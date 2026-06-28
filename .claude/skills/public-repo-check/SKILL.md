@@ -1,6 +1,6 @@
 ---
 name: public-repo-check
-description: Pre-publish hygiene gate for this public portfolio repo. Scans for secrets, .env/credentials, and any private/Intuit-specific framing before pushing or making the repo public. Use before any push, before tagging a release, or when the user asks to publish/share the repo.
+description: Pre-publish hygiene gate for this public portfolio repo. Scans for secrets, .env/credentials, and any private/employer-specific or interview-prep framing before pushing or making the repo public. Use before any push, before tagging a release, or when the user asks to publish/share the repo.
 ---
 
 # Public-repo hygiene check
@@ -17,10 +17,10 @@ This is a **public** portfolio repo. Before it is pushed or published, verify no
    - Hardcoded connection strings with credentials.
 
 3. **Scan for private / interview framing** that must stay out of the public repo:
-   - Case-insensitive `intuit`, recruiter names, the verbatim problem statement.
-   - Interview-prep content: STAR stories, "why Intuit" narratives, DSA practice, probe-bank framed as interview prep, round-by-round strategy.
-   - Cross-check against the "Keep PRIVATE" section of `Build-Delivery-Plan-and-Repo-Structure.md`.
-   - Note: `Build-Delivery-Plan-and-Repo-Structure.md` itself contains Intuit/interview framing — it should NOT be committed to the public repo. Flag it.
+   - Read the private planning/design docs to learn the specific terms to block, then case-insensitive scan tracked files for the **employer/company name** and **recruiter names** found there, plus the verbatim problem statement.
+   - Interview-prep content: STAR stories, "why <company>" narratives, DSA practice, probe-bank framed as interview prep, round-by-round strategy.
+   - Cross-check against the "Keep PRIVATE" section of the delivery plan.
+   - The private planning/design docs themselves — the **delivery plan** and the **HLD v2 design doc** — must NEVER be committed. Confirm both are gitignored and untracked (`git ls-files`); flag if either is tracked. Their filenames may contain the company name, so prefer non-revealing globs in `.gitignore`.
 
 4. **Confirm generic framing** in user-facing files (`README.md`, `docs/`, `presentation/`): the project should read as a generic sales-forecasting platform.
 

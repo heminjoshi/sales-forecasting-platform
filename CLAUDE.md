@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A **multi-tenant sales-forecasting platform** built as a public portfolio/interview project — designed to *read* like production, not to be one. It is currently at the **planning stage**: only the delivery plan exists; there is no source code, build tooling, or git repo yet.
+A **multi-tenant "top sales by category" platform** built as a public portfolio/interview project — designed to *read* like production, not to be one. It is currently at the **planning stage**: only design/plan docs exist; there is no source code or build tooling yet.
 
-`Build-Delivery-Plan-and-Repo-Structure.md` is the **source of truth** for scope, sequencing, the target directory layout, and what is built vs designed-only. Read it before scaffolding or implementing — keep new work consistent with the structure and phase it defines.
+Two private (gitignored) docs are the **source of truth** — read them before scaffolding or implementing, and keep new work consistent with the structure and phase they define:
+- the **delivery plan** (`Build-Delivery-Plan-and-Repo-Structure.md`) — scope, phase sequencing, target directory layout, built-vs-designed-only.
+- the **HLD v2 design doc** — the architecture: four tiers (presentation → serving → forecast batch → ingestion), interface seams, decision records. v2 adds the user-facing dashboard tier.
 
 ## How to work in this repo
 
@@ -17,20 +19,22 @@ A **multi-tenant sales-forecasting platform** built as a public portfolio/interv
 ## Planned stack & conventions (when scaffolding)
 
 - **Service:** Java 21 + Spring Boot, **Maven multi-module** (root `pom.xml` aggregating `topsales-common`, `-ingestion`, `-forecast`, `-insight`, `-api`, `db/migration`).
-- **Infra:** AWS CDK in TypeScript, 5 stacks (network, storage, intelligence, application, monitoring) under `infra/`.
-- **Local dev:** `docker-compose` (Postgres + Redis) under `local/`; no AWS account required to run the demo.
+- **UI (presentation tier):** the demo dashboard is **static HTML + vanilla JS + Chart.js via CDN**, served from Spring Boot static resources — **no Node toolchain, no build step for the demo UI**. The production React SPA (Vite + Recharts on S3+CloudFront) is **designed-only** — don't build it for the demo. The dashboard is a thin, read-only view over the REST API; keep business logic out of it.
+- **Infra:** AWS CDK in TypeScript, 5 stacks (network, storage, intelligence, application, monitoring) under `infra/`. The Application/Storage stacks also carry the S3 site bucket + CloudFront for the designed React SPA.
+- **Profiles:** a Spring profile selects impls behind the same interfaces — `local` (Postgres / Redis / filesystem raw log / template insight / Java forecaster / static dashboard) vs `aws` (Kinesis / DynamoDB / S3 / Bedrock / SageMaker / React SPA). Don't hardcode cloud services on the common path.
 - **Migrations:** Flyway/Liquibase SQL.
 - **Tests:** JUnit + Testcontainers (Postgres + Redis) for integration.
-- **Commands** (once Phase 0 scaffolds them): `make run | test | seed | demo | synth | up | down`; `mvn clean test` in `service/`; `npm install && npx cdk synth` in `infra/`.
+- **Local dev:** prerequisites are **Docker Desktop, JDK 21, Maven, and a browser — no Node, no AWS account.** Run sequence: `docker-compose up` → `make run` → `make seed` → open the dashboard.
+- **Commands** (once Phase 0 scaffolds them): `make run | test | seed | demo | synth | up | down`; `mvn clean test` in `service/`; `npm install && npx cdk synth` in `infra/` (CDK is the *only* place Node is used).
 
 ## Core design principles (the talking points — preserve these seams)
 
 - **Local-runnable vs cloud-designed:** the same interfaces back both a local impl and an AWS impl. Local paths must work standalone; cloud paths live behind the interface.
 - **Interface seams:** `Forecaster`, `ForecastProvider`, `InsightGenerator`, and repository abstractions let local↔cloud and baseline↔ML swap without rewrites. Don't bypass them.
-- **Degradation chain:** when forecasts are unavailable, fall back last-good → seasonal-naive from actuals → actuals with a `forecast_pending`/status flag. Reads must always succeed (flagged).
+- **Degradation chain:** when forecasts are unavailable, fall back last-good → seasonal-naive from actuals → actuals with a `forecast_pending`/status flag. Reads must always succeed (flagged); the read path survives a total ML-plane outage and the dashboard always renders something honest (status badge: `fresh|stale|pending|degraded` + as-of).
 - **Grounded GenAI:** insight prompts receive only computed numbers; output is validated to contain only those figures; fall back to the deterministic template on failure/timeout. Treat category names as untrusted (injection).
 - **Multi-tenant isolation:** `TenantScopeFilter` enforced from the start.
 
 ## Public-repo hygiene (important — easy to get wrong)
 
-This is a **public** repo. Never commit secrets, `.env`, or credentials. Keep all framing **generic** — no Intuit references, recruiter emails, the verbatim problem statement, or interview-prep material in tracked files. Those stay private (see the plan's "Keep PRIVATE" section). Run `/public-repo-check` before publishing or pushing.
+This is a **public** repo. Never commit secrets, `.env`, or credentials. Keep all framing **generic** — no employer/company name, recruiter emails, the verbatim problem statement, or interview-prep material in tracked files (this applies to `CLAUDE.md`, `.gitignore`, and skills too — they're tracked and public). The private planning and design docs (the delivery plan and the HLD v2 doc) stay **gitignored and never committed**. Run `/public-repo-check` before publishing or pushing.
