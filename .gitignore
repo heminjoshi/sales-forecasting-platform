@@ -1,0 +1,25 @@
+# Personal Claude Code instructions (private)
+CLAUDE.local.md
+
+# Private interview/delivery plan (contains Intuit framing — keep out of public repo)
+Build-Delivery-Plan-and-Repo-Structure.md
+
+# Private reference material
+Builder Craft Demo - Quickbooks Commerce.pdf
+
+# Secrets / env
+.env
+.env.*
+*.pem
+
+# Java / Maven
+target/
+*.class
+
+# Node / CDK
+node_modules/
+cdk.out/
+
+# IDE / OS
+.idea/
+.DS_Store
