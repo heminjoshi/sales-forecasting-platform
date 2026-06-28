@@ -9,7 +9,7 @@ Assess where the repo stands against the private planning/design docs under `pri
 
 ## Steps
 
-1. **Read the plan** (`private/Build-Delivery-Plan-v2.md` — the current plan; it has per-task `[ ]` checkboxes and workstreams WS-A…WS-G) for the phase list, acceptance criteria, and milestone map. Also read the **consolidated design doc** (`private/Design-Doc-v3-Consolidated.md`, supersedes HLD v2) — the architecture, per-component deep-dive, data-flow catalog, and canonical data shapes; the dashboard (presentation tier) is a built component, so fold it into the relevant phase's expectations even where the original plan text predates it.
+1. **Read the plan** (`private/Build-Delivery-Plan-v3.md` — the current plan; it has per-task `[ ]` checkboxes and workstreams WS-A…WS-G) for the phase list, acceptance criteria, and milestone map. Also read the **consolidated design doc** (`private/Design-Doc-v3-Consolidated.md`, supersedes HLD v2) — the architecture, per-component deep-dive, data-flow catalog, and canonical data shapes; the dashboard (presentation tier) is a built component, so fold it into the relevant phase's expectations even where the original plan text predates it.
 
 2. **Inspect the actual repo state** to judge each phase against its exit criteria — don't trust the plan's status markers, verify:
    - Is it a git repo yet? CI present (`.github/workflows/`)?
