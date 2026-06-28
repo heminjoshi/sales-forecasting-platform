@@ -1,0 +1,19 @@
+name: infra
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Placeholder until the AWS CDK lands in Phase 7. Keeps the badge green without
+# pointing at an empty infra/. In Phase 7 this becomes a real `cdk synth` job:
+#   - actions/setup-node@v4
+#   - working-directory: infra; run: npm ci && npx cdk synth
+jobs:
+  synth:
+    name: cdk synth (placeholder)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pending CDK
+        run: echo "CDK validation is wired in Phase 7 (infra/)."

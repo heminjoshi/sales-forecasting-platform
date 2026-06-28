@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: topsales-api
+  profiles:
+    default: local
+
+server:
+  port: 8080
+
+# Phase 2+ adds: datasource (Postgres), Redis, Flyway, profile-specific (local|aws) wiring.

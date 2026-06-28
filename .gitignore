@@ -13,7 +13,9 @@ interview-prep/
 
 # Java / Maven
 target/
+build/
 *.class
+HELP.md
 
 # Node / CDK
 node_modules/

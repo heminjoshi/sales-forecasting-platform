@@ -1,0 +1,3 @@
+-- Postgres bootstrap for local development.
+-- Intentionally empty: Flyway owns the schema (events, aggregates, serving) from Phase 2 onward.
+-- This file exists so the docker-entrypoint init mount has something to run.
