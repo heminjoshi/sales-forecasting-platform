@@ -15,7 +15,7 @@ Assess where the repo stands against the private planning/design docs under `pri
    - Is it a git repo yet? CI present (`.github/workflows/`)?
    - `service/` scaffolded? Which `topsales-*` modules exist and compile?
    - `infra/` CDK present? `local/docker-compose.yml`? `Makefile`? `docs/` artifacts? `data/`, `postman/`, `presentation/`?
-   - Dashboard present (static HTML/JS + Chart.js in the API module's `src/main/resources/static/`)? Does it render table + chart + insight + status badge? (The `web/` React SPA is designed-only — absence is expected, not a gap.)
+   - Dashboard present (static HTML/JS + Chart.js in the API module's `src/main/resources/static/`)? Does it render table + chart + insight + status badge? (The `web/` React SPA is designed-only and deploys to Vercel; its absence is expected, not a gap. S3+CloudFront is a documented AWS-native alternative, not built.)
    - Tests present (Testcontainers)? Migrations?
 
 3. **Map each phase (0–10) to a status:** done / in-progress / not-started, with one line of evidence each (what exists or is missing).
