@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A **multi-tenant "top sales by category" platform** built as a public portfolio/interview project — designed to *read* like production, not to be one. It is currently at the **planning stage**: only design/plan docs exist; there is no source code or build tooling yet.
 
 Two docs under `private/` (gitignored, never committed) are the **source of truth** — read them before scaffolding or implementing, and keep new work consistent with the structure and phase they define:
-- the **delivery plan** (`private/Build-Delivery-Plan-and-Repo-Structure.md`) — scope, phase sequencing, target directory layout, built-vs-designed-only.
+- the **delivery plan** (`private/Build-Delivery-Plan-v2.md`) — scope, phase sequencing (Phases 0–10, organized into workstreams WS-A…WS-G), target directory layout, built-vs-designed-only. This v2 supersedes the older `Build-Delivery-Plan-and-Repo-Structure.md` in the same folder.
 - the **HLD v2 design doc** (in `private/`) — the architecture: four tiers (presentation → serving → forecast batch → ingestion), interface seams, decision records. v2 adds the user-facing dashboard tier.
 
 ## How to work in this repo
@@ -19,7 +19,7 @@ Two docs under `private/` (gitignored, never committed) are the **source of trut
 ## Planned stack & conventions (when scaffolding)
 
 - **Service:** Java 21 + Spring Boot, **Maven multi-module** (root `pom.xml` aggregating `topsales-common`, `-ingestion`, `-forecast`, `-insight`, `-api`, `db/migration`).
-- **UI (presentation tier):** the demo dashboard is **static HTML + vanilla JS + Chart.js via CDN**, served from Spring Boot static resources — **no Node toolchain, no build step for the demo UI**. The production React SPA (Vite + Recharts on S3+CloudFront) is **designed-only** — don't build it for the demo. The dashboard is a thin, read-only view over the REST API; keep business logic out of it.
+- **UI (presentation tier):** the demo dashboard is **static HTML + vanilla JS + Chart.js via CDN**, served from Spring Boot static resources (the API module's `src/main/resources/static/`) — **no Node toolchain, no build step for the demo UI**. The production React SPA (Vite + Recharts on S3+CloudFront) lives in a separate top-level `web/` dir and is **designed-only / optional build** — don't build it for the demo. The dashboard is a thin, read-only view over the REST API; keep business logic out of it.
 - **Infra:** AWS CDK in TypeScript, 5 stacks (network, storage, intelligence, application, monitoring) under `infra/`. The Application/Storage stacks also carry the S3 site bucket + CloudFront for the designed React SPA.
 - **Profiles:** a Spring profile selects impls behind the same interfaces — `local` (Postgres / Redis / filesystem raw log / template insight / Java forecaster / static dashboard) vs `aws` (Kinesis / DynamoDB / S3 / Bedrock / SageMaker / React SPA). Don't hardcode cloud services on the common path.
 - **Migrations:** Flyway/Liquibase SQL.
@@ -37,4 +37,4 @@ Two docs under `private/` (gitignored, never committed) are the **source of trut
 
 ## Public-repo hygiene (important — easy to get wrong)
 
-This is a **public** repo. Never commit secrets, `.env`, or credentials. Keep all framing **generic** — no employer/company name, recruiter emails, the verbatim problem statement, or interview-prep material in tracked files (this applies to `CLAUDE.md`, `.gitignore`, and skills too — they're tracked and public). Everything under `private/` (the delivery plan, the HLD v2 doc, reference material) stays **gitignored and never committed**. Run `/public-repo-check` before publishing or pushing.
+This is a **public** repo. Never commit secrets, `.env`, or credentials. Keep all framing **generic** — no employer/company name, recruiter emails, the verbatim problem statement, or interview-prep material in tracked files (this applies to `CLAUDE.md`, `.gitignore`, and skills too — they're tracked and public). Everything under `private/`, plus `claude-sessions/` and `interview-prep/` (raw transcript exports, recruiter emails, probe bank, STAR stories — all contain employer/interview material), stays **gitignored and never committed**. Run `/public-repo-check` before publishing or pushing.

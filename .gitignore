@@ -3,6 +3,8 @@ CLAUDE.local.md
 
 # Private docs & reference material (planning, design, employer-specific — never committed)
 private/
+claude-sessions/
+interview-prep/
 
 # Secrets / env
 .env

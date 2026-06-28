@@ -9,7 +9,7 @@ This is a **public** portfolio repo. Before it is pushed or published, verify no
 
 ## Steps
 
-1. **Confirm `.gitignore` covers private files.** Ensure `private/`, `CLAUDE.local.md`, `.env`, `.env.*`, and credential files are ignored. Critically, confirm **nothing under `private/` is tracked** (`git ls-files private/` must return nothing) — that directory holds the planning/design docs and reference material. Also flag any tracked `CLAUDE.local.md` or `.env*`.
+1. **Confirm `.gitignore` covers private files.** Ensure `private/`, `claude-sessions/`, `interview-prep/`, `CLAUDE.local.md`, `.env`, `.env.*`, and credential files are ignored. Critically, confirm **nothing under those private dirs is tracked** (`git ls-files private/ claude-sessions/ interview-prep/` must return nothing) — they hold planning/design docs, raw Claude transcript exports, recruiter emails, the verbatim problem statement, and the probe bank. Also flag any tracked `CLAUDE.local.md` or `.env*`.
 
 2. **Scan for secrets** across tracked files (skip `.git/`, `node_modules/`, `target/`, `cdk.out/`):
    - AWS keys: `AKIA[0-9A-Z]{16}`, `aws_secret_access_key`

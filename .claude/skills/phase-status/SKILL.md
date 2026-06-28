@@ -9,13 +9,13 @@ Assess where the repo stands against the private planning/design docs under `pri
 
 ## Steps
 
-1. **Read the plan** (`private/Build-Delivery-Plan-and-Repo-Structure.md`) for the phase list, exit criteria, and milestone map. Also read the **HLD v2 design doc** (in `private/`) — v2 adds the user-facing dashboard (presentation tier) as a built component; fold the dashboard into the relevant phase's expectations even though the original plan text predates it.
+1. **Read the plan** (`private/Build-Delivery-Plan-v2.md` — the current plan; it has per-task `[ ]` checkboxes and workstreams WS-A…WS-G) for the phase list, acceptance criteria, and milestone map. Also read the **HLD v2 design doc** (in `private/`) — v2 adds the user-facing dashboard (presentation tier) as a built component; fold the dashboard into the relevant phase's expectations even though the original plan text predates it.
 
 2. **Inspect the actual repo state** to judge each phase against its exit criteria — don't trust the plan's status markers, verify:
    - Is it a git repo yet? CI present (`.github/workflows/`)?
    - `service/` scaffolded? Which `topsales-*` modules exist and compile?
    - `infra/` CDK present? `local/docker-compose.yml`? `Makefile`? `docs/` artifacts? `data/`, `postman/`, `presentation/`?
-   - Dashboard present (static HTML/JS + Chart.js under Spring Boot static resources)? Does it render table + chart + insight + status badge?
+   - Dashboard present (static HTML/JS + Chart.js in the API module's `src/main/resources/static/`)? Does it render table + chart + insight + status badge? (The `web/` React SPA is designed-only — absence is expected, not a gap.)
    - Tests present (Testcontainers)? Migrations?
 
 3. **Map each phase (0–10) to a status:** done / in-progress / not-started, with one line of evidence each (what exists or is missing).
