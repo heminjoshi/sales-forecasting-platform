@@ -1,5 +1,7 @@
 # Sales-Forecasting Platform
 
+[![ci](https://github.com/heminjoshi/sales-forecasting-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/heminjoshi/sales-forecasting-platform/actions/workflows/ci.yml)
+
 > Multi-tenant "top sales by category" platform — ingests sale events, maintains per-tenant
 > category aggregates, forecasts each category forward, ranks to a top-k, surfaces a grounded
 > natural-language insight, and presents it in a dashboard. Java / Spring Boot, runnable locally
