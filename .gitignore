@@ -1,12 +1,8 @@
 # Personal Claude Code instructions (private)
 CLAUDE.local.md
 
-# Private planning/design docs (employer-specific framing — keep out of public repo)
-Build-Delivery-Plan-and-Repo-Structure.md
-*HLD-v2*.md
-
-# Private reference material
-Builder Craft Demo - Quickbooks Commerce.pdf
+# Private docs & reference material (planning, design, employer-specific — never committed)
+private/
 
 # Secrets / env
 .env

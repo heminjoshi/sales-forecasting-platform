@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A **multi-tenant "top sales by category" platform** built as a public portfolio/interview project — designed to *read* like production, not to be one. It is currently at the **planning stage**: only design/plan docs exist; there is no source code or build tooling yet.
 
-Two private (gitignored) docs are the **source of truth** — read them before scaffolding or implementing, and keep new work consistent with the structure and phase they define:
-- the **delivery plan** (`Build-Delivery-Plan-and-Repo-Structure.md`) — scope, phase sequencing, target directory layout, built-vs-designed-only.
-- the **HLD v2 design doc** — the architecture: four tiers (presentation → serving → forecast batch → ingestion), interface seams, decision records. v2 adds the user-facing dashboard tier.
+Two docs under `private/` (gitignored, never committed) are the **source of truth** — read them before scaffolding or implementing, and keep new work consistent with the structure and phase they define:
+- the **delivery plan** (`private/Build-Delivery-Plan-and-Repo-Structure.md`) — scope, phase sequencing, target directory layout, built-vs-designed-only.
+- the **HLD v2 design doc** (in `private/`) — the architecture: four tiers (presentation → serving → forecast batch → ingestion), interface seams, decision records. v2 adds the user-facing dashboard tier.
 
 ## How to work in this repo
 
@@ -37,4 +37,4 @@ Two private (gitignored) docs are the **source of truth** — read them before s
 
 ## Public-repo hygiene (important — easy to get wrong)
 
-This is a **public** repo. Never commit secrets, `.env`, or credentials. Keep all framing **generic** — no employer/company name, recruiter emails, the verbatim problem statement, or interview-prep material in tracked files (this applies to `CLAUDE.md`, `.gitignore`, and skills too — they're tracked and public). The private planning and design docs (the delivery plan and the HLD v2 doc) stay **gitignored and never committed**. Run `/public-repo-check` before publishing or pushing.
+This is a **public** repo. Never commit secrets, `.env`, or credentials. Keep all framing **generic** — no employer/company name, recruiter emails, the verbatim problem statement, or interview-prep material in tracked files (this applies to `CLAUDE.md`, `.gitignore`, and skills too — they're tracked and public). Everything under `private/` (the delivery plan, the HLD v2 doc, reference material) stays **gitignored and never committed**. Run `/public-repo-check` before publishing or pushing.

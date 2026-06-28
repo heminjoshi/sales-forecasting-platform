@@ -5,11 +5,11 @@ description: Report build progress against the Build-Delivery-Plan phases (0–1
 
 # Phase status
 
-Assess where the repo stands against `Build-Delivery-Plan-and-Repo-Structure.md` and recommend the next step.
+Assess where the repo stands against the private planning/design docs under `private/` and recommend the next step.
 
 ## Steps
 
-1. **Read the plan** (`Build-Delivery-Plan-and-Repo-Structure.md`) for the phase list, exit criteria, and milestone map. Also read the **HLD v2 design doc** — v2 adds the user-facing dashboard (presentation tier) as a built component; fold the dashboard into the relevant phase's expectations even though the original plan text predates it.
+1. **Read the plan** (`private/Build-Delivery-Plan-and-Repo-Structure.md`) for the phase list, exit criteria, and milestone map. Also read the **HLD v2 design doc** (in `private/`) — v2 adds the user-facing dashboard (presentation tier) as a built component; fold the dashboard into the relevant phase's expectations even though the original plan text predates it.
 
 2. **Inspect the actual repo state** to judge each phase against its exit criteria — don't trust the plan's status markers, verify:
    - Is it a git repo yet? CI present (`.github/workflows/`)?
