@@ -96,11 +96,11 @@ management:
         include: health,info,prometheus,metrics
   endpoint:
     health:
-      # Surface per-component health (db + redis) on /actuator/health so a probe/operator can see
-      # which dependency is down, not just the rolled-up status. Local demo has no auth in front of
-      # actuator; the aws profile would gate this behind the platform's auth.
+      # Surface per-component health STATUS (db + redis up/down) on /actuator/health so a probe/operator
+      # can see which dependency is down. Deliberately NOT show-details: that would expose detail (DB
+      # product/version, validation query, etc.) on an unauthenticated actuator — info disclosure. The
+      # aws profile would raise this to show-details: when-authorized behind the platform's auth.
       show-components: always
-      show-details: always
   metrics:
     tags:
       application: topsales-api
