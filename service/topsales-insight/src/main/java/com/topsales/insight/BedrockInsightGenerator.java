@@ -4,13 +4,22 @@ import com.topsales.common.api.TopKItem;
 import com.topsales.common.insight.InsightGenerator;
 import com.topsales.common.insight.InsightRequest;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest;
 import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelResponse;
@@ -57,20 +66,41 @@ public final class BedrockInsightGenerator implements InsightGenerator {
     private final ObjectMapper mapper;
     private final String modelId;
     private final Duration timeout;
+    private final CircuitBreaker circuitBreaker;
+    private final Retry retry;
+    private final Runnable onFallback;
 
+    /**
+     * @param circuitBreaker Phase 6 breaker over the single InvokeModel call: after enough failures it
+     *     trips OPEN and short-circuits the call (throwing {@link CallNotPermittedException}, caught
+     *     below), so a sick model plane stops being hammered and reads serve the template instantly.
+     * @param retry Phase 6 retry over the same call (one extra attempt) for transient timeouts/SDK
+     *     errors; it does <em>not</em> retry a grounding rejection (that is a boolean check outside the
+     *     decorated supplier).
+     * @param onFallback fired EXACTLY ONCE whenever {@link #generate} returns the template instead of a
+     *     grounded Bedrock result (any failure path, plus the empty/ungrounded path) — the api layer
+     *     uses it to increment a fallback counter. May be {@code null} (treated as a no-op) so existing
+     *     callers/tests need not supply one.
+     */
     public BedrockInsightGenerator(
             InsightGenerator template,
             GroundingValidator validator,
             BedrockRuntimeClient client,
             ObjectMapper mapper,
             String modelId,
-            Duration timeout) {
+            Duration timeout,
+            CircuitBreaker circuitBreaker,
+            Retry retry,
+            Runnable onFallback) {
         this.template = template;
         this.validator = validator;
         this.client = client;
         this.mapper = mapper;
         this.modelId = modelId;
         this.timeout = timeout;
+        this.circuitBreaker = circuitBreaker;
+        this.retry = retry;
+        this.onFallback = onFallback;
     }
 
     /**
@@ -86,23 +116,79 @@ public final class BedrockInsightGenerator implements InsightGenerator {
             ObjectMapper mapper,
             String modelId,
             Duration timeout) {
+        return create(template, validator, mapper, modelId, timeout, null);
+    }
+
+    /**
+     * Same factory, additionally wiring a {@code onFallback} callback (fired once per template
+     * fallback — see the constructor). The single construction point for the Phase-6 resilience
+     * defaults, so all {@code io.github.resilience4j} and {@code software.amazon.awssdk} symbols stay
+     * confined to this module and never leak onto the {@code topsales-api} classpath.
+     *
+     * <p><b>Defaults.</b> Retry = 1 extra attempt ({@code maxAttempts=2}) on a transient
+     * {@link ApiCallTimeoutException} or any other {@link SdkException}; a grounding rejection is a
+     * boolean check outside the decorated call, so it is never retried. Breaker = COUNT-based window of
+     * 10, opening at a 50% failure rate once at least 5 calls are seen, and staying OPEN for 30s before
+     * probing again. Both share the stable name {@code "bedrock-insight"} for metrics/logs.
+     */
+    public static BedrockInsightGenerator create(
+            InsightGenerator template,
+            GroundingValidator validator,
+            ObjectMapper mapper,
+            String modelId,
+            Duration timeout,
+            Runnable onFallback) {
+        RetryConfig retryConfig =
+                RetryConfig.custom()
+                        .maxAttempts(2)
+                        .retryExceptions(ApiCallTimeoutException.class, SdkException.class)
+                        .build();
+        CircuitBreakerConfig breakerConfig =
+                CircuitBreakerConfig.custom()
+                        .failureRateThreshold(50)
+                        .slidingWindowSize(10)
+                        .minimumNumberOfCalls(5)
+                        .waitDurationInOpenState(Duration.ofSeconds(30))
+                        .build();
         return new BedrockInsightGenerator(
-                template, validator, BedrockRuntimeClient.create(), mapper, modelId, timeout);
+                template,
+                validator,
+                BedrockRuntimeClient.create(),
+                mapper,
+                modelId,
+                timeout,
+                CircuitBreaker.of("bedrock-insight", breakerConfig),
+                Retry.of("bedrock-insight", retryConfig),
+                onFallback);
     }
 
     @Override
     public String generate(InsightRequest req) {
         try {
             String prompt = buildPrompt(req);
-            InvokeModelResponse response = client.invokeModel(buildRequest(prompt));
+            // Compose the core decorators by hand (no Decorators helper — that lives in
+            // resilience4j-all, which is not on the classpath): the breaker is innermost so each
+            // (possibly retried) attempt is gated and recorded, the retry is outermost so a transient
+            // timeout/SDK error gets one more shot.
+            Supplier<InvokeModelResponse> call = () -> client.invokeModel(buildRequest(prompt));
+            call = CircuitBreaker.decorateSupplier(circuitBreaker, call);
+            call = Retry.decorateSupplier(retry, call);
+            InvokeModelResponse response = call.get();
             String text = extractText(response);
             if (text != null && !text.isBlank() && validator.isGrounded(text, req)) {
                 return text;
             }
             log.debug("Bedrock insight rejected (empty or ungrounded); falling back to template");
+        } catch (CallNotPermittedException e) {
+            // Breaker is OPEN — the model plane is being given time to recover; serve the floor now.
+            log.debug("Bedrock insight circuit open; falling back to template");
         } catch (Exception e) {
             // Timeout, AWS/SDK exception, or malformed response — never propagate to the read path.
             log.warn("Bedrock insight generation failed; falling back to template ({})", e.toString());
+        }
+        // Every non-grounded path lands here exactly once: signal the fallback, then serve the floor.
+        if (onFallback != null) {
+            onFallback.run();
         }
         return template.generate(req);
     }

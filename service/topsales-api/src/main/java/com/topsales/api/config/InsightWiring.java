@@ -6,6 +6,8 @@ import com.topsales.insight.BedrockInsightGenerator;
 import com.topsales.insight.GroundingValidator;
 import com.topsales.insight.TemplateInsightGenerator;
 
+import io.micrometer.core.instrument.MeterRegistry;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,6 +41,12 @@ public class InsightWiring {
      * The Bedrock decorator. Takes the template floor and the grounding validator (both
      * component-scanned beans) plus the shared Jackson {@link ObjectMapper}, and reads its model id +
      * timeout from {@link TopsalesProperties.Insight}.
+     *
+     * <p>Phase 6: the {@link MeterRegistry} (from actuator autoconfig) backs a {@code onFallback}
+     * callback that increments {@code topsales.insight.fallback.total} whenever the decorator serves the
+     * template instead of a grounded Bedrock result — so the breaker/retry fail-soft is observable. The
+     * resilience4j and AWS SDK symbols stay inside {@code BedrockInsightGenerator.create(...)}; this
+     * module never names them.
      */
     @Bean
     @Primary
@@ -46,9 +54,11 @@ public class InsightWiring {
             TemplateInsightGenerator template,
             GroundingValidator validator,
             TopsalesProperties props,
-            ObjectMapper mapper) {
+            ObjectMapper mapper,
+            MeterRegistry meterRegistry) {
         TopsalesProperties.Insight cfg = props.insight();
+        Runnable onFallback = () -> meterRegistry.counter("topsales.insight.fallback.total").increment();
         return BedrockInsightGenerator.create(
-                template, validator, mapper, cfg.modelId(), cfg.timeout());
+                template, validator, mapper, cfg.modelId(), cfg.timeout(), onFallback);
     }
 }
