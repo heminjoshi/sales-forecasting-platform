@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top Sales by Category — deck</title>
+
+  <!--
+    reveal.js wrapper around the canonical deck.md (one content source, three renderings).
+    It fetches ../deck/deck.md, strips the Marp frontmatter, and feeds the markdown to reveal's
+    markdown plugin (split on `\n---\n`). Mermaid code-blocks are rendered after each slide loads.
+
+    OFFLINE NOTE: the libs below load from jsDelivr. For a fully-offline talk (no venue wifi),
+    download reveal.js + the markdown/highlight/notes plugins + mermaid into ./vendor/ and repoint
+    these URLs. The dashboard demo itself is already fully offline (Chart.js is vendored). See ../README.md.
+    SPEAKER VIEW: press `S`.  PDF EXPORT: open `index.html?print-pdf` and print to PDF.
+  -->
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css" id="theme">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+  <style>
+    .reveal h1 { font-size: 2.0em; }
+    .reveal h2 { font-size: 1.35em; }
+    .reveal section { font-size: 0.62em; text-align: left; }
+    .reveal table { font-size: 0.78em; margin: 0.3em 0; }
+    .reveal pre { width: 100%; font-size: 0.5em; box-shadow: none; }
+    .reveal pre code { max-height: 520px; padding: 0.6em; }
+    .reveal blockquote { font-size: 0.9em; width: 100%; }
+    .mermaid-rendered { text-align: center; }
+    .mermaid-rendered svg { max-height: 480px; width: auto; }
+    .reveal .slide-number { font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <section data-markdown data-separator="^\r?\n---\r?\n$" data-separator-notes="^Note:">
+        <script type="text/template" id="deck-md"><!-- filled by fetch() below --></script>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/markdown/markdown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+
+    let seq = 0;
+    async function renderMermaid() {
+      const blocks = document.querySelectorAll('code.language-mermaid:not([data-mmd])');
+      for (const el of blocks) {
+        el.setAttribute('data-mmd', '1');
+        try {
+          const { svg } = await mermaid.render('mmd-' + (seq++), el.textContent);
+          const div = document.createElement('div');
+          div.className = 'mermaid-rendered';
+          div.innerHTML = svg;
+          (el.closest('pre') || el).replaceWith(div);
+        } catch (e) { /* leave the source block visible if mermaid fails */ }
+      }
+    }
+
+    const tpl = document.getElementById('deck-md');
+    const md = await fetch('deck.md').then(r => r.text());
+    // strip the leading Marp frontmatter block so it isn't rendered as a slide
+    tpl.textContent = md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '');
+
+    Reveal.initialize({
+      hash: true,
+      slideNumber: 'c/t',
+      plugins: [RevealMarkdown, RevealHighlight, RevealNotes],
+    });
+    Reveal.on('ready', renderMermaid);
+    Reveal.on('slidechanged', renderMermaid);
+  </script>
+</body>
+</html>

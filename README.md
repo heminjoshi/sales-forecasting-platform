@@ -7,7 +7,7 @@
 > natural-language insight, and presents it in a dashboard. Java / Spring Boot, runnable locally
 > with one `docker compose up`; AWS path designed in CDK behind the same interfaces.
 
- > **Status:** 🟢 Built through **Phase 8** — PROD-SHAPED (locally runnable end-to-end). Ingest events → idempotent per-tenant, per-channel
+ > **Status:** 🟢 Built through **Phase 9** — 🎤 PRESENTATION-READY (PROD-SHAPED + the interview deck, demo script, and a fully-offline live demo). Ingest events → idempotent per-tenant, per-channel
 > category aggregates → ranked top-k over the REST API → served dashboard. On top of that:
 > the **channel** first-class dimension + a deterministic seasonal synthetic-data generator
 > (Phase 2.5), a **central config** surface (`TopsalesProperties`), the **forecasting engine**
@@ -30,8 +30,11 @@
 > real full-stack ITs (booted against CI-provided Postgres+Redis) over a shared base for the Redis cache (miss→hit /
 > version-bump invalidation / single-flight), HTTP forecast **degradation** (still 200, never fails
 > closed), and **multi-tenant isolation** (cross-tenant 403 / unknown-tenant 404); plus a **Newman**
-> coverage gate — `make demo` runs the whole Postman collection, enforced in CI). Next: presentation
-> & rehearsal (Phase 9).
+> coverage gate — `make demo` runs the whole Postman collection, enforced in CI), and the **presentation
+> layer** (Phase 9 — the interview deck (`presentation/deck/`, one `deck.md` rendered via Marp / GitHub /
+> reveal.js), the `intro-achievements` + `demo-script` + `speaker-notes` companions, and a **fully-offline
+> live demo**: Chart.js is vendored into the dashboard so it renders with zero network dependency). Next:
+> public-repo polish & final dry run (Phase 10).
 
 ## Quick start
 
@@ -73,10 +76,44 @@ Tests: `make test` (fast unit tests, no Docker) · `make verify` (adds Testconta
 
 ## Architecture
 
-_Diagram and overview — to be added._
+Four tiers — **presentation** (dashboard) → **serving** (REST API) → **forecast** (batch) →
+**ingestion**. The forecast and serving planes couple **only** through the versioned serving table —
+no synchronous ML on the read path — which is what lets reads survive a total ML-plane outage. Local
+impls and AWS impls sit behind the same interfaces, selected by Spring profile.
 
-Four tiers: **presentation** (dashboard) → **serving** (REST API) → **forecast** (batch) →
-**ingestion**. Local impls and AWS impls sit behind the same interfaces, selected by Spring profile.
+```mermaid
+flowchart TB
+    subgraph Presentation
+      UI["Dashboard UI<br/>demo: static on Spring Boot<br/>prod: React SPA on Vercel"]
+    end
+    subgraph Ingestion
+      EV["Upstream events"] --> ST["Kinesis / MSK<br/>(local: POST /events)"]
+      ST --> CO["Consumer<br/>dedupe + additive upsert"]
+      CO -->|idempotent upsert| AGG["Aurora Postgres<br/>(tenant,category,channel,day)"]
+      CO -->|append| RAW["S3 Raw Log (SoT)"]
+      CO -. malformed .-> DLQ["DLQ"]
+    end
+    subgraph Forecast[Forecast batch]
+      SCH["EventBridge cron<br/>(local: make forecast)"] --> FJ["Forecaster Job<br/>Java baseline / SageMaker"]
+      AGG --> FJ
+      FJ -->|versioned swap| SRV["Serving Table<br/>precomputed top-k + intervals"]
+      FJ --> EVAL["Eval / Drift (WAPE, bias)"]
+    end
+    subgraph Serving
+      UI --> API["Spring Boot Service (stateless)"]
+      API --> CA["Redis cache"]
+      API --> SRV
+      API --> AGG
+      API -. lazy, cached .-> BR["Bedrock insight → template"]
+      API -. ML down .-> FB["JVM baseline fallback"]
+    end
+```
+
+Full narrative in [`docs/hld.md`](docs/hld.md) and the diagrams under [`docs/diagrams/`](docs/diagrams/).
+The interview deck + live-demo script live in [`presentation/`](presentation/).
+
+<!-- Hero screenshot: capture during a rehearsal — see presentation/screenshots/README.md, then embed dashboard-fresh.png here. -->
+> _Dashboard screenshots (fresh + degraded) — capture via `presentation/screenshots/README.md`._
 
 ## Tech stack
 

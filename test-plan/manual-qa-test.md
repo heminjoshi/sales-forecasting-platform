@@ -78,10 +78,10 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 ## 7. Cross-browser / responsiveness / a11y (smoke)
 | ID | Step | Expected |
 |---|---|---|
-| MQ-60 | Load in Chrome, Firefox, Safari | Renders consistently; no console errors; Chart.js (CDN) loads |
+| MQ-60 | Load in Chrome, Firefox, Safari | Renders consistently; no console errors; Chart.js (P9: **vendored**, `static/vendor/`) loads |
 | MQ-61 | Narrow viewport / mobile width | Layout remains usable (table scroll/stack); controls reachable |
 | MQ-62 | Keyboard-only | Controls are tabbable and operable; focus visible |
-| MQ-63 | Offline/no-internet **except** the page itself | Local-served dashboard works; only the Chart.js CDN needs network — note this dependency for the live demo |
+| MQ-63 | (P9) Fully offline — disconnect the network, then load + use the dashboard | Local-served dashboard works **end-to-end with no internet**: chart renders from the vendored `static/vendor/chart.umd.min.js` (no CDN call in the network tab) — the live demo has **zero** network dependency |
 
 ## 8. Cold-clone acceptance (the "stranger" test) [P10]
 | ID | Step | Expected |
@@ -99,6 +99,22 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 
 > **Note:** §9 [P7] is **N/A until deployed** — like the other unbuilt-phase cases, an N/A here is **not a fail**;
 > the Vercel/cross-origin checks become runnable only once PR1 (CORS) ships and the SPA is deployed (PR2/infra).
+
+## 10. Presentation & rehearsal [P9] — the demo-day gate
+The Phase-9 acceptance is "full run-through to time; demo (incl. dashboard) runs clean from cold." These
+cases are the rehearsal checklist — run them as the dry-run, not just at release.
+| ID | Step | Expected |
+|---|---|---|
+| MQ-90 | **Cold-start from scratch** (containers down, no prior state): `make up` → `make seed` → `make run` → `make forecast` → open `http://localhost:8080` | Comes up clean in the documented sequence; dashboard renders seeded `t_demo` with a `fresh` forecast badge, intervals, and a grounded insight — **no errors, no manual fix-ups** |
+| MQ-91 | **Dashboard walk** (the demo beats): toggle mode actuals↔forecast, window week/month/year, channel all/online/offline, change k | Each control updates table + chart live; badge + `asOf` stay honest; per-channel views differ and `all` ≈ their sum (mirrors MQ-01..05, run as one fluid sequence) |
+| MQ-92 | **Degradation beat (live):** `docker compose -f local/docker-compose.yml exec -T postgres psql -U topsales -d topsales -c 'TRUNCATE serving_rows, serving_active_version;'` then `... exec -T redis redis-cli INCR tenantver:t_demo`, then refresh forecast view | Forecast read still **200**; badge flips to `degraded` (seasonal-naive) or `pending` (actuals floor); the degradation banner shows; items still present — **never a 5xx, blank, or crash** (the signature resilience moment; matches `ForecastDegradationIT`) |
+| MQ-93 | **Recovery:** `make forecast` again, refresh | Badge returns to `fresh` with intervals; the wipe was fully recoverable on stage |
+| MQ-94 | **Fully-offline rehearsal:** repeat MQ-90→93 with the machine's network **off** (after images are pulled) | Everything works — no CDN, no AWS, no internet (Chart.js vendored in P9); proves the demo survives a dead venue wifi |
+| MQ-95 | **Deck renders:** open `presentation/deck/index.html` in a browser (reveal.js) **and** preview `presentation/deck/deck.md` (Marp / GitHub) | Slides advance with arrow keys; diagrams + screenshots show; the three renderings are the same content from one `deck.md` source |
+| MQ-96 | **Run to time:** present the full deck + live demo against `presentation/demo-script.md` timings | Completes within the 60-min budget (Build-Plan §155 split); the demo + degradation beat land inside their allotted minutes |
+
+> §10 [P9] is the rehearsal gate — runnable now (the system is built through P8). MQ-92's manual SQL/Redis
+> steps are intentional (no `make degrade` target by decision); they live verbatim in `demo-script.md`.
 
 ## Reporting
 For each failed case record: ID, build/commit, steps, **actual** vs **expected**, screenshot (UI cases),
