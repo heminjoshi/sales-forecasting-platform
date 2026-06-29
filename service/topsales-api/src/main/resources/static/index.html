@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Top Sales by Category — Demo Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <h1>Top Sales by Category</h1>
+      <p class="sub">Thin, read-only demo view over the REST API.</p>
+    </header>
+
+    <form id="controls" class="controls" autocomplete="off">
+      <label class="field">
+        <span>Tenant</span>
+        <input id="tenantId" type="text" value="t_demo" spellcheck="false" />
+      </label>
+
+      <label class="field">
+        <span>Mode</span>
+        <select id="mode">
+          <option value="actuals" selected>actuals</option>
+          <option value="forecast">forecast</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Window</span>
+        <select id="window">
+          <option value="week">week</option>
+          <option value="month" selected>month</option>
+          <option value="year">year</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>k</span>
+        <input id="k" type="number" min="1" max="50" value="10" />
+      </label>
+
+      <button id="loadBtn" type="submit" class="btn">Load</button>
+    </form>
+
+    <section class="meta" id="meta" hidden>
+      <span id="badge" class="badge">—</span>
+      <span id="asOf" class="asof"></span>
+    </section>
+
+    <p id="insight" class="insight" hidden></p>
+
+    <!-- Explicit UI states -->
+    <div id="state-loading" class="state" hidden>Loading…</div>
+    <div id="state-empty" class="state" hidden>No categories for this selection.</div>
+    <div id="state-error" class="state state-error" hidden></div>
+
+    <section id="results" hidden>
+      <div class="chart-box">
+        <canvas id="chart" height="120"></canvas>
+      </div>
+
+      <table id="table" class="table">
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>Category</th>
+            <th class="num">Value</th>
+            <th class="num col-delta">Δ vs prior</th>
+            <th class="col-conf">Confidence</th>
+            <th class="col-interval">Interval</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
