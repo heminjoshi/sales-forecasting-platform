@@ -7,11 +7,15 @@
 > natural-language insight, and presents it in a dashboard. Java / Spring Boot, runnable locally
 > with one `docker compose up`; AWS path designed in CDK behind the same interfaces.
 
- > **Status:** 🟢 Walking skeleton runnable (Phase 2). End-to-end **actuals** path works:
-> ingest events → idempotent per-tenant category aggregates → ranked top-k over the REST API →
-> served dashboard. Synthetic seasonal data + the channel dimension (Phase 2.5), forecasting
-> (Phase 3), forecast serving + degradation + cache (Phase 4), and the GenAI insight layer
-> (Phase 5) land next.
+ > **Status:** 🟢 Runnable through **Phase 3**. Ingest events → idempotent per-tenant, per-channel
+> category aggregates → ranked top-k over the REST API → served dashboard (actuals). On top of that:
+> the **channel** first-class dimension + a deterministic seasonal synthetic-data generator
+> (Phase 2.5), a **central config** surface (`TopsalesProperties`), and the **forecasting engine**
+> (Phase 3 — seasonal-naive / Holt-Winters behind a `Forecaster` seam, a batch that writes
+> **versioned, ranked serving rows** per tenant×window×channel with the channels rolled up to `all`,
+> and a **WAPE backtest** report). Next: the forecast **read path** + degradation chain + cache
+> (Phase 4) — the batch writes serving rows today, but reads still return the honest `pending` floor
+> until Phase 4 wires `ForecastProvider` — then the GenAI insight layer (Phase 5).
 
 ## Quick start
 
@@ -33,10 +37,20 @@ curl -H "X-Tenant-Id: t_demo" \
   "http://localhost:8080/api/v1/tenants/t_demo/top-categories?mode=actuals&window=month&channel=all&k=10"
 ```
 
-For a realistic demo, `make seed` bulk-backfills months of seasonal, channel-split history, and
-`make trickle` posts live events that continue it so the dashboard moves (see `data/seed/`). The
-dashboard's **tenant** picker is populated from `GET /api/v1/tenants`; two demo tenants (`t_demo`,
-`t_acme`) are seeded with independent data, so you can flip between them to see multi-tenant isolation.
+For a realistic demo, seed the data and run the forecast batch:
+
+```bash
+make seed        # backfill months of seasonal, channel-split history for both demo tenants
+make trickle     # (optional) post live events that continue it so the dashboard moves
+make forecast    # batch: fit forecasters → write ranked, versioned serving rows (per tenant×window×channel)
+make eval        # backtest the forecasters → regenerate docs/forecast-eval-report.md (WAPE + bias)
+```
+
+The dashboard's **tenant** picker is populated from `GET /api/v1/tenants`; two demo tenants
+(`t_demo`, `t_acme`) are seeded with independent data, so you can flip between them to see
+multi-tenant isolation. The dashboard's window/channel/`k` controls are config-driven from
+`GET /api/v1/config` — every tweakable (the `k` choices, window lengths, validation bounds, forecast
+params) lives in one place, `topsales.*` in `application.yml` (bound to `TopsalesProperties`).
 
 Prerequisites: Docker Desktop, JDK 21+, Maven, a browser. No Node, no AWS account required.
 Tests: `make test` (fast unit tests, no Docker) · `make verify` (adds Testcontainers integration tests).
@@ -65,16 +79,25 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
 
 ## Built vs. designed
 
-- **Built & runnable now (Phase 2):** event ingestion with idempotent additive aggregation,
-  tenant-local bucketing, dedupe + raw log + quarantine; the two-mode read API (actuals served;
-  `forecast` returns the `pending` floor until Phase 3); `TenantScopeFilter` multi-tenant isolation;
-  RFC 7807 errors; the served dashboard; Postgres + Flyway via Docker Compose.
-- **Designed behind the same interfaces (later phases / `aws` profile):** the `channel`
-  (`ONLINE`/`OFFLINE`) first-class dimension + seasonal synthetic-data generator (Phase 2.5;
-  [ADR-0010](docs/adr/0010-channel-as-first-class-dimension.md)), the forecasting engine and
-  versioned serving table (`Forecaster`/`ForecastProvider`), the full degradation chain + Redis cache,
-  the grounded GenAI insight layer (`InsightGenerator` → Bedrock), Kinesis/DynamoDB/S3/SageMaker
-  impls, the React SPA on Vercel, and the 5-stack AWS CDK.
+- **Built & runnable now (Phases 0–3):**
+  - **Ingestion** — idempotent additive aggregation, tenant-local bucketing, dedupe + raw log +
+    quarantine; the `channel` (`ONLINE`/`OFFLINE`) **first-class key dimension**
+    ([ADR-0010](docs/adr/0010-channel-as-first-class-dimension.md), Phase 2.5).
+  - **Read API & dashboard** — the two-mode read API (`channel`/window/`k`, window from/to);
+    `TenantScopeFilter` multi-tenant isolation; RFC 7807 errors; a config-driven served dashboard.
+  - **Synthetic data** (Phase 2.5) — a deterministic seasonal, channel-split generator (`make seed`/
+    `make trickle`) with HVE calendar, sparse category, outlier, and signed returns.
+  - **Central config** — `TopsalesProperties` binds the whole `topsales.*` tree; the dashboard reads
+    `GET /api/v1/config`.
+  - **Forecasting engine** (Phase 3) — `Forecaster` impls (seasonal-naive + additive Holt-Winters,
+    cold-start dispatch, prediction intervals + confidence); a batch that writes **versioned, ranked**
+    serving rows per tenant×window×channel (atomic swap + rollback, channels summed up to `all`); a
+    **time-series-CV WAPE/bias** backtest (`make eval`, [report](docs/forecast-eval-report.md)).
+  - Postgres + Flyway via Docker Compose.
+- **Designed behind the same interfaces (later phases / `aws` profile):** the forecast **read path**
+  + degradation chain + Redis cache (`ForecastProvider`, Phase 4), the grounded GenAI insight layer
+  (`InsightGenerator` → Bedrock, Phase 5), the Python/SageMaker global model + Croston behind the
+  `Forecaster` seam, Kinesis/DynamoDB/S3 impls, the React SPA on Vercel, and the 5-stack AWS CDK.
 
 ## License
 
