@@ -99,7 +99,7 @@ Success = **200** + `TopKResponse`. Enums on the wire are **lowercase** (`mode/w
 | IT-RD-33 | **Cross-tenant leakage:** tenant A ingests, tenant B reads B's path | B sees only B's data (empty if none); A's totals never appear under B |
 | IT-RD-34 | Tenant A tries to read A's path with B's data present | Only A's aggregates returned (scoping in the SQL `WHERE tenant_id`) |
 
-> **[P8] promotion.** `IT-RD-30/31/32` are realized end-to-end by the Testcontainers HTTP IT
+> **[P8] promotion.** `IT-RD-30/31/32` are realized end-to-end by the full-stack HTTP IT
 > `TenantIsolationIT` (`tenant-mismatch` 403 / missing-header 403 / unknown-tenant 404, asserting the
 > RFC-7807 `type`/`title`/`instance`), complementing the unit `TenantScopeFilterTest`. Cross-tenant
 > data leakage (`IT-RD-33/34`) is asserted by the Postman multi-tenant isolation folder (`t_demo` vs
@@ -142,10 +142,13 @@ Success = **200** + `TopKResponse`. Enums on the wire are **lowercase** (`mode/w
 > **Coverage status (P3–P5).** These cases were specified as HTTP/Testcontainers integration tests;
 > through P5 the behavior shipped covered by **unit** suites (run in `make test`) plus one real
 > serving-row IT. The **[P8] test-hardening pass** then promoted the highest-value `⚠️/❌` rows to real
-> Testcontainers `*IT` classes — `RedisCacheShellIT` (`IT-CA-01/03/05`, `IT-AI-05`),
-> `ForecastDegradationIT` (`IT-FC-02/07`), `TenantIsolationIT` (`IT-RD-30/31/32`). The **Status** column
-> records what is really implemented. Legend: **✅ unit** = covered by a unit test in `make test`;
-> **✅ IT** = real Testcontainers `*IT` (CI-only on this host; run in CI via `mvn verify`);
+> full-stack `*IT` classes — `RedisCacheShellIT` (`IT-CA-01/03/05`, `IT-AI-05`),
+> `ForecastDegradationIT` (`IT-FC-02/07`), `TenantIsolationIT` (`IT-RD-30/31/32`); these boot the app
+> against CI-provided Postgres + Redis services (`ci.yml`), since the Testcontainers Redis wiring would
+> not bind on the runner. The **Status** column records what is really implemented. Legend:
+> **✅ unit** = covered by a unit test in `make test`; **✅ IT** = a real `*IT` over live
+> Postgres/Redis (Testcontainers for the single-store repo ITs, CI service containers for the P8
+> full-stack ITs; CI-only on this host, run via `mvn verify`);
 > **⚠️** = partial / proxied (see note); **❌ gap** = no automated test yet. Two rows stay
 > carried-forward (documented, not built): `IT-FC-06` (WAPE on the committed seed *in CI*) and
 > `IT-FC-03` (concurrent mid-batch version-swap assertion).

@@ -27,7 +27,7 @@
 > allow-list (`localhost` + Vercel) on `/api/**`, a **React SPA** (Vite + Recharts) in `web/` deploying to
 > Vercel as the cross-origin prod UI, and a **synth-only AWS CDK** 5-stack fronted by **API Gateway → a
 > private ALB** with `aws-cdk-lib` assertion tests), and the **test-hardening + Postman gate** (Phase 8 —
-> real **Testcontainers** ITs over a shared Postgres+Redis base for the Redis cache (miss→hit /
+> real full-stack ITs (booted against CI-provided Postgres+Redis) over a shared base for the Redis cache (miss→hit /
 > version-bump invalidation / single-flight), HTTP forecast **degradation** (still 200, never fails
 > closed), and **multi-tenant isolation** (cross-tenant 403 / unknown-tenant 404); plus a **Newman**
 > coverage gate — `make demo` runs the whole Postman collection, enforced in CI). Next: presentation
@@ -144,8 +144,9 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
     least-privilege Bedrock invoke policy + an L1 `CfnGuardrail` + SSM model config; container images are
     non-root; the Monitoring stack alarms on the exact Phase-6 meter names. Nothing is deployed — `cdk
     synth` + assertions + `docker build` only.
-  - **Test-hardening & Postman gate** (Phase 8) — real **Testcontainers** integration tests over a
-    shared Postgres+Redis base (`AbstractPostgresRedisIT`): the Redis cache (miss→hit, version-bump
+  - **Test-hardening & Postman gate** (Phase 8) — real full-stack integration tests over a shared
+    base (`AbstractPostgresRedisIT`, booted against CI-provided Postgres + Redis services; locally the
+    `make up` compose stack): the Redis cache (miss→hit, version-bump
     invalidation, single-flight), HTTP forecast **degradation** (serving-table wiped → still `200`
     `degraded`/`pending`, never fails closed), and **multi-tenant isolation** (cross-tenant `403`
     tenant-mismatch / unknown-tenant `404`, RFC-7807 body). Plus a **Newman coverage gate** — `make
