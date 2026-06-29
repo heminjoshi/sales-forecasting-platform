@@ -13,6 +13,35 @@
     <artifactId>topsales-common</artifactId>
     <packaging>jar</packaging>
     <name>topsales-common</name>
-    <description>Domain model, DTOs, config, and interface seams (Forecaster, ForecastProvider, InsightGenerator, repository ports)</description>
+    <description>Domain model, DTOs, config, and interface seams (Forecaster, ForecastProvider, InsightGenerator, repository ports). Also ships the Flyway migrations on the classpath (db/migration) so every module shares one schema.</description>
+
+    <dependencies>
+        <!-- DTO (de)serialization. Records + java.time on the wire. Versions managed by the Boot parent. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
+        <!-- Flyway migrations live here (src/main/resources/db/migration) so both the bootable
+             app and each module's Testcontainers ITs resolve one schema from the classpath. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
 </project>

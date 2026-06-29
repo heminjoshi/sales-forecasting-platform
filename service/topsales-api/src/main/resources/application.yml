@@ -4,7 +4,29 @@ spring:
   profiles:
     default: local
 
+  # Local stack from local/docker-compose.yml (Postgres 16). Overridden by the `aws` profile (designed).
+  datasource:
+    url: jdbc:postgresql://localhost:5432/topsales
+    username: topsales
+    password: topsales
+  # Flyway owns the schema; migrations ship on the classpath from topsales-common (db/migration).
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  # Omit nulls (intervals/confidence are absent in actuals/pending responses).
+  jackson:
+    default-property-inclusion: non_null
+
 server:
   port: 8080
 
-# Phase 2+ adds: datasource (Postgres), Redis, Flyway, profile-specific (local|aws) wiring.
+# Application config (docs/lld.md §10). Cache values are placeholders until Phase 4 (Redis).
+topsales:
+  forecast:
+    freshness-slo: 36h
+    history-days: 730
+  cache:
+    base-ttl: 15m
+    jitter-pct: 20
+  rawlog:
+    dir: ./data/rawlog       # local S3 stand-in for the immutable raw event log

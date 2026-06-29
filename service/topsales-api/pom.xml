@@ -13,7 +13,7 @@
     <artifactId>topsales-api</artifactId>
     <packaging>jar</packaging>
     <name>topsales-api</name>
-    <description>REST API: controllers, top-k assembly, caching, degradation, tenant filter, actuator, and the served dashboard</description>
+    <description>REST API and the only bootable app: read controllers, top-k assembly, degradation, tenant filter, the served dashboard. Aggregates the other modules as libraries so a single run serves ingest + read.</description>
 
     <dependencies>
         <dependency>
@@ -21,14 +21,47 @@
             <artifactId>topsales-common</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- Pulls in the ingestion controller + the JDBC repository @Repository beans, which the
+             app discovers via component scan of com.topsales. This is why one `make run` serves
+             both POST /events and the read endpoint. -->
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-ingestion</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
