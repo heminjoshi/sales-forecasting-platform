@@ -14,11 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -26,15 +24,17 @@ import org.springframework.transaction.support.TransactionTemplate;
  * versioned, copy-on-write swap (DR-1): new rows land at {@code max(version)+1}, then the active
  * pointer is flipped in one statement so the last-good version stays readable until the instant of
  * the swap. Reads join {@code serving_active_version} to the rows of the active version.
- * docs/lld.md §3, §8. Profiled {@code local}; {@code aws} swaps in DynamoDB behind the same port.
+ * docs/lld.md §3, §8. {@code aws} swaps in DynamoDB behind the same port.
+ *
+ * <p>Not a component-scanned bean: it takes a plain {@code int versionKeep}, so the forecast batch
+ * constructs it explicitly in {@code BatchConfig} (and the Phase-4 read path will wire it from
+ * config). This keeps it out of the api's bean graph until the read path actually needs it.
  *
  * <p>The whole write runs in one {@link TransactionTemplate} (insert → swap → prune are
  * all-or-nothing). Like {@code IngestionService}, this drives the transaction explicitly rather than
  * via {@code @Transactional} so atomicity holds even when the repository is constructed directly
  * (e.g. in the integration test) without a Spring proxy.
  */
-@Repository
-@Profile("local")
 public class JdbcServingTableRepository implements ServingTableRepository {
 
     /** Next version for a pk: {@code max+1}, not {@code active+1}, so a rerun after a rollback never collides. */
