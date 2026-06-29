@@ -1,13 +1,14 @@
 package com.topsales.api.web;
 
+import com.topsales.api.cache.CacheShell;
 import com.topsales.api.error.TenantMismatchException;
 import com.topsales.api.service.ActualsService;
+import com.topsales.api.service.ForecastReadService;
 import com.topsales.common.api.TopKQuery;
 import com.topsales.common.api.TopKResponse;
 import com.topsales.common.config.TopsalesProperties;
 import com.topsales.common.domain.ChannelFilter;
 import com.topsales.common.domain.Mode;
-import com.topsales.common.domain.Status;
 import com.topsales.common.domain.Window;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,19 +22,27 @@ import org.springframework.web.bind.annotation.RestController;
  * The read/serving endpoint the dashboard polls (docs/lld.md §13):
  * {@code GET /api/v1/tenants/{tenantId}/top-categories}.
  *
- * <p>Phase 2 is actuals-only. {@code mode=actuals} returns the ranked actuals with
- * {@code status=fresh}. {@code mode=forecast} returns the <em>same</em> actuals aggregation but with
- * {@code status=pending} — the always-available floor and a one-line nod to the degradation chain;
- * the real serving-row lookup and last-good/seasonal-naive fallbacks arrive in Phase 4.
+ * <p>{@code mode=actuals} returns the ranked actuals with {@code status=fresh}, bypassing the
+ * forecast cache and degradation chain. {@code mode=forecast} runs the cache-aside shell over the
+ * {@link ForecastReadService} degradation ladder (fresh → stale → degraded → pending, §5), so the
+ * status reflects the best available source rather than a fixed label.
  */
 @RestController
 public class TopCategoriesController {
 
     private final ActualsService actualsService;
+    private final ForecastReadService forecastReadService;
+    private final CacheShell cacheShell;
     private final TopsalesProperties props;
 
-    public TopCategoriesController(ActualsService actualsService, TopsalesProperties props) {
+    public TopCategoriesController(
+            ActualsService actualsService,
+            ForecastReadService forecastReadService,
+            CacheShell cacheShell,
+            TopsalesProperties props) {
         this.actualsService = actualsService;
+        this.forecastReadService = forecastReadService;
+        this.cacheShell = cacheShell;
         this.props = props;
     }
 
@@ -70,24 +79,13 @@ public class TopCategoriesController {
         }
 
         TopKQuery query = new TopKQuery(tenantId, parsedWindow, parsedMode, kValue, parsedChannel);
-        TopKResponse response = actualsService.topCategories(query); // 404 if unknown tenant
 
+        // Actuals bypass the forecast cache + degradation chain — always fresh from aggregates (§5).
+        // Forecast reads run the cache-aside shell over the degradation ladder; the supplier is the
+        // cache-miss compute. Both still raise UnknownTenantException → 404 for an unknown tenant.
         if (parsedMode == Mode.FORECAST) {
-            // No serving rows yet (Phase 2): same aggregation, honest pending status.
-            response =
-                    new TopKResponse(
-                            response.tenantId(),
-                            response.mode(),
-                            response.window(),
-                            response.channel(),
-                            response.k(),
-                            Status.PENDING,
-                            response.asOf(),
-                            response.windowFrom(),
-                            response.windowTo(),
-                            response.insight(),
-                            response.items());
+            return cacheShell.getOrCompute(query, () -> forecastReadService.handle(query));
         }
-        return response;
+        return actualsService.topCategories(query); // 404 if unknown tenant
     }
 }
