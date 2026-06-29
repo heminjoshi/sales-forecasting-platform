@@ -29,11 +29,16 @@
             <version>${project.version}</version>
         </dependency>
         <!-- The WAPE eval backtests on the committed seed by regenerating it in-memory via the
-             generator's deterministic SeasonalityModel (pure JVM, no DB). -->
+             generator's deterministic SeasonalityModel (pure JVM, no DB). Marked optional so it does
+             NOT propagate transitively: topsales-api depends on this module (to reuse
+             SeasonalNaiveForecaster for the Phase-4 degradation fallback) but must not drag the
+             generator (and its Spring beans) onto the read app's classpath. eval still compiles/runs
+             here because optional deps remain on this module's own classpath. -->
         <dependency>
             <groupId>com.topsales</groupId>
             <artifactId>topsales-datagen</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Core context + JdbcTemplate for the batch app (no web server). -->
@@ -45,6 +50,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
+        <!-- Phase 4: after a successful serving-row swap the batch bumps the per-tenant cache version
+             (Redis INCR) so the read path's cache invalidates at once (docs/lld.md §7). Wired only in
+             the local profile; the batch still runs with Redis absent (no-op CacheVersion fallback). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -77,10 +89,19 @@
 
     <build>
         <plugins>
-            <!-- `make forecast` → spring-boot:run boots BatchApplication (web-less) and exits. -->
+            <!-- `make forecast` → spring-boot:run boots BatchApplication (web-less) and exits.
+                 The repackaged executable jar is attached under the `app` classifier so the *main*
+                 artifact stays a plain library jar — topsales-api depends on this module to reuse
+                 SeasonalNaiveForecaster (Phase-4 degradation fallback), and a Boot fat jar (classes
+                 under BOOT-INF/classes) is not usable as a compile/runtime dependency. Mirrors
+                 topsales-datagen. spring-boot:run runs from target/classes, so `make forecast` is
+                 unaffected. -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <classifier>app</classifier>
+                </configuration>
             </plugin>
             <!-- `make eval` → exec:java runs the pure-JVM EvalMain (no Spring, no DB). -->
             <plugin>
