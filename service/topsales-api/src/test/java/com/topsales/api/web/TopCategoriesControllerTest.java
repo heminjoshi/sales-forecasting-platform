@@ -12,12 +12,14 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 import com.topsales.api.service.ActualsService;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKResponse;
+import com.topsales.common.config.TopsalesProperties;
 import com.topsales.common.domain.ChannelFilter;
 import com.topsales.common.domain.Mode;
 import com.topsales.common.domain.Status;
 import com.topsales.common.domain.Window;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -34,11 +36,21 @@ class TopCategoriesControllerTest {
     private MockMvc mvc;
     private ActualsService actualsService;
 
+    // Mirrors application.yml's topsales.read.* / topsales.window-days.* (the defaults + bounds).
+    private static final TopsalesProperties PROPS =
+            new TopsalesProperties(
+                    new TopsalesProperties.Read(
+                            10, 1, 50, List.of(5, 7, 10), "month", "forecast", "all"),
+                    new TopsalesProperties.WindowDays(7, 30, 365),
+                    new TopsalesProperties.Forecast(Duration.ofHours(36), 730),
+                    new TopsalesProperties.Cache(Duration.ofMinutes(15), 20),
+                    new TopsalesProperties.Rawlog("./data/rawlog"));
+
     @BeforeEach
     void setUp() {
         actualsService = mock(ActualsService.class);
         mvc =
-                standaloneSetup(new TopCategoriesController(actualsService))
+                standaloneSetup(new TopCategoriesController(actualsService, PROPS))
                         .setControllerAdvice(new ApiExceptionHandler())
                         .build();
     }

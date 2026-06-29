@@ -2,6 +2,7 @@ package com.topsales.ingestion.repo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.topsales.common.config.TopsalesProperties;
 import com.topsales.common.domain.Channel;
 import com.topsales.common.domain.EventType;
 import com.topsales.common.domain.SaleEvent;
@@ -55,7 +56,10 @@ class JdbcEventLedgerIT {
     void setUp() {
         jdbc.update("TRUNCATE events");
         ObjectMapper mapper = JsonMapper.builder().build();
-        ledger = new JdbcEventLedger(jdbc, mapper, rawLogDir.toString());
+        TopsalesProperties props =
+                new TopsalesProperties(
+                        null, null, null, null, new TopsalesProperties.Rawlog(rawLogDir.toString()));
+        ledger = new JdbcEventLedger(jdbc, mapper, props);
     }
 
     private SaleEvent sale() {

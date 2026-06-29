@@ -20,8 +20,24 @@ spring:
 server:
   port: 8080
 
-# Application config (docs/lld.md §10). Cache values are placeholders until Phase 4 (Redis).
+# Central application config (docs/lld.md §10) — the single place every tweakable read-side variable
+# lives, bound into TopsalesProperties. Cache values are placeholders until Phase 4 (Redis).
 topsales:
+  # Read/serving endpoint: the dashboard's k choices + the request-param defaults (parsed via the
+  # enums' from(...), so the string values are case-insensitive on the wire).
+  read:
+    k-default: 10
+    k-min: 1
+    k-max: 50
+    k-options: [5, 7, 10]
+    window-default: month
+    mode-default: forecast
+    channel-default: all
+  # Trailing window length in calendar days, by window.
+  window-days:
+    week: 7
+    month: 30
+    year: 365
   forecast:
     freshness-slo: 36h
     history-days: 730

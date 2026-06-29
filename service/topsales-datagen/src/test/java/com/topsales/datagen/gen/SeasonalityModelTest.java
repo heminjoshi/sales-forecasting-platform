@@ -6,7 +6,9 @@ import com.topsales.common.domain.AggregateRow;
 import com.topsales.common.domain.Channel;
 import com.topsales.datagen.SeedConfig;
 import com.topsales.datagen.SeedConfig.CategorySpec;
+import com.topsales.datagen.SeedConfig.HveSpec;
 import com.topsales.datagen.SeedConfig.OutlierSpec;
+import com.topsales.datagen.SeedConfig.SeasonalitySpec;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -27,6 +29,16 @@ class SeasonalityModelTest {
     private static final CategorySpec COLLECTIBLES =
             new CategorySpec("cat_collectibles", 60, 240, 0.8, true);
 
+    private static final SeasonalitySpec SEASONALITY =
+            new SeasonalitySpec(
+                    new double[] {1.00, 1.05, 1.08, 1.10, 1.18, 1.12, 0.95},
+                    new double[] {0.85, 0.88, 0.92, 1.00, 1.20, 1.45, 1.20},
+                    new double[] {0.88, 0.86, 0.96, 1.00, 1.04, 0.98, 1.10, 1.00, 0.98, 1.06, 1.20, 1.25},
+                    0.2,
+                    0.18);
+    private static final HveSpec HVE =
+            new HveSpec(5.0, 3.0, 1.5, 6.0, 4.0, 1.5, 1.3, 2.0, 0.7);
+
     private SeedConfig config() {
         return new SeedConfig(
                 42L,
@@ -35,7 +47,9 @@ class SeasonalityModelTest {
                 0.15,
                 0.07,
                 List.of(ELECTRONICS, COLLECTIBLES),
-                new OutlierSpec("cat_home", "ONLINE", 70, 10));
+                new OutlierSpec("cat_home", "ONLINE", 70, 10),
+                SEASONALITY,
+                HVE);
     }
 
     private SeasonalityModel model() {

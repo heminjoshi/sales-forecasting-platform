@@ -292,6 +292,47 @@
     }
   }
 
+  // Used when GET /api/v1/config can't be reached, so the demo still renders honest controls.
+  const FALLBACK_CONFIG = {
+    kOptions: [5, 7, 10],
+    kDefault: 10,
+    windowOptions: ["week", "month", "year"],
+    windowDefault: "month",
+    channelOptions: ["all", "online", "offline"],
+    channelDefault: "all",
+  };
+
+  // Build a <select>'s <option>s via createElement + textContent (never innerHTML) — option labels
+  // are config-controlled, but we keep the untrusted-input rule uniform across the dashboard.
+  function setSelectOptions(selectEl, values, selected) {
+    selectEl.replaceChildren();
+    for (const v of values) {
+      const opt = document.createElement("option");
+      opt.value = String(v);
+      opt.textContent = String(v);
+      if (String(v) === String(selected)) opt.selected = true;
+      selectEl.appendChild(opt);
+    }
+  }
+
+  function applyConfig(cfg) {
+    setSelectOptions(els.k, cfg.kOptions, cfg.kDefault);
+    setSelectOptions(els.window, cfg.windowOptions, cfg.windowDefault);
+    setSelectOptions(els.channel, cfg.channelOptions, cfg.channelDefault);
+  }
+
+  // Build the k / window / channel controls from GET /api/v1/config (central TopsalesProperties),
+  // falling back to sane defaults so the demo always renders.
+  async function populateConfig() {
+    try {
+      const res = await fetch("/api/v1/config", { headers: { Accept: "application/json" } });
+      const body = res.ok ? await res.json() : null;
+      applyConfig(body && Array.isArray(body.kOptions) ? body : FALLBACK_CONFIG);
+    } catch (_) {
+      applyConfig(FALLBACK_CONFIG);
+    }
+  }
+
   // Populate the tenant picker from GET /api/v1/tenants, then load. Falls back to a single
   // t_demo option if the catalog can't be reached, so the demo still renders.
   async function populateTenants() {
@@ -313,6 +354,7 @@
   // Reload immediately when the tenant changes — convenient for flipping between demo tenants.
   els.tenantId.addEventListener("change", load);
 
-  // Populate the tenant dropdown, then auto-load once so the demo shows data immediately.
-  populateTenants().then(load);
+  // Build the config-driven controls and the tenant dropdown, then auto-load once so the demo shows
+  // data immediately.
+  Promise.all([populateTenants(), populateConfig()]).then(load);
 })();

@@ -11,6 +11,7 @@ import com.topsales.api.error.UnknownTenantException;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKQuery;
 import com.topsales.common.api.TopKResponse;
+import com.topsales.common.config.TopsalesProperties;
 import com.topsales.common.domain.AggregateRow;
 import com.topsales.common.domain.Channel;
 import com.topsales.common.domain.ChannelFilter;
@@ -22,6 +23,7 @@ import com.topsales.common.repository.AggregateRepository;
 import com.topsales.common.repository.TenantConfigRepository;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -43,11 +45,21 @@ class ActualsServiceTest {
     private TenantConfigRepository tenants;
     private ActualsService service;
 
+    // Mirrors application.yml's topsales.window-days.* (week=7, month=30, year=365).
+    private static final TopsalesProperties PROPS =
+            new TopsalesProperties(
+                    new TopsalesProperties.Read(
+                            10, 1, 50, List.of(5, 7, 10), "month", "forecast", "all"),
+                    new TopsalesProperties.WindowDays(7, 30, 365),
+                    new TopsalesProperties.Forecast(Duration.ofHours(36), 730),
+                    new TopsalesProperties.Cache(Duration.ofMinutes(15), 20),
+                    new TopsalesProperties.Rawlog("./data/rawlog"));
+
     @BeforeEach
     void setUp() {
         aggregates = mock(AggregateRepository.class);
         tenants = mock(TenantConfigRepository.class);
-        service = new ActualsService(aggregates, tenants);
+        service = new ActualsService(aggregates, tenants, PROPS);
         when(tenants.find(TENANT))
                 .thenReturn(Optional.of(new TenantConfig(TENANT, ZONE, "USD")));
     }

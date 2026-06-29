@@ -16,6 +16,14 @@
     <description>Domain model, DTOs, config, and interface seams (Forecaster, ForecastProvider, InsightGenerator, repository ports). Also ships the Flyway migrations on the classpath (db/migration) so every module shares one schema.</description>
 
     <dependencies>
+        <!-- Spring Boot core: provides @ConfigurationProperties so the central TopsalesProperties
+             config surface can live here (com.topsales.common.config) and be shared by every module.
+             Core only — no starter/web/autoconfigure pulled onto the library classpath. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot</artifactId>
+        </dependency>
+
         <!-- Wire contract on the DTOs (@JsonValue/@JsonCreator/@JsonInclude). The annotations
              package is shared across Jackson 2 and Boot 4.1's Jackson 3, so the records serialize
              correctly through Spring's Jackson 3 mapper without pulling a second databind onto the

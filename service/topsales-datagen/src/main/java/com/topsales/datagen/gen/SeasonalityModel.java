@@ -32,17 +32,9 @@ import java.util.SplittableRandom;
  */
 public final class SeasonalityModel {
 
-    // Day-of-week factors (index = DayOfWeek.getValue() - 1, Mon..Sun). Offline lifts on weekends;
-    // online is flatter with a mid-week bump.
-    private static final double[] WEEKLY_ONLINE = {1.00, 1.05, 1.08, 1.10, 1.18, 1.12, 0.95};
-    private static final double[] WEEKLY_OFFLINE = {0.85, 0.88, 0.92, 1.00, 1.20, 1.45, 1.20};
-
-    // Month factors (index = month - 1). A broad retail shape; HVE handles the sharp spikes.
-    private static final double[] MONTHLY = {
-        0.88, 0.86, 0.96, 1.00, 1.04, 0.98, 1.10, 1.00, 0.98, 1.06, 1.20, 1.25
-    };
-
     private final SeedConfig config;
+    private final SeedConfig.SeasonalitySpec seasonality;
+    private final HveCalendar hve;
     private final String tenantId;
     private final String currency;
     private final LocalDate windowStart;
@@ -56,6 +48,10 @@ public final class SeasonalityModel {
             LocalDate windowStart,
             LocalDate windowEnd) {
         this.config = config;
+        // Seasonality factors + HVE magnitudes are config (data/seed/seed-config.json), not constants:
+        // weekly[index = DayOfWeek.getValue() - 1, Mon..Sun], monthly[index = month - 1].
+        this.seasonality = config.seasonality();
+        this.hve = new HveCalendar(config.hve());
         this.tenantId = tenantId;
         this.currency = currency;
         this.windowStart = windowStart;
@@ -123,20 +119,21 @@ public final class SeasonalityModel {
 
     /** The model value for one cell, including HVE, the one-off outlier, and the sparse gate. */
     public double grossValue(CategorySpec cat, Channel channel, LocalDate date) {
-        if (cat.sparse() && unit(cat, channel, date, "sparse-gate") >= 0.18) {
+        if (cat.sparse() && unit(cat, channel, date, "sparse-gate") >= seasonality.sparseHitRate()) {
             return 0.0; // intermittent demand: most days are empty
         }
         double channelShare = channel == Channel.ONLINE ? cat.onlineShare() : 1.0 - cat.onlineShare();
         double years = ChronoUnit.DAYS.between(windowStart, date) / 365.0;
         double trend = 1.0 + config.trendAnnual() * years;
         double weekly =
-                (channel == Channel.ONLINE ? WEEKLY_ONLINE : WEEKLY_OFFLINE)[
+                (channel == Channel.ONLINE ? seasonality.weeklyOnline() : seasonality.weeklyOffline())[
                         date.getDayOfWeek().getValue() - 1];
-        double monthly = MONTHLY[date.getMonthValue() - 1];
-        double hve = HveCalendar.multiplier(date, channel);
-        double noise = 0.9 + 0.2 * unit(cat, channel, date, "noise");
+        double monthly = seasonality.monthly()[date.getMonthValue() - 1];
+        double hveMultiplier = hve.multiplier(date, channel);
+        // noiseBand width centered on 1.0: e.g. 0.2 → [0.9, 1.1).
+        double noise = (1.0 - seasonality.noiseBand() / 2.0) + seasonality.noiseBand() * unit(cat, channel, date, "noise");
 
-        double value = cat.base() * channelShare * trend * weekly * monthly * hve * noise;
+        double value = cat.base() * channelShare * trend * weekly * monthly * hveMultiplier * noise;
 
         if (isOutlier(cat, channel, date)) {
             value *= config.outlier().multiplier();

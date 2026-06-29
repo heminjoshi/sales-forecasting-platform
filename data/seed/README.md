@@ -25,6 +25,8 @@ make trickle   # posts live SaleEvents for "today" → the dashboard moves
 | `returnRate` | Fraction of gross value netted out as signed returns (financial-domain correctness). |
 | `categories[]` | `base` daily level, `aov` (avg order value → order counts), `onlineShare` (channel split), `sparse` (intermittent → cold-start). |
 | `outlier` | A single one-off spike on a non-HVE day (distinct from recurring seasonality → outlier-dampening reasoning). |
+| `seasonality` | Recurring-seasonality tunables read by `SeasonalityModel`: `weeklyOnline`/`weeklyOffline` (7 day-of-week factors, Mon..Sun), `monthly` (12 month factors, Jan..Dec), `noiseBand` (multiplicative noise width centered on 1.0 — `0.2` → `[0.9, 1.1)`), `sparseHitRate` (fraction of cells a `sparse` category fires on, e.g. `0.18`). |
+| `hve` | High-volume-event multipliers read by `HveCalendar` (calendar anchors stay in code; only magnitudes are config): `blackFridayOffline`/`blackFridayOnline`, `cyberMondayOffline`/`cyberMondayOnline`, `primeDayOnline`/`primeDayOffline`, and the December ramp `decemberRampStart` (Dec 1) → `decemberRampEnd` (Dec 24) then `decemberPostDip` (from Dec 26). |
 
 ## Features baked into the data (each maps to a behavior to demonstrate)
 

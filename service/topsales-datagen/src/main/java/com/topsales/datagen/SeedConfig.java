@@ -14,7 +14,9 @@ public record SeedConfig(
         double trendAnnual,
         double returnRate,
         List<CategorySpec> categories,
-        OutlierSpec outlier) {
+        OutlierSpec outlier,
+        SeasonalitySpec seasonality,
+        HveSpec hve) {
 
     /** One demo category: baseline level, average order value, channel split, and sparsity. */
     public record CategorySpec(
@@ -22,4 +24,34 @@ public record SeedConfig(
 
     /** A single one-off spike on a non-HVE day (distinct from recurring seasonality). */
     public record OutlierSpec(String category, String channel, int daysAgo, double multiplier) {}
+
+    /**
+     * The repeating-seasonality tunables read by {@code SeasonalityModel}: per-day-of-week factors
+     * (Mon..Sun, length 7), per-month factors (Jan..Dec, length 12), the multiplicative noise band
+     * width (e.g. {@code 0.2} → noise in {@code [0.9, 1.1)}), and the sparse-category hit rate (the
+     * fraction of {@code (category, channel, day)} cells an intermittent category fires on).
+     */
+    public record SeasonalitySpec(
+            double[] weeklyOnline,
+            double[] weeklyOffline,
+            double[] monthly,
+            double noiseBand,
+            double sparseHitRate) {}
+
+    /**
+     * High-volume-event multipliers read by {@code HveCalendar} (the calendar anchors stay in code;
+     * only the channel-split magnitudes are config). The December ramp interpolates linearly from
+     * {@code decemberRampStart} (Dec 1) to {@code decemberRampEnd} (Dec 24), then dips to
+     * {@code decemberPostDip} from Dec 26.
+     */
+    public record HveSpec(
+            double blackFridayOffline,
+            double blackFridayOnline,
+            double cyberMondayOffline,
+            double cyberMondayOnline,
+            double primeDayOnline,
+            double primeDayOffline,
+            double decemberRampStart,
+            double decemberRampEnd,
+            double decemberPostDip) {}
 }
