@@ -239,4 +239,27 @@ Unit-level with a mocked `BedrockRuntimeClient` (no Testcontainers); the read mu
 | IT-CO-05 | Exposed correlation header | response carries `Access-Control-Expose-Headers: X-Request-Id` so the cross-origin SPA can read the echoed request id | spec — `@Disabled` until promoted |
 | IT-CO-06 | No credentialed CORS | response does **not** set `Access-Control-Allow-Credentials: true` — auth is header-based (`X-Tenant-Id`), not cookies | spec — `@Disabled` until promoted |
 | IT-CO-07 | Allow-list config binds | `topsales.web.cors.allowed-origins` binds to `props.web().cors().allowedOrigins()` (localhost + Vercel) and feeds the `WebMvcConfigurer` mapping | ✅ unit — config-binding test on the allow-list property |
+
+---
+
+## 10. Infrastructure / AWS CDK (synth assertions) [P7]
+
+> The infra is **synth-only** (account-agnostic, never deployed). These cases are realized as
+> `aws-cdk-lib/assertions` (`Template.fromStack`) tests under `infra/test/` plus a `npx cdk synth`, run
+> by `npm test` / the `infra.yml` CI job — **not** Maven. `✅ jest` in the Status column = an asserted
+> CDK template test; `✅ synth` = rendered green by `cdk synth`. (§9 above is the UI PR's CORS section; this is §10.)
+
+| ID | Scenario | Expected | Status |
+|---|---|---|---|
+| IT-IF-01 | Account-agnostic synth | `npx cdk synth` renders all 5 stacks with `env` unset — no `fromLookup`, no creds; region/account appear only as CFN pseudo-param **tokens** | ✅ synth (`cdk synth -c imageTag=…`) |
+| IT-IF-02 | Network — private-pull endpoints | VPC (×1) + an S3 **gateway** endpoint + ≥7 **interface** endpoints incl. a `bedrock-runtime` service (proves the typed-enum, not a region-interpolated string) | ✅ jest `network-stack.test` |
+| IT-IF-03 | Storage — durable-state guards | DynamoDB `PAY_PER_REQUEST` + PITR; raw-log S3 block-public + versioned + `Retain`; Aurora `aurora-postgresql`; SQS DLQ; ElastiCache Redis (at-rest + transit encryption) | ✅ jest `storage-stack.test` |
+| IT-IF-04 | Intelligence — governance surface | exactly **one** Bedrock `Guardrail` (content + topic DENY policies); model-config `SSM::Parameter` at `/topsales/intelligence/model-config`; SageMaker model-package-group + execution role; ML ECR + artifact bucket | ✅ jest `intelligence-stack.test` |
+| IT-IF-05 | **Least-privilege Bedrock IAM** | the `InvokeModel` grant resource is the **single model id** (`…foundation-model/anthropic.claude-3-haiku-…`), **not** `foundation-model/*` | ✅ jest `intelligence-stack.test` (security-review regression) |
+| IT-IF-06 | **Metric-name contract gate** | a `CloudWatch::Alarm` exists for **each** Phase-6 dotted meter name (`http.server.requests`, `topsales.read.total`, `topsales.insight.fallback.total`, `topsales.forecast.freshness.seconds`, `topsales.forecast.provider.faults.total`) under namespace `topsales-api`, sourced from `lib/metric-names.ts` — must match `MetricNames.java` | ✅ jest `monitoring-stack.test` |
+| IT-IF-07 | Application — imageTag flow | 3 app ECR repos (serving/consumer/forecaster); the git-sha `imageTag` flows into the container image URI token; forecaster `Events::Rule` (cron); serving task role carries the Bedrock policy + DynamoDB read | ✅ jest `application-stack.test` |
+| IT-IF-08 | **Ingress posture (API GW → private ALB)** | the public edge is an API Gateway HTTP API (`ApiGatewayV2::Api` `ProtocolType=HTTP`, ×1) with a `VpcLink` (×1); the ALB is **internal** (`Scheme=internal`); the integration is `HTTP_PROXY` over `VPC_LINK` — the compute tier is never internet-facing | ✅ jest `application-stack.test` |
+| IT-IF-09 | No SPA hosting in CDK (ADR-0009) | `CloudFront::Distribution` count = 0; the CORS-allow-listed Vercel origin is recorded as a `CfnOutput` (SPA hosts on Vercel, outside AWS) | ✅ jest `application-stack.test` |
+| IT-IF-10 | **Non-root containers** | every Dockerfile under `docker/` declares a non-root `USER` (build runs as an unprivileged uid) | ⚠️ manual/CI (`docker.yml` build); grep-asserted |
+| IT-IF-11 | CLI/lib lockstep | `aws-cdk-lib` is pinned exact (`2.177.0`) and the `aws-cdk` CLI matches — guards the classic cloud-assembly version-drift synth break | ✅ manual (`package.json` pin + `package-lock.json`) |
 </content>

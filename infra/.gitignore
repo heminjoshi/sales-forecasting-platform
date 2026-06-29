@@ -1,0 +1,14 @@
+# CDK synth output
+cdk.out/
+
+# dependencies
+node_modules/
+
+# compiled JS / declarations emitted by tsc (sources are .ts)
+*.js
+*.d.ts
+!jest.config.js
+
+# logs / misc
+*.log
+.DS_Store

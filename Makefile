@@ -55,4 +55,4 @@ demo:
 
 # Validate the CDK — wired in Phase 7 (becomes: cd infra && npm ci && npx cdk synth).
 synth:
-	@echo "synth: not yet implemented — CDK lands in Phase 7 (infra/)"
+	cd infra && npm ci && npx cdk synth
