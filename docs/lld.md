@@ -64,7 +64,7 @@ CREATE TABLE events (
 );
 CREATE INDEX ix_events_tenant_bucket ON events (tenant_id, bucket_date);
 
--- V2__aggregates.sql  (authoritative rollup; PK = (tenant, category, day))
+-- V2__aggregates.sql  (authoritative rollup; PK = (tenant, category, day); + channel in V6)
 CREATE TABLE aggregates (
   tenant_id    text          NOT NULL,
   category_id  text          NOT NULL,
@@ -79,7 +79,7 @@ CREATE INDEX ix_agg_tenant_cat_date ON aggregates (tenant_id, category_id, bucke
 
 -- V3__serving.sql  (precomputed top-k; versioned for atomic swap + rollback)
 CREATE TABLE serving_rows (
-  pk             text          NOT NULL,           -- 'tenant#window#mode'
+  pk             text          NOT NULL,           -- 'tenant#window#mode' (+'#channel' after V6)
   version        integer       NOT NULL,
   rank           integer       NOT NULL,           -- 1..k
   category_id    text          NOT NULL,
@@ -93,10 +93,18 @@ CREATE TABLE serving_rows (
 );
 
 CREATE TABLE serving_active_version (
-  pk             text PRIMARY KEY,                 -- 'tenant#window#mode'
+  pk             text PRIMARY KEY,                 -- 'tenant#window#mode' (+'#channel' after V6)
   active_version integer NOT NULL,
   as_of          timestamptz NOT NULL
 );
+
+-- V6__channel.sql  (Phase 2.5 — channel as a first-class key dimension; ADR-0010)
+-- The Phase 2 walking skeleton ships the 3-tuple aggregate key above; this migration widens it.
+ALTER TABLE aggregates ADD COLUMN channel text NOT NULL DEFAULT 'all';  -- 'ONLINE' | 'OFFLINE'
+ALTER TABLE aggregates DROP CONSTRAINT aggregates_pkey,
+  ADD PRIMARY KEY (tenant_id, category_id, channel, bucket_date);
+-- serving_rows.pk / serving_active_version.pk gain a '#channel' suffix → 'tenant#window#mode#channel'
+-- ('all' is the summed rollup; forecasts are fit at channel grain and summed up to 'all').
 ```
 
 **Atomic swap.** The batch writes all `k` rows of a new `version` into `serving_rows`, then a single
@@ -110,7 +118,7 @@ WHERE r.pk = :pk ORDER BY r.rank;   -- one keyed scan = the whole top-k
 ```
 
 **Cloud mapping (`aws`):** `aggregates` → Aurora Postgres; `serving_rows` → DynamoDB
-(`pk=tenant#window#mode`, `sk=zero-padded rank`, item carries `version`/`as_of`); `events` raw log → S3.
+(`pk=tenant#window#mode#channel`, `sk=zero-padded rank`, item carries `version`/`as_of`); `events` raw log → S3.
 Same logical shapes; see `docs/hld.md` §19.
 
 ---
@@ -136,7 +144,8 @@ Local stand-in for the Kinesis path. Accepts one event or a batch; idempotent.
 
 ### 3.2 Read — `GET /api/v1/tenants/{tenantId}/top-categories`
 Query params: `mode=forecast|actuals` (default `forecast`), `window=week|month|year`
-(default `month`; `quarter` reserved), `k=1..50` (default `10`).
+(default `month`; `quarter` reserved), `channel=all|online|offline` (default `all`; added in
+Phase 2.5 — see ADR-0010), `k=1..50` (default `10`). `channel=all` is the summed rollup.
 
 Returns `200` + `TopKResponse` (§13). Always returns a body with a `status` — reads never fail closed
 (§5). `404` only if the tenant is unknown; `403` if the path tenant ≠ authenticated tenant.
@@ -274,7 +283,8 @@ result independent of arrival order/lateness — each day-bucket is computed ind
 
 ## 8. Forecast batch (`ForecasterJob`)
 
-Triggered by `make forecast` locally (EventBridge cron in `aws`). Per `(tenant, category)`:
+Triggered by `make forecast` locally (EventBridge cron in `aws`). Per `(tenant, category, channel)`
+(Phase 2.5; pre-2.5 it is per `(tenant, category)`), then summed up to the `all` channel:
 
 1. `AggregateRepository.rangeByCategory` → history (default trailing 730 days).
 2. Pick a `Forecaster`: `HoltWintersForecaster` when ≥1 full season of history; else
@@ -378,14 +388,15 @@ The dashboard is a thin, read-only view over the API (no business logic). Respon
 
 ```jsonc
 // TopKResponse  (GET .../top-categories)
-{ "tenantId":"t_123","mode":"forecast","window":"month","k":10,
+{ "tenantId":"t_123","mode":"forecast","window":"month","channel":"all","k":10,
   "status":"fresh|stale|pending|degraded","asOf":"2026-06-28T06:00:00Z",
   "insight":"Office Supplies leads this month (~+12%); Electronics follows.",
   "items":[ { "rank":1,"category":"Office Supplies","value":5400.00,"deltaVsPrior":0.12,
               "confidence":"HIGH","interval":{"low":4900,"high":5900} } ] }
 ```
 
-- **Controls:** `mode` (forecast/actuals toggle), `window` (week/month/year), `k`.
+- **Controls:** `mode` (forecast/actuals toggle), `window` (week/month/year), `channel`
+  (all/online/offline toggle — Phase 2.5), `k`.
 - **Renders:** ranked table (rank, category, value, Δ vs prior, confidence), forecast-vs-actual chart
   (Chart.js CDN, demo), the `insight` line, and a **status badge** `fresh|stale|pending|degraded` +
   the `asOf` timestamp.

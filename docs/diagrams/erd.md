@@ -3,6 +3,11 @@
 The built (`local`) schema. DDL in [`../lld.md`](../lld.md) §2. `serving_active_version` is the
 pointer that makes a batch refresh an atomic swap (and a rollback a flip).
 
+> **Phase 2.5 (channel — ADR-0010):** a follow-up migration adds `channel text` to the **`AGGREGATES`
+> PK** → `(tenant_id, category_id, channel, bucket_date)`, and appends a `#channel` segment to the
+> `SERVING_ROWS.pk` / `SERVING_ACTIVE_VERSION.pk` string (`tenant#window#mode#channel`). The diagram
+> below shows the current 3-tuple built schema.
+
 ```mermaid
 erDiagram
     TENANT_CONFIG ||--o{ EVENTS : "scopes"

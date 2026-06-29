@@ -20,7 +20,7 @@ flowchart LR
 flowchart LR
     CR["cron"] --> F["Forecaster Job"]
     AGG["aggregates"] --> F
-    F -->|"fit per (tenant,category) × horizon"| RK["rank top-k"]
+    F -->|"fit per (tenant,category,channel) × horizon"| RK["rank top-k"]
     RK -->|"write version N + flip pointer"| SV["serving_rows (versioned)"]
     F -->|"predicted vs actual"| EV["Eval/Drift (WAPE, bias)"]
 ```

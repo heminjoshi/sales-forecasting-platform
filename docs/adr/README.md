@@ -16,3 +16,4 @@ Each ADR records one major decision in a **comparative** format —
 | [0007](0007-genai-insight-lazy-cached.md) | GenAI insight generation | **Lazy + cached** (template floor) |
 | [0008](0008-read-modes-forecast-and-actuals.md) | Read modes | **Two modes** (forecast + actuals) |
 | [0009](0009-ui-hosting-spring-vercel-cloudfront.md) | UI hosting | **Spring-served demo + Vercel prod** |
+| [0010](0010-channel-as-first-class-dimension.md) | Channel — key dimension vs post-filter | **First-class key dimension** (default `all`) |

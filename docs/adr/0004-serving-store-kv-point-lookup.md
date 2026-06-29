@@ -11,6 +11,7 @@ at p99 < ~150 ms (NFR3) under a read-heavy load (A4).
 
 ### A — KV point-lookup (chosen)
 `pk = tenant#window#mode`, `sk = rank`; the whole top-k set is one partition read.
+(The `pk` gains a `#channel` segment in Phase 2.5 — see [ADR-0010](0010-channel-as-first-class-dimension.md).)
 - **Pros:** O(top-k) reads, trivially cacheable, scales flat; denormalized → no joins.
 - **Cons:** write-on-refresh; denormalized data must be recomputed each batch.
 

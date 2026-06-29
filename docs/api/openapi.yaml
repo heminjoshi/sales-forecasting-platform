@@ -55,6 +55,7 @@ paths:
                   tenantId: t_123
                   orderId: o_998
                   categoryId: cat_office
+                  channel: ONLINE
                   amount: 42.50
                   currency: USD
                   eventType: SALE
@@ -92,6 +93,14 @@ paths:
           in: query
           required: false
           schema: { $ref: '#/components/schemas/Window' }
+        - name: channel
+          in: query
+          required: false
+          description: |
+            Sales channel to view. `all` (default) is the summed rollup across channels;
+            `online`/`offline` select a single channel. First-class key dimension — see ADR-0010.
+            (Added in Phase 2.5.)
+          schema: { $ref: '#/components/schemas/Channel' }
         - name: k
           in: query
           required: false
@@ -138,6 +147,19 @@ components:
       default: month
       description: Selectable reporting window. `quarter` is reserved.
 
+    Channel:
+      type: string
+      enum: [all, online, offline]
+      default: all
+      description: |
+        Read-side channel view. `all` is the summed rollup; `online`/`offline` select one channel.
+        First-class key dimension (ADR-0010), added in Phase 2.5.
+
+    EventChannel:
+      type: string
+      enum: [ONLINE, OFFLINE]
+      description: Channel a `SaleEvent` was placed through. Aggregated at channel grain.
+
     Status:
       type: string
       enum: [fresh, stale, pending, degraded]
@@ -161,6 +183,10 @@ components:
         tenantId: { type: string, example: t_123 }
         orderId: { type: string, example: o_998 }
         categoryId: { type: string, example: cat_office }
+        channel:
+          allOf: [{ $ref: '#/components/schemas/EventChannel' }]
+          description: Sales channel (Phase 2.5). Defaults to `ONLINE` if omitted by legacy producers.
+          example: ONLINE
         amount:
           type: number
           description: Signed value; minor-unit-safe decimal.
@@ -205,11 +231,12 @@ components:
 
     TopKResponse:
       type: object
-      required: [tenantId, mode, window, k, status, asOf, items]
+      required: [tenantId, mode, window, channel, k, status, asOf, items]
       properties:
         tenantId: { type: string }
         mode: { $ref: '#/components/schemas/Mode' }
         window: { $ref: '#/components/schemas/Window' }
+        channel: { $ref: '#/components/schemas/Channel' }
         k: { type: integer }
         status: { $ref: '#/components/schemas/Status' }
         asOf: { type: string, format: date-time }
@@ -224,6 +251,7 @@ components:
         tenantId: t_123
         mode: forecast
         window: month
+        channel: all
         k: 10
         status: fresh
         asOf: "2026-06-28T06:00:00Z"

@@ -9,8 +9,9 @@
 
  > **Status:** 🟢 Walking skeleton runnable (Phase 2). End-to-end **actuals** path works:
 > ingest events → idempotent per-tenant category aggregates → ranked top-k over the REST API →
-> served dashboard. Forecasting (Phase 3), forecast serving + degradation + cache (Phase 4), and
-> the GenAI insight layer (Phase 5) land next.
+> served dashboard. Synthetic seasonal data + the channel dimension (Phase 2.5), forecasting
+> (Phase 3), forecast serving + degradation + cache (Phase 4), and the GenAI insight layer
+> (Phase 5) land next.
 
 ## Quick start
 
@@ -54,8 +55,9 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
 
 - [`docs/hld.md`](docs/hld.md) — high-level design (consolidated design doc) · [`docs/component-deep-dive.md`](docs/component-deep-dive.md)
 - [`docs/lld.md`](docs/lld.md) — low-level design (the implementation contract: DDL, interfaces, pipelines)
-- [`docs/adr/`](docs/adr/) — 9 comparative architecture decision records · [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — REST contract
+- [`docs/adr/`](docs/adr/) — 10 comparative architecture decision records · [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — REST contract
 - [`docs/diagrams/`](docs/diagrams/) — architecture, data-flow, ERD, sequence, UI-flow · [`docs/runbook.md`](docs/runbook.md) — alarms, degradation, recovery
+- [`test-plan/`](test-plan/) — integration, load, stress, canary, and manual-QA test plans
 
 ## Built vs. designed
 
@@ -63,7 +65,9 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
   tenant-local bucketing, dedupe + raw log + quarantine; the two-mode read API (actuals served;
   `forecast` returns the `pending` floor until Phase 3); `TenantScopeFilter` multi-tenant isolation;
   RFC 7807 errors; the served dashboard; Postgres + Flyway via Docker Compose.
-- **Designed behind the same interfaces (later phases / `aws` profile):** the forecasting engine and
+- **Designed behind the same interfaces (later phases / `aws` profile):** the `channel`
+  (`ONLINE`/`OFFLINE`) first-class dimension + seasonal synthetic-data generator (Phase 2.5;
+  [ADR-0010](docs/adr/0010-channel-as-first-class-dimension.md)), the forecasting engine and
   versioned serving table (`Forecaster`/`ForecastProvider`), the full degradation chain + Redis cache,
   the grounded GenAI insight layer (`InsightGenerator` → Bedrock), Kinesis/DynamoDB/S3/SageMaker
   impls, the React SPA on Vercel, and the 5-stack AWS CDK.

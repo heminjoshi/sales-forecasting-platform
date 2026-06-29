@@ -71,7 +71,7 @@
 
 ### C1 · Upstream sale/return events
 **Responsibility:** the source — emits sale / return / adjustment events; owned upstream (A2), not built here.
-**Out:** events to Kinesis. **Shape:** `{tenantId, orderId, categoryId, amount, currency, eventType, eventTime, idempotencyKey}` (returns/cancellations are signed/negative `eventType`).
+**Out:** events to Kinesis. **Shape:** `{tenantId, orderId, categoryId, channel, amount, currency, eventType, eventTime, idempotencyKey}` (returns/cancellations are signed/negative `eventType`).
 
 ### C2 · Kinesis / MSK
 **Responsibility:** durable, partition-ordered **ingestion buffer**; decouples producers from consumers; absorbs bursts; enables replay.
@@ -87,10 +87,10 @@
 **Tech:** Spring Boot + KCL (cloud) / the `POST /events` controller (local).
 **Fails:** poison pill → DLQ + keep flowing; at-least-once delivery + idempotency = **exactly-once *effect***; checkpoint resumes after crash. **Scales:** scale consumers by shard/lag.
 
-### C4 · Aurora Postgres — `(tenant, category, day)` rollups
+### C4 · Aurora Postgres — `(tenant, category, channel, day)` rollups
 **Responsibility:** the **authoritative aggregate store**; serves actuals reads and feeds the forecaster.
 **In:** upserts from the consumer. **Out:** reads by the service (actuals + degradation) and the forecaster (history).
-**Internals:** row = `(tenant_id, category_id, bucket_date) → sum_amount, order_count, currency`; indexes for range/group-by; **partition by tenant** at scale + read replicas; lives in isolated subnets.
+**Internals:** row = `(tenant_id, category_id, channel, bucket_date) → sum_amount, order_count, currency` (channel is a first-class key dimension — ADR-0010; added in Phase 2.5); indexes for range/group-by; **partition by tenant** at scale + read replicas; lives in isolated subnets.
 **Tech:** Aurora Postgres Serverless v2 (cloud) / Postgres container (local). **Fails:** replica failover; if down → degrade to cache/last-good. **Scales:** partition + replicas.
 
 ### C5 · S3 Raw Event Log (SoT)
@@ -113,7 +113,7 @@
 **Out:** starts the Forecaster Job. **Tech:** EventBridge rule (cloud) / a `make`/scheduler trigger (local).
 
 ### D2 · Forecaster Job  (Java baseline / SageMaker future)
-**Responsibility:** read aggregates → **forecast per `(tenant, category)` × horizon** → rank → write **versioned** serving rows + intervals → emit eval metrics.
+**Responsibility:** read aggregates → **forecast per `(tenant, category, channel)` × horizon** (Phase 2.5; summed up to the `all` channel) → rank → write **versioned** serving rows + intervals → emit eval metrics.
 **In:** aggregates from Aurora. **Out:** Serving Table (versioned write), Eval/Drift.
 **Internals:** per-series fit (Holt-Winters level/trend/seasonal, or seasonal-naive); **cold-start** handling (<1 season → trend-only; none → prior/flat + low-confidence); prediction **intervals**/confidence; rank to top-k per `(window, mode)`; **partition by tenant** (embarrassingly parallel); incremental refit + tiered cadence at scale.
 **Tech:** Java baseline on a scheduled Fargate task (**built**); **SageMaker batch transform (designed)** as a second `Forecaster` impl behind the same interface — drop-in, no serving-contract change.
@@ -122,7 +122,7 @@
 ### D3 · Serving Table — precomputed top-k + intervals
 **Responsibility:** the **read-optimized store** the API serves forecasts from; pure point-lookup.
 **In:** versioned writes from the forecaster. **Out:** reads by the service.
-**Internals:** key `pk = tenant#window#mode`, `sk = zero-padded rank`; value = `{category, value, interval, confidence, version, as_of}`; **versioned** so a new batch is an atomic swap and rollback is a flip.
+**Internals:** key `pk = tenant#window#mode#channel`, `sk = zero-padded rank`; value = `{category, value, interval, confidence, version, as_of}`; **versioned** so a new batch is an atomic swap and rollback is a flip.
 **Tech:** DynamoDB (cloud) / Postgres table (local), behind `ForecastProvider`. **Fails:** miss/stale → degradation chain; versioned rollback. **Scales:** tiny rows, point lookups, trivially cacheable.
 
 ### D4 · Eval / Drift (WAPE, bias)
@@ -145,7 +145,7 @@
 | 1 | UI → API GW/ALB | user control change | GET + `(tenant via auth, mode, window, k)` | sync | UI shows error/degraded |
 | 2 | API GW/ALB → Service | request routed | HTTP request, tenant-scoped | sync | 503/429; healthy-target routing |
 | 3 | Service ↔ Redis | every read | key `(tenant,window,mode,k)` ↔ serialized response | sync | fall through to DB |
-| 4 | Service → Serving Table | forecast mode, cache miss | read by `pk=tenant#window#mode` | sync | degradation chain |
+| 4 | Service → Serving Table | forecast mode, cache miss | read by `pk=tenant#window#mode#channel` | sync | degradation chain |
 | 5 | Service → Aurora | actuals mode / degradation | aggregate range-query `(tenant, window)` | sync | last cache / replica |
 | 6 | Service ⇢ Bedrock | insight absent (lazy) | prompt w/ provided numbers → text | sync (bounded) | template fallback |
 | 7 | Service → JVM fallback | forecast missing/stale | in-process; reads aggregates | sync | actuals + `forecast_pending` |
@@ -155,7 +155,7 @@
 | 11 | Consumer → S3 | per event | append raw `SaleEvent` | async | retry; durable |
 | 12 | Consumer ⇢ DLQ | malformed | bad event + reason | async | alert; manual/auto reprocess |
 | 13 | EventBridge → Forecaster | daily cron | trigger | async | next tick; idempotent re-run |
-| 14 | Aurora → Forecaster | batch start | history per `(tenant, category)` | sync (batch) | retry segment |
+| 14 | Aurora → Forecaster | batch start | history per `(tenant, category, channel)` | sync (batch) | retry segment |
 | 15 | Forecaster → Serving Table | per series | versioned `ForecastRow` write | sync (batch) | keep last-good version |
 | 16 | Forecaster → Eval/Drift | per batch | predicted vs actual | sync (batch) | metrics gap alarmed |
 | 17 | Eval/Drift → CloudWatch | per batch | WAPE/bias/drift metrics | async | — |
@@ -167,7 +167,7 @@
 
 **F1 · Write path (ingestion).** Upstream emits `SaleEvent` → Kinesis (partition by tenant) → Consumer **dedupes** on `idempotencyKey`, buckets by tenant-local day, **additively upserts** Aurora, **appends** raw to S3; malformed → DLQ. Result: aggregates are eventually-consistent, correct regardless of order/lateness; S3 is the rebuild source.
 
-**F2 · Forecast path (batch).** EventBridge fires daily → Forecaster reads Aurora history per `(tenant, category)` → fits a model → produces point + interval + confidence per horizon → **ranks** to top-k → writes **versioned** rows to the Serving Table → emits predicted-vs-actual to Eval/Drift → CloudWatch. A new version is an atomic swap; the old one is the rollback.
+**F2 · Forecast path (batch).** EventBridge fires daily → Forecaster reads Aurora history per `(tenant, category, channel)` → fits a model → produces point + interval + confidence per horizon → **ranks** to top-k → writes **versioned** rows to the Serving Table → emits predicted-vs-actual to Eval/Drift → CloudWatch. A new version is an atomic swap; the old one is the rollback.
 
 **F3 · Read path — forecast mode (happy).** UI → ALB → Service: tenant-scope → Redis **hit?** return. **Miss:** read Serving Table (fresh) → assemble (rank, delta, confidence) → insight present? if not, lazy Bedrock (grounded) + cache → populate Redis → return with `status=fresh` + `as-of`. UI renders table + chart + insight + badge.
 
@@ -181,16 +181,16 @@
 
 ```jsonc
 // SaleEvent  (C1 → C2 → C3 → S3)
-{ "tenantId":"t_123", "orderId":"o_998", "categoryId":"cat_office",
+{ "tenantId":"t_123", "orderId":"o_998", "categoryId":"cat_office", "channel":"ONLINE",
   "amount": 42.50, "currency":"USD", "eventType":"SALE|RETURN|ADJUSTMENT",
   "eventTime":"2026-06-20T14:03:00Z", "idempotencyKey":"o_998:SALE" }
 
-// AggregateRow  (Aurora C4)  PK (tenant_id, category_id, bucket_date)
-{ "tenant_id":"t_123", "category_id":"cat_office", "bucket_date":"2026-06-20",
+// AggregateRow  (Aurora C4)  PK (tenant_id, category_id, channel, bucket_date)
+{ "tenant_id":"t_123", "category_id":"cat_office", "channel":"ONLINE", "bucket_date":"2026-06-20",
   "sum_amount": 1820.75, "order_count": 37, "currency":"USD" }
 
-// ForecastRow / ServingRow  (Serving Table D3)  pk=tenant#window#mode, sk=rank
-{ "pk":"t_123#month#forecast", "sk":"001", "category_id":"cat_office",
+// ForecastRow / ServingRow  (Serving Table D3)  pk=tenant#window#mode#channel, sk=rank
+{ "pk":"t_123#month#forecast#all", "sk":"001", "category_id":"cat_office",
   "value": 5400.00, "interval_low": 4900, "interval_high": 5900,
   "confidence":"HIGH", "delta_vs_prior": 0.12, "version": 42, "as_of":"2026-06-28T06:00:00Z" }
 
