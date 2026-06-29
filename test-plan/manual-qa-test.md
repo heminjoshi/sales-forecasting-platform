@@ -88,6 +88,17 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 | MQ-70 | Fresh clone on a clean machine → `make up` → `make run` (→ `make seed`/`demo`) | Comes up in the documented 2 commands; dashboard shows data; design docs + ADRs readable |
 | MQ-71 | Public-repo hygiene glance | No secrets/.env/employer-specific text visible (run `/public-repo-check` for the real gate) |
 
+## 9. Cross-origin / Vercel deploy [P7]
+| ID | Step | Expected |
+|---|---|---|
+| MQ-80 | Open the deployed **Vercel URL** and watch the network tab while it loads top-categories | The SPA's `GET`s go to the API host (`VITE_API_BASE`); responses carry `Access-Control-Allow-Origin` echoing the Vercel origin; table/chart render cross-origin with no CORS console error |
+| MQ-81 | Open the local `http://localhost:8080` static demo | Still **same-origin** (no CORS involved); no regression — dashboard renders exactly as before P7 |
+| MQ-82 | Hit the API from a **non-allow-listed** origin (e.g. a scratch page on another host, or DevTools `fetch` from a random origin) | Browser **blocks** the response (CORS error); `Access-Control-Allow-Origin` absent — the allow-list holds |
+| MQ-83 | Confirm the `web/` SPA points at the API via `VITE_API_BASE` and the Spring static demo is untouched | The React build reads `VITE_API_BASE` for the API base URL; the local static dashboard still works with no env/build step (the two presentation paths are independent) |
+
+> **Note:** §9 [P7] is **N/A until deployed** — like the other unbuilt-phase cases, an N/A here is **not a fail**;
+> the Vercel/cross-origin checks become runnable only once PR1 (CORS) ships and the SPA is deployed (PR2/infra).
+
 ## Reporting
 For each failed case record: ID, build/commit, steps, **actual** vs **expected**, screenshot (UI cases),
 and the response body/status for API cases. File against the owning phase. Phases 0–6 are built, so

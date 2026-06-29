@@ -217,4 +217,26 @@ Unit-level with a mocked `BedrockRuntimeClient` (no Testcontainers); the read mu
 | IT-LG-03 | Generated request id | request without the header → a UUID `requestId` is generated and returned in the response header | ✅ unit `TenantScopeFilterTest.missingRequestId_isGeneratedAndEchoed` |
 | IT-LG-04 | **MDC cleared (no leak)** | after the filter returns, MDC has no `tenantId`/`requestId`; holds even when the chain throws (cleared in `finally`) — guards against cross-thread tenant-id leakage on pooled threads | ✅ unit `TenantScopeFilterTest.chainThrows_stillClearsMdc` (+ cleared-after assertions in the echo tests) |
 | IT-LG-05 | Batch per-tenant MDC | `ForecasterJob.runTenant` sets `tenantId` in MDC and removes it in `finally` (no bleed across tenants in one batch run) | ✅ unit `ForecasterJobTest.runTenant_setsTenantIdInMdcDuringProcessing_andClearsItAfter` |
+
+---
+
+## 9. CORS [P7]
+
+> **Coverage status (P7).** The CORS allow-list is a `WebMvcConfigurer` mapping on `/api/**` whose
+> origins bind from `topsales.web.cors.allowed-origins` (`localhost` + the Vercel domain). CORS is
+> **browser-enforced**, so its realized coverage is a **config-binding unit test** (the allow-list props)
+> plus a **Postman Origin/preflight probe** ("CORS preflight (allowed origin)") run via `make verify`/Newman.
+> The HTTP-slice `IT-CO` rows below are the **spec** and ship `@Disabled` until promoted — they can't run on
+> this host's `@WebMvcTest`/`TestRestTemplate`-less SB4.1/Jackson-3 runner (see the §1 runner note). Legend
+> as in §6/§8: **✅ unit** = `make test`; **spec** = `@Disabled`-until-promoted, verified live via Postman/canary.
+
+| ID | Scenario | Expected | Status |
+|---|---|---|---|
+| IT-CO-01 | Allowed origin on actual `GET` | request with `Origin: http://localhost:5173` → **200**; `Access-Control-Allow-Origin` echoes the origin | spec — `@Disabled` until it lands; verify via Postman "CORS preflight (allowed origin)" |
+| IT-CO-02 | Disallowed origin | `Origin: https://evil.example` on an actual `GET` → **no** `Access-Control-Allow-Origin`; Spring rejects the cross-origin request (**403** `Invalid CORS request`) | spec — `@Disabled` until promoted |
+| IT-CO-03 | Preflight `OPTIONS` on top-categories | `OPTIONS` with `Origin` + `Access-Control-Request-Method: GET` + `Access-Control-Request-Headers: x-tenant-id` → **200**; `Access-Control-Allow-Origin` echoed; `Allow-Methods ⊇ GET`; `Allow-Headers ⊇ X-Tenant-Id`; `Access-Control-Max-Age: 3600` | spec — `@Disabled`; verified by the Postman preflight probe |
+| IT-CO-04 | Preflight not blocked by tenant filter | `OPTIONS` preflight with **no** `X-Tenant-Id` → **200** (CORS preflight is exempt), **not** 400/403 — the `TenantScopeFilter` must not gate `OPTIONS` | spec — `@Disabled` until promoted |
+| IT-CO-05 | Exposed correlation header | response carries `Access-Control-Expose-Headers: X-Request-Id` so the cross-origin SPA can read the echoed request id | spec — `@Disabled` until promoted |
+| IT-CO-06 | No credentialed CORS | response does **not** set `Access-Control-Allow-Credentials: true` — auth is header-based (`X-Tenant-Id`), not cookies | spec — `@Disabled` until promoted |
+| IT-CO-07 | Allow-list config binds | `topsales.web.cors.allowed-origins` binds to `props.web().cors().allowedOrigins()` (localhost + Vercel) and feeds the `WebMvcConfigurer` mapping | ✅ unit — config-binding test on the allow-list property |
 </content>
