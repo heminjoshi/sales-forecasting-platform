@@ -1,0 +1,96 @@
+name: postman
+
+# API coverage gate: boots the real service (Postgres + Redis), seeds it, then runs the
+# Postman/Newman collection against the live stack — the same sequence as `make demo`, but
+# in CI. A non-zero Newman exit (any failed pm.test) fails the build, so the smoke +
+# degradation + multi-tenant-isolation assertions are an enforced gate, not just a demo.
+#
+# Path-scoped (mirrors web.yml): only runs when something it actually exercises changes —
+# the collection, the service, the Makefile, or this workflow itself. Stays inert (green)
+# on infra/web-only PRs.
+on:
+  push:
+    branches: [main]
+    paths: ["postman/**", "service/**", "Makefile", ".github/workflows/postman.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["postman/**", "service/**", "Makefile", ".github/workflows/postman.yml"]
+
+jobs:
+  newman:
+    name: API gate (newman)
+    runs-on: ubuntu-latest
+
+    # Backing stores on localhost:5432 / :6379 so the app's application.yml defaults
+    # (jdbc:postgresql://localhost:5432/topsales, redis localhost:6379) work unchanged.
+    # local/init.sql is NOT mounted here — it's intentionally empty (Flyway owns the
+    # schema), so V1–V7 migrations create everything (incl. t_acme) on first boot.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: topsales
+          POSTGRES_USER: topsales
+          POSTGRES_PASSWORD: topsales
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U topsales"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Install only the modules the gate needs (API + datagen) plus their deps, so the
+      # background spring-boot:run and `make seed` both resolve everything from the local repo.
+      - name: Build & install (topsales-api, topsales-datagen)
+        run: mvn -B -f service/pom.xml -pl topsales-api,topsales-datagen -am -DskipTests install
+
+      # Backfill seasonal history for t_demo + t_acme straight into the rollup (Flyway has
+      # already created the schema against the postgres service above).
+      - name: Seed
+        run: make seed
+
+      # Boot the API in the background, then poll /actuator/health until UP (bounded ~90s).
+      # Fail fast if it never comes up so we don't run Newman against a dead port.
+      - name: Start API & wait for health
+        run: |
+          mvn -B -f service/pom.xml -pl topsales-api spring-boot:run &
+          echo "waiting for /actuator/health to report UP..."
+          for i in $(seq 1 45); do
+            status=$(curl -fsS http://localhost:8080/actuator/health 2>/dev/null | grep -o '"status":"UP"' | head -n1 || true)
+            if [ "$status" = '"status":"UP"' ]; then
+              echo "API is UP (after ~$((i*2))s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not reach UP within ~90s" >&2
+          exit 1
+
+      # The gate. Any failed pm.test => non-zero exit => failed build.
+      - name: Run Newman (API coverage gate)
+        run: npx --yes newman run postman/TopSales.postman_collection.json -e postman/local.postman_environment.json
