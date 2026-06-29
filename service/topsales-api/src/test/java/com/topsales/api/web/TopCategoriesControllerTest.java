@@ -56,7 +56,8 @@ class TopCategoriesControllerTest {
                             new TopsalesProperties.Forecast.Eval(84, 7, 7, 12, 0.20, 0.40)),
                     new TopsalesProperties.Cache(Duration.ofMinutes(15), 20, Duration.ofSeconds(2)),
                     null,
-                    new TopsalesProperties.Rawlog("./data/rawlog"));
+                    new TopsalesProperties.Rawlog("./data/rawlog"),
+                    null);
 
     @BeforeEach
     void setUp() {

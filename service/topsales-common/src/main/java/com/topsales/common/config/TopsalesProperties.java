@@ -27,7 +27,8 @@ public record TopsalesProperties(
         Forecast forecast,
         Cache cache,
         Insight insight,
-        Rawlog rawlog) {
+        Rawlog rawlog,
+        Web web) {
 
     /**
      * Read/serving endpoint tunables: the dashboard's {@code k} choices and the request-param
@@ -119,4 +120,15 @@ public record TopsalesProperties(
 
     /** Local immutable raw-event-log directory (the S3 stand-in). */
     public record Rawlog(String dir) {}
+
+    /**
+     * Web/HTTP-edge config — currently just the CORS allow-list (docs/lld.md §11). The cross-origin
+     * SPA (Vercel) lives outside the AWS account, so the API must allow-list its origin;
+     * {@code allowedOrigins} is the only env-varying value here (a Vercel domain injected per
+     * environment). Null in modules that don't define {@code topsales.web} — only {@code topsales-api}
+     * reads it.
+     */
+    public record Web(Cors cors) {
+        public record Cors(java.util.List<String> allowedOrigins) {}
+    }
 }
