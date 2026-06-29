@@ -199,7 +199,7 @@ class ForecasterJobTest {
                         null,
                         null,
                         null);
-        return new TopsalesProperties(null, windowDays, forecast, null, null, null);
+        return new TopsalesProperties(null, windowDays, forecast, null, null, null, null);
     }
 
     /** Fixture: 14 daily rows per series, ending today (so trailing-7 windows align with wall clock). */

@@ -22,6 +22,12 @@ The platform is built phase-by-phase ([`../docs/`](../docs/), Build-Delivery-Pla
 - **[P4]** — forecast serving, degradation chain, Redis cache.
 - **[P5]** — GenAI insight layer (grounding, injection safety).
 - **[P6]** — hardening: resilience & observability (health/readiness, metrics, structured logs).
+- **[P7]** — production path: API **CORS allow-list** (`localhost` + the Vercel origin) on `/api/**`; the
+  `web/` React SPA (Vite/Recharts) cross-origin **prod build** deployed to Vercel (the static dashboard
+  stays the local demo); and (PR2) the AWS **CDK infra** validation. Because CORS is **browser-enforced**,
+  its header behavior is realized via **Postman** (Origin/preflight probe) + **manual/canary** checks, **not**
+  HTTP-slice ITs (the SB4.1/Jackson-3 runner caveat — no `@WebMvcTest`/`TestRestTemplate`); the one automated
+  JUnit case is a config-binding **unit** test over the allow-list property.
 
 A `[P3+]` case is written now but **expected to be skipped/`@Disabled`** until that phase lands; the
 plan is the spec the phase must satisfy. These plans are authored and kept current phase-by-phase by

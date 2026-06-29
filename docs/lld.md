@@ -364,6 +364,12 @@ topsales:
     jitter-pct: 20
   rawlog:
     dir: ./data/rawlog       # local S3 stand-in
+  web:
+    cors:
+      allowed-origins:       # CORS allow-list for /api/** (§11)
+        - http://localhost:5173    # local Vite dev server
+        - http://localhost:8080    # local static demo (same-origin; harmless to list)
+        - https://<app>.vercel.app # prod React SPA origin (Vercel)
 ```
 
 ```java
@@ -393,8 +399,12 @@ profiles — the entire local↔cloud difference is bean selection (`docs/hld.md
   tenant id** — the path `{tenantId}` is asserted equal to the authenticated tenant or `403`.
 - **Prompt-injection:** category names are untrusted; passed to the LLM as delimited data, output
   validated to the provided numbers, guardrail in prod, model has no tools/write (§9, hld §17).
-- **CORS:** allow-list the UI origin only — `localhost` (local) + the Vercel domain (prod). S3+
-  CloudFront would be same-origin and skip CORS (the documented trade-off, DR-8).
+- **CORS (Phase 7, implemented):** a `WebMvcConfigurer` registers an allow-list mapping on `/api/**`
+  whose origins bind from `topsales.web.cors.allowed-origins` (§10) — `localhost` (local Vite/demo) +
+  the Vercel domain (prod). Allows `GET`/`OPTIONS`, allows the `X-Tenant-Id` request header, exposes
+  `X-Request-Id`, sets `max-age 3600`, and is **not** credentialed (header auth, not cookies); CORS
+  preflight (`OPTIONS`) is exempt from `TenantScopeFilter`. S3+CloudFront would be same-origin and skip
+  CORS entirely (the documented trade-off, DR-8).
 - Encryption in transit/at rest, least-privilege IAM, PII minimization — `aws` profile / CDK (Phase 7).
 
 ---
@@ -413,7 +423,12 @@ profiles — the entire local↔cloud difference is bean selection (`docs/hld.md
 
 ## 13. UI contract
 
-The dashboard is a thin, read-only view over the API (no business logic). Response it renders:
+The dashboard is a thin, read-only view over the API (no business logic). The local static dashboard is
+the **demo** presentation path; the `web/` React SPA (Vite/Recharts) is the **cross-origin prod build**
+deployed to Vercel — it reads the API base from `VITE_API_BASE` and relies on the Phase-7 CORS allow-list
+(§11). Both render the same `TopKResponse` below; the static demo stays the local live demo.
+
+Response it renders:
 
 ```jsonc
 // TopKResponse  (GET .../top-categories)

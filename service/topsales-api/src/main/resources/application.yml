@@ -85,6 +85,13 @@ topsales:
     timeout: 1500ms
   rawlog:
     dir: ./data/rawlog       # local S3 stand-in for the immutable raw event log
+  # CORS allow-list (docs/lld.md §11). The demo dashboard is same-origin (Spring-served) so needs
+  # none; these entries cover the Vite dev server (:5173) and the cross-origin Vercel deploy. Set the
+  # real Vercel origin via env (TOPSALES_CORS_ALLOWED_ORIGINS) / the aws profile. Spring binds a
+  # comma-separated env default into List<String> fine.
+  web:
+    cors:
+      allowed-origins: ${TOPSALES_CORS_ALLOWED_ORIGINS:http://localhost:8080,http://localhost:5173}
 
 # Observability: Prometheus registry (local, scrape /actuator/prometheus). aws profile swaps in
 # micrometer-registry-cloudwatch2 + management.cloudwatch.metrics.export.* — designed-only (Phase 7

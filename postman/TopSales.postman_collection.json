@@ -575,6 +575,51 @@
           ]
         }
       ]
+    },
+    {
+      "name": "10. CORS preflight (allowed origin)",
+      "request": {
+        "method": "OPTIONS",
+        "header": [
+          { "key": "Origin", "value": "http://localhost:5173" },
+          { "key": "Access-Control-Request-Method", "value": "GET" },
+          { "key": "Access-Control-Request-Headers", "value": "x-tenant-id" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/top-categories?mode=actuals&window=month&channel=all&k=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "tenants", "{{tenantId}}", "top-categories"],
+          "query": [
+            { "key": "mode", "value": "actuals" },
+            { "key": "window", "value": "month" },
+            { "key": "channel", "value": "all" },
+            { "key": "k", "value": "10" }
+          ]
+        },
+        "description": "Phase 7 (IT-CO-03): CORS preflight from an allow-listed origin (the local Vite dev server, http://localhost:5173). The cross-origin React SPA fires this OPTIONS before its actual GET. Asserts the API echoes the origin in Access-Control-Allow-Origin and advertises GET in Access-Control-Allow-Methods. CORS is browser-enforced, so this Postman probe (not an HTTP-slice IT) is the automated realization of the allow-list."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('preflight returns 2xx', function () {",
+              "  pm.expect(pm.response.code).to.be.within(200, 204);",
+              "});",
+              "pm.test('Access-Control-Allow-Origin echoes the request origin', function () {",
+              "  var acao = pm.response.headers.get('Access-Control-Allow-Origin');",
+              "  pm.expect(acao).to.be.a('string');",
+              "  pm.expect(acao).to.eql('http://localhost:5173');",
+              "});",
+              "pm.test('Access-Control-Allow-Methods includes GET', function () {",
+              "  var methods = pm.response.headers.get('Access-Control-Allow-Methods') || '';",
+              "  pm.expect(methods.toUpperCase()).to.include('GET');",
+              "});"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

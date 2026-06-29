@@ -33,6 +33,8 @@ correctness suites; they answer "is this build serving correctly right now?"
 | CN-11 | Metrics endpoint | `GET /actuator/prometheus` [P6] | 200; key metrics (RED + ML-quality) present and named as alarms expect |
 | CN-12 | Degradation badge [P4] | read a tenant with no fresh forecast | 200 with `degraded`/`pending` + `asOf`; UI badge renders |
 | CN-13 | Teardown | delete canary events / quarantine for the deploy-id | clean; no canary residue left behind |
+| CN-14 | CORS allow-list live [P7] | preflight `OPTIONS` + actual `GET` to the API with the **deployed UI** `Origin` (read-only, `t_canary`) | 200; `Access-Control-Allow-Origin` echoes the deployed origin; `Allow-Methods ⊇ GET` — the prod allow-list is wired |
+| CN-15 | Cross-origin Vercel dashboard reachable [P7] | `GET` the deployed Vercel URL, then its API `GET` (`t_canary`, idempotent read) | Vercel URL **200** (SPA shell loads); the API `GET` returns **200** with `Access-Control-Allow-Origin` present — the cross-origin SPA→API hop works end-to-end |
 
 ## Progressive-rollout guardrails (auto-rollback triggers)
 During a canary/blue-green or % rollout, compare the new fleet against baseline. **Roll back automatically** if any breach over the observation window:

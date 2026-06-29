@@ -44,7 +44,7 @@ class RedisCacheShellTest {
 
     private static TopsalesProperties propsWith(Duration baseTtl, int jitterPct, Duration lockTtl) {
         return new TopsalesProperties(
-                null, null, null, new TopsalesProperties.Cache(baseTtl, jitterPct, lockTtl), null, null);
+                null, null, null, new TopsalesProperties.Cache(baseTtl, jitterPct, lockTtl), null, null, null);
     }
 
     private static TopKResponse sampleForecastResponse() {
