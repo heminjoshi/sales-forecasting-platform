@@ -70,6 +70,22 @@ paths:
         '400':
           $ref: '#/components/responses/Problem'
 
+  /api/v1/tenants:
+    get:
+      tags: [read]
+      operationId: listTenants
+      summary: List configured tenant ids (demo dashboard tenant picker)
+      description: |
+        Returns the configured tenant ids so the demo dashboard can offer a tenant dropdown.
+        A demo/dev affordance — in production, tenant discovery belongs to the admin/auth plane,
+        not a public unscoped listing (multi-tenant isolation). (Added in Phase 2.5.)
+      responses:
+        '200':
+          description: The tenant catalog.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TenantsResponse' }
+
   /api/v1/tenants/{tenantId}/top-categories:
     get:
       tags: [read]
@@ -178,14 +194,14 @@ components:
 
     SaleEvent:
       type: object
-      required: [tenantId, orderId, categoryId, amount, currency, eventType, eventTime]
+      required: [tenantId, orderId, categoryId, channel, amount, currency, eventType, eventTime]
       properties:
         tenantId: { type: string, example: t_123 }
         orderId: { type: string, example: o_998 }
         categoryId: { type: string, example: cat_office }
         channel:
           allOf: [{ $ref: '#/components/schemas/EventChannel' }]
-          description: Sales channel (Phase 2.5). Defaults to `ONLINE` if omitted by legacy producers.
+          description: Sales channel — a first-class key dimension (Phase 2.5, ADR-0010); required.
           example: ONLINE
         amount:
           type: number
@@ -228,6 +244,17 @@ components:
         interval:
           allOf: [{ $ref: '#/components/schemas/Interval' }]
           description: Present only for forecasts; absent in actuals/pending.
+
+    TenantsResponse:
+      type: object
+      required: [tenants]
+      properties:
+        tenants:
+          type: array
+          items: { type: string }
+          description: Configured tenant ids (ascending).
+      example:
+        tenants: [t_acme, t_demo]
 
     TopKResponse:
       type: object

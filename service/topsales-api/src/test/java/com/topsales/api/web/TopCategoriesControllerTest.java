@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 import com.topsales.api.service.ActualsService;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKResponse;
+import com.topsales.common.domain.ChannelFilter;
 import com.topsales.common.domain.Mode;
 import com.topsales.common.domain.Status;
 import com.topsales.common.domain.Window;
@@ -46,6 +47,7 @@ class TopCategoriesControllerTest {
                 TENANT,
                 mode,
                 Window.MONTH,
+                ChannelFilter.ALL,
                 10,
                 status,
                 Instant.parse("2026-06-28T00:00:00Z"),

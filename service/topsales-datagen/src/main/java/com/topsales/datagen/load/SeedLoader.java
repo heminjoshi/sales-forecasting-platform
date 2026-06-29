@@ -3,10 +3,10 @@ package com.topsales.datagen.load;
 import com.topsales.common.domain.AggregateRow;
 import com.topsales.common.repository.AggregateRepository;
 import com.topsales.datagen.SeedConfig;
+import com.topsales.datagen.TenantProfile;
 import com.topsales.datagen.gen.SeasonalityModel;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -15,10 +15,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Historic backfill ({@code make seed}): clears the tenant's rollup, then bulk-overwrites months of
- * pre-summed, seasonal, channel-split {@link AggregateRow}s straight into the aggregates table. This
- * is a <em>trusted</em> backfill that deliberately bypasses the consumer's idempotency path so the
- * forecaster has months of history to fit. Re-runnable: it converges to an identical state.
+ * Historic backfill ({@code make seed}): for each configured tenant, clears its rollup then
+ * bulk-overwrites months of pre-summed, seasonal, channel-split {@link AggregateRow}s straight into
+ * the aggregates table. A <em>trusted</em> backfill that deliberately bypasses the consumer's
+ * idempotency path so the forecaster has months of history to fit. Re-runnable: it converges to an
+ * identical state. Each tenant's data is keyed independently (multi-tenant isolation).
  */
 @Component
 public class SeedLoader {
@@ -36,33 +37,26 @@ public class SeedLoader {
     }
 
     public void run() {
-        ZoneId zone = tenantZone();
-        LocalDate today = LocalDate.now(zone);
-        LocalDate start = today.minusDays(config.historyDays() - 1L);
+        for (String tenantId : config.tenants()) {
+            TenantProfile profile = TenantProfile.load(jdbc, tenantId);
+            LocalDate today = LocalDate.now(profile.zone());
+            LocalDate start = today.minusDays(config.historyDays() - 1L);
 
-        SeasonalityModel model = new SeasonalityModel(config, start, today);
-        List<AggregateRow> rows = model.generateAggregates();
+            SeasonalityModel model =
+                    new SeasonalityModel(config, tenantId, profile.currency(), start, today);
+            List<AggregateRow> rows = model.generateAggregates();
 
-        int cleared = jdbc.update("DELETE FROM aggregates WHERE tenant_id = ?", config.tenant());
-        aggregates.bulkUpsert(rows);
+            int cleared = jdbc.update("DELETE FROM aggregates WHERE tenant_id = ?", tenantId);
+            aggregates.bulkUpsert(rows);
 
-        log.info(
-                "seed: tenant={} window={}..{} ({} days) cleared={} rows wrote={} aggregate rows",
-                config.tenant(),
-                start,
-                today,
-                config.historyDays(),
-                cleared,
-                rows.size());
-    }
-
-    /** The tenant's IANA zone (bucketing is tenant-local), from the Flyway-seeded tenant_config. */
-    private ZoneId tenantZone() {
-        String tz =
-                jdbc.queryForObject(
-                        "SELECT timezone FROM tenant_config WHERE tenant_id = ?",
-                        String.class,
-                        config.tenant());
-        return ZoneId.of(tz);
+            log.info(
+                    "seed: tenant={} window={}..{} ({} days) cleared={} wrote={} aggregate rows",
+                    tenantId,
+                    start,
+                    today,
+                    config.historyDays(),
+                    cleared,
+                    rows.size());
+        }
     }
 }

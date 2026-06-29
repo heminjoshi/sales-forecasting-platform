@@ -30,8 +30,7 @@ class SeasonalityModelTest {
     private SeedConfig config() {
         return new SeedConfig(
                 42L,
-                "t_demo",
-                "USD",
+                List.of("t_demo"),
                 60,
                 0.15,
                 0.07,
@@ -40,12 +39,21 @@ class SeasonalityModelTest {
     }
 
     private SeasonalityModel model() {
-        return new SeasonalityModel(config(), START, END);
+        return new SeasonalityModel(config(), "t_demo", "USD", START, END);
     }
 
     @Test
     void generationIsDeterministic_byteIdenticalAcrossRuns() {
         assertThat(model().generateAggregates()).isEqualTo(model().generateAggregates());
+    }
+
+    @Test
+    void differentTenants_getIndependentData() {
+        // The per-cell RNG keys on the tenant id, so two tenants get distinct (isolated) series.
+        SeasonalityModel demo = new SeasonalityModel(config(), "t_demo", "USD", START, END);
+        SeasonalityModel acme = new SeasonalityModel(config(), "t_acme", "USD", START, END);
+        assertThat(demo.grossValue(ELECTRONICS, Channel.ONLINE, PLAIN_DAY))
+                .isNotEqualTo(acme.grossValue(ELECTRONICS, Channel.ONLINE, PLAIN_DAY));
     }
 
     @Test
@@ -93,7 +101,8 @@ class SeasonalityModelTest {
         // Black Friday produces a large spike vs the same weekday two weeks earlier (same weekly +
         // monthly factors, no HVE) — isolating the ~×5 offline BF uplift against ±10% noise.
         LocalDate bf = HveCalendar.blackFriday(2025);
-        SeasonalityModel m = new SeasonalityModel(config(), bf.minusDays(30), bf.plusDays(5));
+        SeasonalityModel m =
+                new SeasonalityModel(config(), "t_demo", "USD", bf.minusDays(30), bf.plusDays(5));
 
         double spike = m.grossValue(ELECTRONICS, Channel.OFFLINE, bf);
         double ordinary = m.grossValue(ELECTRONICS, Channel.OFFLINE, bf.minusDays(14));

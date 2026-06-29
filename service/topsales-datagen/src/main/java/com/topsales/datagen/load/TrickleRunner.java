@@ -2,11 +2,11 @@ package com.topsales.datagen.load;
 
 import com.topsales.common.domain.SaleEvent;
 import com.topsales.datagen.SeedConfig;
+import com.topsales.datagen.TenantProfile;
 import com.topsales.datagen.gen.SeasonalityModel;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -16,10 +16,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 /**
- * Realtime trickle ({@code make trickle}): emits individual {@link SaleEvent}s for "today" that
- * continue the seeded history (same model, same day) and POSTs them to the running API's
- * {@code /api/v1/events} — exercising the consumer's dedupe/idempotency/upsert path and powering the
- * "watch the dashboard move" demo. Re-run it to add more.
+ * Realtime trickle ({@code make trickle}): for each tenant, emits individual {@link SaleEvent}s for
+ * "today" that continue the seeded history (same model, same day) and POSTs them to the running
+ * API's {@code /api/v1/events} — exercising the consumer's dedupe/idempotency/upsert path and
+ * powering the "watch the dashboard move" demo. Re-run it to add more.
  */
 @Component
 public class TrickleRunner {
@@ -37,33 +37,33 @@ public class TrickleRunner {
     }
 
     public void run() {
-        ZoneId zone = tenantZone();
-        LocalDate today = LocalDate.now(zone);
-        LocalDate start = today.minusDays(config.historyDays() - 1L);
         Instant now = Instant.now();
         String nonce = Long.toString(now.toEpochMilli(), 36);
 
-        SeasonalityModel model = new SeasonalityModel(config, start, today);
-        List<SaleEvent> events = model.generateEventsForDay(today, now, nonce);
+        for (String tenantId : config.tenants()) {
+            TenantProfile profile = TenantProfile.load(jdbc, tenantId);
+            LocalDate today = LocalDate.now(profile.zone());
+            LocalDate start = today.minusDays(config.historyDays() - 1L);
 
-        String response =
-                restClient
-                        .post()
-                        .uri("/api/v1/events")
-                        .header("X-Tenant-Id", config.tenant())
-                        .body(events)
-                        .retrieve()
-                        .body(String.class);
+            SeasonalityModel model =
+                    new SeasonalityModel(config, tenantId, profile.currency(), start, today);
+            List<SaleEvent> events = model.generateEventsForDay(today, now, nonce);
 
-        log.info("trickle: posted {} events for {} → {}", events.size(), today, response);
-    }
+            String response =
+                    restClient
+                            .post()
+                            .uri("/api/v1/events")
+                            .header("X-Tenant-Id", tenantId)
+                            .body(events)
+                            .retrieve()
+                            .body(String.class);
 
-    private ZoneId tenantZone() {
-        String tz =
-                jdbc.queryForObject(
-                        "SELECT timezone FROM tenant_config WHERE tenant_id = ?",
-                        String.class,
-                        config.tenant());
-        return ZoneId.of(tz);
+            log.info(
+                    "trickle: tenant={} posted {} events for {} → {}",
+                    tenantId,
+                    events.size(),
+                    today,
+                    response);
+        }
     }
 }

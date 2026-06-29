@@ -34,7 +34,9 @@ curl -H "X-Tenant-Id: t_demo" \
 ```
 
 For a realistic demo, `make seed` bulk-backfills months of seasonal, channel-split history, and
-`make trickle` posts live events that continue it so the dashboard moves (see `data/seed/`).
+`make trickle` posts live events that continue it so the dashboard moves (see `data/seed/`). The
+dashboard's **tenant** picker is populated from `GET /api/v1/tenants`; two demo tenants (`t_demo`,
+`t_acme`) are seeded with independent data, so you can flip between them to see multi-tenant isolation.
 
 Prerequisites: Docker Desktop, JDK 21+, Maven, a browser. No Node, no AWS account required.
 Tests: `make test` (fast unit tests, no Docker) · `make verify` (adds Testcontainers integration tests).

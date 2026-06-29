@@ -23,6 +23,9 @@ public class JdbcTenantConfigRepository implements TenantConfigRepository {
     private static final String FIND =
             "SELECT timezone, reporting_currency FROM tenant_config WHERE tenant_id = ?";
 
+    private static final String ALL_IDS =
+            "SELECT tenant_id FROM tenant_config ORDER BY tenant_id";
+
     private final JdbcTemplate jdbc;
 
     public JdbcTenantConfigRepository(JdbcTemplate jdbc) {
@@ -39,5 +42,10 @@ public class JdbcTenantConfigRepository implements TenantConfigRepository {
                                 rs.getString("reporting_currency"));
         List<TenantConfig> rows = jdbc.query(FIND, mapper, tenantId);
         return rows.stream().findFirst();
+    }
+
+    @Override
+    public List<String> allTenantIds() {
+        return jdbc.queryForList(ALL_IDS, String.class);
     }
 }

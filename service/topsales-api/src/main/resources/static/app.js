@@ -257,11 +257,37 @@
     }
   }
 
+  function setTenantOptions(ids) {
+    els.tenantId.replaceChildren();
+    for (const id of ids) {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id;
+      els.tenantId.appendChild(opt);
+    }
+  }
+
+  // Populate the tenant picker from GET /api/v1/tenants, then load. Falls back to a single
+  // t_demo option if the catalog can't be reached, so the demo still renders.
+  async function populateTenants() {
+    try {
+      const res = await fetch("/api/v1/tenants", { headers: { Accept: "application/json" } });
+      const body = res.ok ? await res.json() : null;
+      const ids = body && Array.isArray(body.tenants) && body.tenants.length ? body.tenants : ["t_demo"];
+      setTenantOptions(ids);
+    } catch (_) {
+      setTenantOptions(["t_demo"]);
+    }
+  }
+
   els.form.addEventListener("submit", (e) => {
     e.preventDefault();
     load();
   });
 
-  // Auto-load once on first paint so the demo shows data immediately.
-  load();
+  // Reload immediately when the tenant changes — convenient for flipping between demo tenants.
+  els.tenantId.addEventListener("change", load);
+
+  // Populate the tenant dropdown, then auto-load once so the demo shows data immediately.
+  populateTenants().then(load);
 })();

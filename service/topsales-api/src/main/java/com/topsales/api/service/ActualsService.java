@@ -99,6 +99,7 @@ public class ActualsService {
                 query.tenantId(),
                 query.mode(),
                 query.window(),
+                query.channel(),
                 query.k(),
                 Status.FRESH,
                 Instant.now(),

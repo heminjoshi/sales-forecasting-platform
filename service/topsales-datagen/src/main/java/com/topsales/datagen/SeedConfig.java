@@ -9,8 +9,7 @@ import java.util.List;
  */
 public record SeedConfig(
         long globalSeed,
-        String tenant,
-        String currency,
+        List<String> tenants,
         int historyDays,
         double trendAnnual,
         double returnRate,

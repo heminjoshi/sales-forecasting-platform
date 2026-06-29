@@ -1,7 +1,6 @@
 {
   "globalSeed": 42,
-  "tenant": "t_demo",
-  "currency": "USD",
+  "tenants": ["t_demo", "t_acme"],
   "historyDays": 540,
   "trendAnnual": 0.15,
   "returnRate": 0.07,

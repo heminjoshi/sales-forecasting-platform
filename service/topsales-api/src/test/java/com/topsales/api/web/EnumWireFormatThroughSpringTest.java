@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKResponse;
+import com.topsales.common.domain.ChannelFilter;
 import com.topsales.common.domain.Mode;
 import com.topsales.common.domain.Status;
 import com.topsales.common.domain.Window;
@@ -45,6 +46,7 @@ class EnumWireFormatThroughSpringTest {
                         "t_demo",
                         Mode.ACTUALS,
                         Window.MONTH,
+                        ChannelFilter.ALL,
                         10,
                         Status.FRESH,
                         Instant.parse("2026-06-28T00:00:00Z"),
@@ -55,6 +57,7 @@ class EnumWireFormatThroughSpringTest {
 
         assertThat(json).contains("\"mode\":\"actuals\"");
         assertThat(json).contains("\"window\":\"month\"");
+        assertThat(json).contains("\"channel\":\"all\"");
         assertThat(json).contains("\"status\":\"fresh\"");
         // forecast-only fields are null → omitted under non_null inclusion
         assertThat(json).doesNotContain("interval");

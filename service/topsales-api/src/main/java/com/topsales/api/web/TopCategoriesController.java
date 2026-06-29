@@ -73,6 +73,7 @@ public class TopCategoriesController {
                             response.tenantId(),
                             response.mode(),
                             response.window(),
+                            response.channel(),
                             response.k(),
                             Status.PENDING,
                             response.asOf(),

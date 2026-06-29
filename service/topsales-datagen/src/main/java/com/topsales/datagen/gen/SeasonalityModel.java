@@ -43,12 +43,21 @@ public final class SeasonalityModel {
     };
 
     private final SeedConfig config;
+    private final String tenantId;
+    private final String currency;
     private final LocalDate windowStart;
     private final LocalDate windowEnd;
     private final LocalDate outlierDate;
 
-    public SeasonalityModel(SeedConfig config, LocalDate windowStart, LocalDate windowEnd) {
+    public SeasonalityModel(
+            SeedConfig config,
+            String tenantId,
+            String currency,
+            LocalDate windowStart,
+            LocalDate windowEnd) {
         this.config = config;
+        this.tenantId = tenantId;
+        this.currency = currency;
         this.windowStart = windowStart;
         this.windowEnd = windowEnd;
         this.outlierDate =
@@ -68,13 +77,13 @@ public final class SeasonalityModel {
                     double net = gross * (1.0 - config.returnRate()); // signed returns netted in
                     rows.add(
                             new AggregateRow(
-                                    config.tenant(),
+                                    tenantId,
                                     cat.id(),
                                     channel,
                                     date,
                                     money(net),
                                     orderCount(gross, cat),
-                                    config.currency()));
+                                    currency));
                 }
             }
         }
@@ -154,12 +163,12 @@ public final class SeasonalityModel {
             EventType type,
             Instant eventTime) {
         return new SaleEvent(
-                config.tenant(),
+                tenantId,
                 orderId,
                 cat.id(),
                 channel,
                 amount,
-                config.currency(),
+                currency,
                 type,
                 eventTime,
                 null);
@@ -169,7 +178,7 @@ public final class SeasonalityModel {
     private double unit(CategorySpec cat, Channel channel, LocalDate date, String salt) {
         long h = 0x9E3779B97F4A7C15L;
         h = mix(h, config.globalSeed());
-        h = mix(h, config.tenant().hashCode());
+        h = mix(h, tenantId.hashCode());
         h = mix(h, cat.id().hashCode());
         h = mix(h, channel.ordinal());
         h = mix(h, date.toEpochDay());

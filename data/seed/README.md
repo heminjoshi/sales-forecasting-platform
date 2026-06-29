@@ -19,6 +19,7 @@ make trickle   # posts live SaleEvents for "today" → the dashboard moves
 | Field | Meaning |
 |---|---|
 | `globalSeed` | Seeds the per-cell RNG (`hash(globalSeed, tenant, category, channel, epochDay)`), so generation is order-independent and reruns are identical. |
+| `tenants` | The tenant ids to generate for (e.g. `["t_demo","t_acme"]`). Each gets independent data (the RNG keys on tenant id); timezone + currency are read from `tenant_config`. |
 | `historyDays` | Trailing window length ending **today** (so the dashboard always has fresh data). |
 | `trendAnnual` | Multi-month upward trend (e.g. `0.15` = +15%/yr) the forecaster's trend term fits. |
 | `returnRate` | Fraction of gross value netted out as signed returns (financial-domain correctness). |
