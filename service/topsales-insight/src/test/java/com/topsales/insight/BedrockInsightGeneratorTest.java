@@ -123,6 +123,8 @@ class BedrockInsightGeneratorTest {
 
         assertThat(out).isEqualTo("Coffee leads at 1200, up +12%.");
         verifyNoInteractions(template);
+        // IT-RS-05: a grounded success must NOT fire the fallback counter.
+        assertThat(fallbacks.get()).isZero();
     }
 
     @Test
@@ -136,6 +138,8 @@ class BedrockInsightGeneratorTest {
         String out = generator.generate(REQ);
 
         assertThat(out).isEqualTo(TEMPLATE_FLOOR);
+        // IT-RS-05: the ungrounded path fires the fallback counter exactly once.
+        assertThat(fallbacks.get()).isEqualTo(1);
     }
 
     @Test
@@ -148,6 +152,8 @@ class BedrockInsightGeneratorTest {
 
         assertThat(out).isEqualTo(TEMPLATE_FLOOR);
         verifyNoInteractions(validator);
+        // IT-RS-05: the exception path fires the fallback counter exactly once.
+        assertThat(fallbacks.get()).isEqualTo(1);
     }
 
     @Test
@@ -207,6 +213,8 @@ class BedrockInsightGeneratorTest {
 
         assertThat(out).isEqualTo(TEMPLATE_FLOOR);
         verify(validator, never()).isGrounded(any(), any());
+        // IT-RS-05: the empty-response path fires the fallback counter exactly once.
+        assertThat(fallbacks.get()).isEqualTo(1);
     }
 
     // --- Phase 6: resilience (retry + circuit breaker) ------------------------------------------
@@ -259,6 +267,54 @@ class BedrockInsightGeneratorTest {
 
         assertThat(out).isEqualTo(TEMPLATE_FLOOR);
         assertThat(fallbacks.get()).isEqualTo(1);
+    }
+
+    @Test
+    void breakerHalfOpen_probeSuccess_closesBreaker_andResumesInvoking() {
+        // IT-RS-03: a dedicated breaker with a 1-call half-open window so a single probe success
+        // closes it deterministically (no waiting on waitDurationInOpenState).
+        CircuitBreakerConfig cfg =
+                CircuitBreakerConfig.custom()
+                        .slidingWindowSize(4)
+                        .minimumNumberOfCalls(4)
+                        .failureRateThreshold(50)
+                        .permittedNumberOfCallsInHalfOpenState(1)
+                        .build();
+        CircuitBreaker breaker = CircuitBreaker.of("half-open-test", cfg);
+        BedrockInsightGenerator gen =
+                new BedrockInsightGenerator(
+                        template,
+                        validator,
+                        client,
+                        JsonMapper.builder().build(),
+                        MODEL_ID,
+                        Duration.ofMillis(1500),
+                        breaker,
+                        Retry.of("half-open-test", RetryConfig.custom().maxAttempts(1).build()),
+                        fallbacks::incrementAndGet);
+
+        // Drive the breaker OPEN: 4 failing calls (no retry -> one failure each) fill the window.
+        when(client.invokeModel(any(InvokeModelRequest.class)))
+                .thenThrow(SdkClientException.create("bedrock unavailable"));
+        when(template.generate(REQ)).thenReturn(TEMPLATE_FLOOR);
+        for (int i = 0; i < 4; i++) {
+            assertThat(gen.generate(REQ)).isEqualTo(TEMPLATE_FLOOR);
+        }
+        assertThat(breaker.getState()).isEqualTo(CircuitBreaker.State.OPEN);
+
+        // Simulate waitDurationInOpenState elapsing, then let the single half-open probe succeed.
+        breaker.transitionToHalfOpenState();
+        clearInvocations(client);
+        when(client.invokeModel(any(InvokeModelRequest.class)))
+                .thenReturn(bedrockText("Coffee leads at 1200, up +12%."));
+        when(validator.isGrounded(any(), any())).thenReturn(true);
+
+        String out = gen.generate(REQ);
+
+        // The probe invoked the client again, returned grounded text, and CLOSED the breaker.
+        assertThat(out).isEqualTo("Coffee leads at 1200, up +12%.");
+        verify(client, times(1)).invokeModel(any(InvokeModelRequest.class));
+        assertThat(breaker.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
     }
 
     /** A minimal Anthropic-on-Bedrock Messages API response body carrying a single text block. */
