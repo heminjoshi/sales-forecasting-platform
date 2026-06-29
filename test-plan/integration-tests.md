@@ -176,37 +176,45 @@ Success = **200** + `TopKResponse`. Enums on the wire are **lowercase** (`mode/w
 
 ---
 
-## 8. Hardening: resilience & observability [P6] — spec, `@Disabled`/unit until built
+## 8. Hardening: resilience & observability [P6]
+
+> **Coverage status (P6).** Shipped covered by **unit** suites (in `make test`) plus a **Postman**
+> actuator probe — there is no `IT-RS`/`IT-OB`/`IT-LG` Testcontainers class, and nothing is `@Disabled`.
+> The **Status** column records what's really implemented. Legend as in §6 plus **✅ Postman** = asserted
+> by a `postman/TopSales.postman_collection.json` request (run via `make verify`/Newman, not JUnit).
+> The earlier ❌ gaps (RS-03, OB-02, OB-07, OB-08, LG-05) were closed in this pass — unit tests for the
+> batch/MDC/resilience cases, Postman probes for the live actuator cases. Remaining ⚠️ rows are scoped
+> by design (see notes); promoting them further is deferred to the Phase-8 test-hardening pass.
 
 ### 8.1 Resilience4j on Bedrock (circuit breaker + retry; fail-soft preserved)
 Unit-level with a mocked `BedrockRuntimeClient` (no Testcontainers); the read must **never** block.
-| ID | Scenario | Expected |
-|---|---|---|
-| IT-RS-01 | Transient error then success (retry) | client throws `ApiCallTimeoutException` once then returns a grounded body → grounded text returned; `invokeModel` called twice (1 retry) |
-| IT-RS-02 | Breaker opens after threshold | drive ≥ `minimumNumberOfCalls` failures → breaker `OPEN`; next call short-circuits (`CallNotPermittedException`) **without** invoking the client → deterministic **template** returned |
-| IT-RS-03 | Breaker half-open recovery | after `waitDurationInOpenState`, a probe success closes the breaker; subsequent calls invoke the client again |
-| IT-RS-04 | Timeout → template | `ApiCallTimeoutException` (no retry left) → template fallback; read still produces a grounded insight |
-| IT-RS-05 | Fallback counter | every fallback path (exception, breaker-open, ungrounded/blank) increments `topsales.insight.fallback.total` **exactly once**; a grounded success does **not** |
-| IT-RS-06 | No dep leakage | no `software.amazon.awssdk` / `resilience4j` symbol resolvable from `topsales-api` — confined to `topsales-insight` (compile-level invariant) |
+| ID | Scenario | Expected | Status |
+|---|---|---|---|
+| IT-RS-01 | Transient error then success (retry) | client throws `ApiCallTimeoutException` once then returns a grounded body → grounded text returned; `invokeModel` called twice (1 retry) | ✅ unit `BedrockInsightGeneratorTest.transientTimeout_isRetried_thenGroundedTextReturned` |
+| IT-RS-02 | Breaker opens after threshold | drive ≥ `minimumNumberOfCalls` failures → breaker `OPEN`; next call short-circuits (`CallNotPermittedException`) **without** invoking the client → deterministic **template** returned | ✅ unit `BedrockInsightGeneratorTest.breakerOpens_afterRepeatedFailures_thenShortCircuitsWithoutInvoking` |
+| IT-RS-03 | Breaker half-open recovery | after `waitDurationInOpenState`, a probe success closes the breaker; subsequent calls invoke the client again | ✅ unit `BedrockInsightGeneratorTest.breakerHalfOpen_probeSuccess_closesBreaker_andResumesInvoking` |
+| IT-RS-04 | Timeout → template | `ApiCallTimeoutException` (no retry left) → template fallback; read still produces a grounded insight | ✅ unit `BedrockInsightGeneratorTest.timeout_fallsBackToTemplate` / `timeout_firesOnFallbackOnce_andServesTemplate` |
+| IT-RS-05 | Fallback counter | every fallback path (exception, breaker-open, ungrounded/blank) increments `topsales.insight.fallback.total` **exactly once**; a grounded success does **not** | ✅ unit `BedrockInsightGeneratorTest` — counter asserted on the timeout / exception / ungrounded / empty paths **and** asserted **not** fired on grounded success |
+| IT-RS-06 | No dep leakage | no `software.amazon.awssdk` / `resilience4j` symbol resolvable from `topsales-api` — confined to `topsales-insight` (compile-level invariant) | ⚠️ unit `BedrockDependencyConfinementTest` asserts the **AWS SDK** is unresolvable from `topsales-api`; resilience4j is intentionally a **non-optional** transitive dep (slf4j+vavr only) so its confinement is **not** an invariant — row scoped to the SDK |
 
 ### 8.2 Metrics — Actuator + Micrometer (RED + ML-quality)
-| ID | Scenario | Expected |
-|---|---|---|
-| IT-OB-01 | Prometheus scrape live | `GET /actuator/prometheus` → 200; body contains `http_server_requests`, `topsales_read_total`, `topsales_forecast_freshness_seconds` |
-| IT-OB-02 | Health endpoint | `GET /actuator/health` → 200 `status: UP`; DB + Redis components reported |
-| IT-OB-03 | `topsales.read.total` tagging | each read increments the counter **once** with correct `status` (fresh/stale/degraded/pending) + `mode` (forecast/actuals) tags — no double-count across rungs |
-| IT-OB-04 | Degraded-read observable | wipe serving table → read returns `degraded` (still 200) **and** `topsales_read_total{status="degraded"}` increments |
-| IT-OB-05 | Freshness gauge | after a batch, `topsales_forecast_freshness_seconds` ≈ age of newest serving row; **empty serving table → gauge does not throw** (NaN/−1 sentinel) |
-| IT-OB-06 | Provider-fault counter | a serving-read RuntimeException (forced) drops a rung **and** increments `topsales_forecast_provider_faults_total`; read still 200 |
-| IT-OB-07 | RED error rate | a 4xx (e.g. `k=0`) is recorded by `http_server_requests` with the matching `status`/`outcome` tags |
-| IT-OB-08 | Batch structured metric | forecast batch logs one `batch_success=true tenants=… durationMs=… pkWrites=…` line on success; on a forced failure logs `batch_success=false` with duration before rethrow |
+| ID | Scenario | Expected | Status |
+|---|---|---|---|
+| IT-OB-01 | Prometheus scrape live | `GET /actuator/prometheus` → 200; body contains `http_server_requests`, `topsales_read_total`, `topsales_forecast_freshness_seconds` | ✅ Postman item 8 "Observability — Prometheus scrape" (asserts all three meter names) |
+| IT-OB-02 | Health endpoint | `GET /actuator/health` → 200 `status: UP`; DB + Redis components reported | ✅ Postman item 9 "Health — /actuator/health UP with db + redis" (needs `management.endpoint.health.show-components/show-details=always`) |
+| IT-OB-03 | `topsales.read.total` tagging | each read increments the counter **once** with correct `status` (fresh/stale/degraded/pending) + `mode` (forecast/actuals) tags — no double-count across rungs | ✅ unit `ForecastReadServiceTest.readCounter_incrementsWith{Fresh,Degraded,Pending}StatusTag` (status tags; `stale`/`mode`-tag not separately asserted) |
+| IT-OB-04 | Degraded-read observable | wipe serving table → read returns `degraded` (still 200) **and** `topsales_read_total{status="degraded"}` increments | ✅ unit `ForecastReadServiceTest.readCounter_incrementsWithDegradedStatusTag` + ✅ Postman degraded-sample probe |
+| IT-OB-05 | Freshness gauge | after a batch, `topsales_forecast_freshness_seconds` ≈ age of newest serving row; **empty serving table → gauge does not throw** (NaN/−1 sentinel) | ✅ unit `ForecastFreshnessGaugeTest` (3 methods) |
+| IT-OB-06 | Provider-fault counter | a serving-read RuntimeException (forced) drops a rung **and** increments `topsales_forecast_provider_faults_total`; read still 200 | ✅ unit `ForecastReadServiceTest.providerFaultCounter_incrementsWhenServingReadThrows` |
+| IT-OB-07 | RED error rate | a 4xx (e.g. `k=0`) is recorded by `http_server_requests` with the matching `status`/`outcome` tags | ✅ Postman item 9 "RED error rate" — drives a `k=0` 400 then asserts `http_server_requests` carries `outcome="CLIENT_ERROR"` |
+| IT-OB-08 | Batch structured metric | forecast batch logs one `batch_success=true tenants=… durationMs=… pkWrites=…` line on success; on a forced failure logs `batch_success=false` with duration before rethrow | ✅ unit `ForecasterJobTest.run_emitsOneStructuredBatchMetricLineOnSuccess` (ListAppender asserts `batch_success=true … pkWrites=9`); ⚠️ the failure-path line isn't separately asserted |
 
 ### 8.3 Structured logging (tenant + request id via MDC)
-| ID | Scenario | Expected |
-|---|---|---|
-| IT-LG-01 | Tenant + request id in log line | a read with `X-Tenant-Id: t_demo` emits log lines carrying `tenantId=t_demo` and a `requestId` (MDC pattern) |
-| IT-LG-02 | Inbound request id honored | request with `X-Request-Id: abc123` → logs + the **response** `X-Request-Id` header echo `abc123` |
-| IT-LG-03 | Generated request id | request without the header → a UUID `requestId` is generated and returned in the response header |
-| IT-LG-04 | **MDC cleared (no leak)** | after the filter returns, MDC has no `tenantId`/`requestId`; holds even when the chain throws (cleared in `finally`) — guards against cross-thread tenant-id leakage on pooled threads |
-| IT-LG-05 | Batch per-tenant MDC | `ForecasterJob.runTenant` sets `tenantId` in MDC and removes it in `finally` (no bleed across tenants in one batch run) |
+| ID | Scenario | Expected | Status |
+|---|---|---|---|
+| IT-LG-01 | Tenant + request id in log line | a read with `X-Tenant-Id: t_demo` emits log lines carrying `tenantId=t_demo` and a `requestId` (MDC pattern) | ✅ unit `TenantScopeFilterTest.headerPresent_setsAttribute` (MDC/attribute set from the header) |
+| IT-LG-02 | Inbound request id honored | request with `X-Request-Id: abc123` → logs + the **response** `X-Request-Id` header echo `abc123` | ✅ unit `TenantScopeFilterTest.headerPresent_echoesRequestIdAndClearsMdc` |
+| IT-LG-03 | Generated request id | request without the header → a UUID `requestId` is generated and returned in the response header | ✅ unit `TenantScopeFilterTest.missingRequestId_isGeneratedAndEchoed` |
+| IT-LG-04 | **MDC cleared (no leak)** | after the filter returns, MDC has no `tenantId`/`requestId`; holds even when the chain throws (cleared in `finally`) — guards against cross-thread tenant-id leakage on pooled threads | ✅ unit `TenantScopeFilterTest.chainThrows_stillClearsMdc` (+ cleared-after assertions in the echo tests) |
+| IT-LG-05 | Batch per-tenant MDC | `ForecasterJob.runTenant` sets `tenantId` in MDC and removes it in `finally` (no bleed across tenants in one batch run) | ✅ unit `ForecasterJobTest.runTenant_setsTenantIdInMdcDuringProcessing_andClearsItAfter` |
 </content>

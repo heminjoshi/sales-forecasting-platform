@@ -94,6 +94,13 @@ management:
     web:
       exposure:
         include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      # Surface per-component health (db + redis) on /actuator/health so a probe/operator can see
+      # which dependency is down, not just the rolled-up status. Local demo has no auth in front of
+      # actuator; the aws profile would gate this behind the platform's auth.
+      show-components: always
+      show-details: always
   metrics:
     tags:
       application: topsales-api

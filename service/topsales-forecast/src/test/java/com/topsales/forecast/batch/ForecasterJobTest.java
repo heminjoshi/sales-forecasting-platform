@@ -29,8 +29,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * Unit tests for {@link ForecasterJob} with hand fakes (no DB). The fixture is 3 categories × 2
@@ -128,6 +134,41 @@ class ForecasterJobTest {
         job.run(null);
         // 3 categories, top-N = 2 -> every one of the 9 partitions keeps exactly 2 rows.
         assertThat(serving.writes.values()).allSatisfy(rows -> assertThat(rows).hasSize(2));
+    }
+
+    @Test
+    void run_emitsOneStructuredBatchMetricLineOnSuccess() {
+        // IT-OB-08: the batch's only "metric" surface is one parse-friendly log line per run.
+        Logger jobLogger = (Logger) LoggerFactory.getLogger(ForecasterJob.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        jobLogger.addAppender(appender);
+        try {
+            job.run(null);
+        } finally {
+            jobLogger.detachAppender(appender);
+        }
+
+        assertThat(appender.list)
+                .anySatisfy(
+                        e ->
+                                assertThat(e.getFormattedMessage())
+                                        .contains("batch metrics:")
+                                        .contains("batch_success=true")
+                                        .contains("tenants=1")
+                                        .contains("pkWrites=9"));
+    }
+
+    @Test
+    void runTenant_setsTenantIdInMdcDuringProcessing_andClearsItAfter() {
+        // IT-LG-05: every log line emitted while a tenant is processing must carry its tenantId, and
+        // the tag must be removed in finally so a pooled thread never leaks it to the next tenant/run.
+        job.run(null);
+
+        // The serving write ran while 't1' was being processed -> MDC carried the tenant tag.
+        assertThat(serving.mdcTenantSeen).isEqualTo(TENANT);
+        // ...and the finally block cleared it.
+        assertThat(MDC.get("tenantId")).isNull();
     }
 
     // --- helpers ---------------------------------------------------------------------------------
@@ -251,6 +292,8 @@ class ForecasterJobTest {
     private static final class CapturingServingTable implements ServingTableRepository {
         private final Map<String, List<ServingRow>> writes = new java.util.LinkedHashMap<>();
         private int calls;
+        // The tenantId visible in MDC at the moment a write happens (proves per-tenant MDC, IT-LG-05).
+        private String mdcTenantSeen;
 
         @Override
         public Optional<ServingResult> readActive(String pk) {
@@ -265,6 +308,7 @@ class ForecasterJobTest {
         @Override
         public int writeVersionAndSwap(String pk, List<ServingRow> rows, Instant asOf) {
             calls++;
+            mdcTenantSeen = MDC.get("tenantId");
             writes.put(pk, rows);
             return 1;
         }

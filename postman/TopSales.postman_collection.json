@@ -462,6 +462,119 @@
           }
         }
       ]
+    },
+    {
+      "name": "9. RED error rate + health probes",
+      "description": "Phase 6 (IT-OB-07 / IT-OB-02). First drive a 4xx (k=0) so the built-in RED timer records a client-error outcome, then scrape /actuator/prometheus and assert http_server_requests carries outcome=\"CLIENT_ERROR\" — proving error rate is observable. Finally assert /actuator/health is UP and surfaces the db + redis components (management.endpoint.health.show-components=always).",
+      "item": [
+        {
+          "name": "Trigger a 4xx (k=0) — recorded by the RED timer",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-Id", "value": "{{tenantId}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/top-categories?mode=actuals&window=month&channel=all&k=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tenants", "{{tenantId}}", "top-categories"],
+              "query": [
+                { "key": "mode", "value": "actuals" },
+                { "key": "window", "value": "month" },
+                { "key": "channel", "value": "all" },
+                { "key": "k", "value": "0" }
+              ]
+            },
+            "description": "k must be 1..50, so k=0 is a 400. This populates the RED timer with a client-error sample for the scrape below."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400 Bad Request', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RED error rate — outcome=\"CLIENT_ERROR\" on /actuator/prometheus",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "text/plain" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/prometheus",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "prometheus"]
+            },
+            "description": "Run AFTER the 4xx above. The built-in RED timer must now carry an http_server_requests sample tagged outcome=\"CLIENT_ERROR\" — error rate is observable, not just success rate."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 OK', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var body = pm.response.text();",
+                  "pm.test('RED timer records a client-error outcome', function () {",
+                  "  pm.expect(body).to.include('http_server_requests');",
+                  "  pm.expect(body).to.include('outcome=\"CLIENT_ERROR\"');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Health — /actuator/health UP with db + redis components",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "IT-OB-02: overall status UP, and the db + redis component health is surfaced so an operator/probe can tell which dependency is down."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 OK', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var body = pm.response.json();",
+                  "pm.test('overall status is UP', function () {",
+                  "  pm.expect(body.status).to.eql('UP');",
+                  "});",
+                  "pm.test('db and redis components are reported UP', function () {",
+                  "  pm.expect(body.components).to.be.an('object');",
+                  "  pm.expect(body.components).to.have.property('db');",
+                  "  pm.expect(body.components).to.have.property('redis');",
+                  "  pm.expect(body.components.db.status).to.eql('UP');",
+                  "  pm.expect(body.components.redis.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
