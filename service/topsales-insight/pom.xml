@@ -15,4 +15,52 @@
     <name>topsales-insight</name>
     <description>InsightGenerator: deterministic TemplateInsight (local) + grounded BedrockInsight (cloud)</description>
 
+    <properties>
+        <!-- AWS SDK v2 BOM aligns all software.amazon.awssdk:* artifact versions (here: bedrockruntime). -->
+        <awssdk.version>2.31.78</awssdk.version>
+    </properties>
+
+    <!-- Import the AWS SDK v2 BOM so the bedrockruntime dependency below can omit its version and stay
+         version-aligned with any future awssdk artifacts. Import scope = version management only; it
+         does not add anything to the classpath on its own. Mirrors the root pom's testcontainers-bom. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${awssdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- The InsightGenerator seam + the grounded DTOs (TopKItem/InsightRequest) live here. -->
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Bedrock Runtime client for the designed (cloud) BedrockInsight impl. Marked optional so it
+             does NOT propagate transitively onto the topsales-api classpath: the read app depends on
+             this module (to wire the local TemplateInsight bean) but must not drag the AWS SDK into the
+             local-runnable graph. The Bedrock impl is selected only under the aws profile; the SDK is
+             present on this module's own classpath so that impl still compiles here. Mirrors the
+             optional topsales-datagen precedent in topsales-forecast. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>bedrockruntime</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- junit + assertj + mockito (bundled by starter-test), matching every sibling module. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
 </project>
