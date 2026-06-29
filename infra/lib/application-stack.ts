@@ -3,8 +3,8 @@ import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
-import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
-import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as apigwv2Integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -93,38 +93,29 @@ export class ApplicationStack extends cdk.Stack {
     });
 
     // -----------------------------------------------------------------
-    // serving: ALB-fronted Fargate service.
-    // The git-sha imageTag becomes part of the image URI token at synth — no
-    // image needs to exist in the repo for the template to render.
+    // serving: an INTERNAL ALB-fronted Fargate service, exposed publicly only
+    // through an API Gateway HTTP API. The git-sha imageTag becomes part of the
+    // image URI token at synth — no image needs to exist for the template to render.
     //
-    // The API must be internet-reachable (the prod React SPA on Vercel calls it
-    // cross-origin), so the ALB is public — but TLS-terminated, never plaintext:
-    // an HTTPS:443 listener with a recommended TLS policy, and HTTP:80 redirects
-    // to it. The ACM certificate is injected per-env via `-c apiCertArn=...`; a
-    // synth-time placeholder ARN keeps account-agnostic synth green (CloudFormation
-    // does not resolve the ARN at synth — only at deploy).
+    // Ingress design (DR-8 follow-on): the prod React SPA on Vercel runs in the
+    // browser and calls this API cross-origin, so the API needs PUBLIC ingress.
+    // The public edge is an API Gateway HTTP API (see below), NOT a public ALB:
+    //  - it terminates TLS on its managed `*.execute-api` domain — no ACM cert and
+    //    no custom domain to provision (the exact friction a public ALB hits at
+    //    deploy time, since ACM won't issue for the raw ALB hostname);
+    //  - it adds throttling / WAF hooks at the edge;
+    //  - the Fargate service + its ALB stay PRIVATE (`publicLoadBalancer: false`),
+    //    reachable only via the gateway's VPC Link — the compute is never
+    //    internet-exposed.
+    // CORS stays in the Spring app (Phase-7 WebCorsConfig) and passes through the
+    // HTTP_PROXY integration untouched.
     // -----------------------------------------------------------------
-    const apiCertArn =
-      (this.node.tryGetContext('apiCertArn') as string | undefined) ??
-      cdk.Arn.format(
-        {
-          service: 'acm',
-          resource: 'certificate',
-          resourceName: 'REPLACE-WITH-REAL-API-CERT',
-          arnFormat: cdk.ArnFormat.SLASH_RESOURCE_NAME,
-        },
-        this,
-      );
-
     this.servingService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'Serving', {
       cluster,
       cpu: 512,
       memoryLimitMiB: 1024,
       desiredCount: 2,
-      protocol: elbv2.ApplicationProtocol.HTTPS,
-      sslPolicy: elbv2.SslPolicy.RECOMMENDED_TLS,
-      certificate: acm.Certificate.fromCertificateArn(this, 'ApiCert', apiCertArn),
-      redirectHTTP: true, // HTTP:80 -> HTTPS:443
+      publicLoadBalancer: false, // internal ALB — only the API Gateway VPC Link reaches it
       taskImageOptions: {
         image: ecs.ContainerImage.fromEcrRepository(servingRepo, props.imageTag),
         containerPort: 8080,
@@ -142,6 +133,24 @@ export class ApplicationStack extends cdk.Stack {
     servingTaskRole.addManagedPolicy(props.bedrockInvokeManagedPolicy);
     props.modelConfigParam.grantRead(servingTaskRole);
     props.auroraRef.secret.grantRead(servingTaskRole);
+
+    // Public edge: API Gateway HTTP API -> VPC Link -> the private ALB listener.
+    // Managed TLS, no cert/domain to own; the only internet-facing resource here.
+    const vpcLink = new apigwv2.VpcLink(this, 'ServingVpcLink', { vpc: props.vpc });
+    const httpApi = new apigwv2.HttpApi(this, 'ServingHttpApi', {
+      description:
+        'Public TLS-terminated edge for the topsales serving API; HTTP_PROXY -> private ALB via VPC Link.',
+      defaultIntegration: new apigwv2Integrations.HttpAlbIntegration(
+        'AlbIntegration',
+        this.servingService.listener,
+        { vpcLink },
+      ),
+    });
+
+    new cdk.CfnOutput(this, 'ApiEndpoint', {
+      value: httpApi.apiEndpoint,
+      description: 'Public HTTPS endpoint (API Gateway HTTP API; managed TLS, no custom domain).',
+    });
 
     // -----------------------------------------------------------------
     // consumer: headless Fargate service (no ALB). DESIGNED-ONLY image —

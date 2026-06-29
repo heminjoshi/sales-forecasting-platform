@@ -22,12 +22,7 @@ The platform is built phase-by-phase ([`../docs/`](../docs/), Build-Delivery-Pla
 - **[P4]** — forecast serving, degradation chain, Redis cache.
 - **[P5]** — GenAI insight layer (grounding, injection safety).
 - **[P6]** — hardening: resilience & observability (health/readiness, metrics, structured logs).
-- **[P7]** — production path: API **CORS allow-list** (`localhost` + the Vercel origin) on `/api/**`; the
-  `web/` React SPA (Vite/Recharts) cross-origin **prod build** deployed to Vercel (the static dashboard
-  stays the local demo); and (PR2) the AWS **CDK infra** validation. Because CORS is **browser-enforced**,
-  its header behavior is realized via **Postman** (Origin/preflight probe) + **manual/canary** checks, **not**
-  HTTP-slice ITs (the SB4.1/Jackson-3 runner caveat — no `@WebMvcTest`/`TestRestTemplate`); the one automated
-  JUnit case is a config-binding **unit** test over the allow-list property.
+- **[P7]** — production path & infra: API **CORS allow-list** (`localhost` + the Vercel origin) on `/api/**` and the `web/` React SPA (Vite/Recharts) cross-origin **prod build** deployed to Vercel (the static dashboard stays the local demo); plus the synth-only **AWS CDK** 5-stack — ingress via **API Gateway → private ALB** (compute never internet-facing), least-privilege Bedrock IAM, non-root containers, and the metric-name contract gate. Because CORS is **browser-enforced**, its header behavior is realized via **Postman** (Origin/preflight probe) + **manual/canary** checks, **not** HTTP-slice ITs (the SB4.1/Jackson-3 runner caveat — no `@WebMvcTest`/`TestRestTemplate`); the one automated JUnit case is a config-binding **unit** test over the allow-list property. Infra cases (`IT-IF`) are `aws-cdk-lib` assertion tests under `infra/test/` (run by `npm test` / `infra.yml`), not Maven.
 
 A `[P3+]` case is written now but **expected to be skipped/`@Disabled`** until that phase lands; the
 plan is the spec the phase must satisfy. These plans are authored and kept current phase-by-phase by

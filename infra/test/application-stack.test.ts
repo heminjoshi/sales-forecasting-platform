@@ -69,21 +69,19 @@ describe('ApplicationStack', () => {
     );
   });
 
-  test('the public ALB is TLS-terminated: HTTPS:443 + HTTP:80 redirect (never plaintext)', () => {
-    // The serving API must be internet-reachable for the cross-origin Vercel SPA,
-    // so it is TLS-terminated, not plaintext. Assert an HTTPS:443 listener...
-    template.hasResourceProperties('AWS::ElasticLoadBalancingV2::Listener', {
-      Protocol: 'HTTPS',
-      Port: 443,
-      Certificates: Match.anyValue(),
+  test('ingress is API Gateway -> VPC Link -> a PRIVATE ALB (compute never internet-facing)', () => {
+    // The public edge is an API Gateway HTTP API (managed TLS, no custom domain);
+    // the ALB is internal and reachable only through the VPC Link.
+    template.hasResourceProperties('AWS::ElasticLoadBalancingV2::LoadBalancer', {
+      Scheme: 'internal',
     });
-    // ...and that the HTTP:80 listener only redirects (no plaintext forwarding).
-    template.hasResourceProperties('AWS::ElasticLoadBalancingV2::Listener', {
-      Protocol: 'HTTP',
-      Port: 80,
-      DefaultActions: Match.arrayWith([
-        Match.objectLike({ Type: 'redirect', RedirectConfig: Match.objectLike({ Protocol: 'HTTPS' }) }),
-      ]),
+    template.resourceCountIs('AWS::ApiGatewayV2::Api', 1);
+    template.hasResourceProperties('AWS::ApiGatewayV2::Api', { ProtocolType: 'HTTP' });
+    template.resourceCountIs('AWS::ApiGatewayV2::VpcLink', 1);
+    // The default route integrates to the private ALB via the VPC Link (HTTP_PROXY).
+    template.hasResourceProperties('AWS::ApiGatewayV2::Integration', {
+      IntegrationType: 'HTTP_PROXY',
+      ConnectionType: 'VPC_LINK',
     });
   });
 
