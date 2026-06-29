@@ -1,0 +1,248 @@
+openapi: 3.1.0
+info:
+  title: Top Sales by Category API
+  version: 1.0.0
+  description: |
+    Multi-tenant sales-forecasting platform. Ingest sale/return/adjustment events, then read
+    the **top-k categories** per tenant per window in **forecast** or **actuals** mode.
+
+    Reads never fail closed: every response carries a `status`
+    (`fresh | stale | pending | degraded`) and an `asOf` timestamp, so the dashboard always renders
+    something honest even during a full ML-plane outage. See `docs/lld.md` for the implementation
+    contract and `docs/hld.md` for the architecture.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local (Spring Boot, `local` profile)
+
+tags:
+  - name: ingestion
+    description: Write path — accept events and maintain idempotent aggregates.
+  - name: read
+    description: Read path — ranked top-k categories with status and freshness.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/v1/events:
+    post:
+      tags: [ingestion]
+      operationId: ingestEvents
+      summary: Ingest one or more sale events (idempotent)
+      description: |
+        Local stand-in for the streaming ingestion path. Accepts a single `SaleEvent` or an array.
+        Deduplicated on `idempotencyKey`; aggregates are updated additively, so replays and
+        out-of-order delivery are safe (exactly-once *effect*). Malformed events are quarantined,
+        not retried.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SaleEvent'
+                - type: array
+                  items: { $ref: '#/components/schemas/SaleEvent' }
+                  minItems: 1
+            examples:
+              single:
+                summary: One event
+                value:
+                  tenantId: t_123
+                  orderId: o_998
+                  categoryId: cat_office
+                  amount: 42.50
+                  currency: USD
+                  eventType: SALE
+                  eventTime: "2026-06-20T14:03:00Z"
+                  idempotencyKey: "o_998:SALE"
+      responses:
+        '202':
+          description: Accepted (with applied/deduped/quarantined counts).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IngestAck' }
+        '400':
+          $ref: '#/components/responses/Problem'
+
+  /api/v1/tenants/{tenantId}/top-categories:
+    get:
+      tags: [read]
+      operationId: getTopCategories
+      summary: Top-k categories for a tenant in a given mode and window
+      description: |
+        Returns the ranked top-k categories. Always returns `200` with a body whose `status`
+        reflects freshness/degradation — a degraded forecast is **not** a 5xx.
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+          description: Must match the authenticated tenant, else `403`.
+          example: t_123
+        - name: mode
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/Mode' }
+        - name: window
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/Window' }
+        - name: k
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        '200':
+          description: Ranked top-k (see `status` for freshness/degradation).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TopKResponse' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Carries the authenticated tenant context (A1). Locally a dev header `X-Tenant-Id` stands in
+        for upstream auth. The tenant is never read from the request body or path.
+
+  responses:
+    Problem:
+      description: Error (RFC 7807 problem+json).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Mode:
+      type: string
+      enum: [forecast, actuals]
+      default: forecast
+      description: forecast = predicted; actuals = historical aggregation (always available).
+
+    Window:
+      type: string
+      enum: [week, month, year]
+      default: month
+      description: Selectable reporting window. `quarter` is reserved.
+
+    Status:
+      type: string
+      enum: [fresh, stale, pending, degraded]
+      description: |
+        fresh = forecast within SLO; stale = last-good forecast beyond SLO;
+        pending = no forecast yet, showing actuals; degraded = JVM seasonal-naive fallback.
+
+    Confidence:
+      type: string
+      enum: [HIGH, MEDIUM, LOW]
+
+    EventType:
+      type: string
+      enum: [SALE, RETURN, ADJUSTMENT]
+      description: RETURN and ADJUSTMENT carry signed (negative) amounts.
+
+    SaleEvent:
+      type: object
+      required: [tenantId, orderId, categoryId, amount, currency, eventType, eventTime]
+      properties:
+        tenantId: { type: string, example: t_123 }
+        orderId: { type: string, example: o_998 }
+        categoryId: { type: string, example: cat_office }
+        amount:
+          type: number
+          description: Signed value; minor-unit-safe decimal.
+          example: 42.50
+        currency: { type: string, description: ISO 4217., example: USD }
+        eventType: { $ref: '#/components/schemas/EventType' }
+        eventTime: { type: string, format: date-time, example: "2026-06-20T14:03:00Z" }
+        idempotencyKey:
+          type: string
+          description: Defaults to `orderId:eventType` if omitted. Dedupe key.
+          example: "o_998:SALE"
+
+    IngestAck:
+      type: object
+      required: [received, applied, deduped]
+      properties:
+        received: { type: integer, description: Events in the request. }
+        applied: { type: integer, description: Newly applied to aggregates. }
+        deduped: { type: integer, description: Skipped as duplicates. }
+        quarantined: { type: integer, description: Malformed events routed to quarantine/DLQ. }
+      example: { received: 3, applied: 2, deduped: 1, quarantined: 0 }
+
+    Interval:
+      type: object
+      required: [low, high]
+      properties:
+        low: { type: number }
+        high: { type: number }
+
+    TopKItem:
+      type: object
+      required: [rank, category, value]
+      properties:
+        rank: { type: integer, minimum: 1 }
+        category: { type: string, example: Office Supplies }
+        value: { type: number, description: Point forecast or actual sum over the window. }
+        deltaVsPrior: { type: number, description: Fractional change vs prior window (0.12 = +12%). }
+        confidence: { $ref: '#/components/schemas/Confidence' }
+        interval:
+          allOf: [{ $ref: '#/components/schemas/Interval' }]
+          description: Present only for forecasts; absent in actuals/pending.
+
+    TopKResponse:
+      type: object
+      required: [tenantId, mode, window, k, status, asOf, items]
+      properties:
+        tenantId: { type: string }
+        mode: { $ref: '#/components/schemas/Mode' }
+        window: { $ref: '#/components/schemas/Window' }
+        k: { type: integer }
+        status: { $ref: '#/components/schemas/Status' }
+        asOf: { type: string, format: date-time }
+        insight:
+          type: string
+          description: Grounded NL summary over the provided numbers (template floor; Bedrock when enabled).
+          example: "Office Supplies leads this month (~+12%); Electronics follows."
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TopKItem' }
+      example:
+        tenantId: t_123
+        mode: forecast
+        window: month
+        k: 10
+        status: fresh
+        asOf: "2026-06-28T06:00:00Z"
+        insight: "Office Supplies leads this month (~+12%); Electronics follows."
+        items:
+          - rank: 1
+            category: Office Supplies
+            value: 5400.00
+            deltaVsPrior: 0.12
+            confidence: HIGH
+            interval: { low: 4900, high: 5900 }
+
+    Problem:
+      type: object
+      description: RFC 7807 problem detail.
+      required: [title, status]
+      properties:
+        type: { type: string, format: uri, example: "https://topsales/errors/tenant-mismatch" }
+        title: { type: string, example: Tenant mismatch }
+        status: { type: integer, example: 403 }
+        detail: { type: string, example: "Path tenant does not match the authenticated tenant." }
+        instance: { type: string, example: "/api/v1/tenants/t_999/top-categories" }
