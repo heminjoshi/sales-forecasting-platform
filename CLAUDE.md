@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A **multi-tenant "top sales by category" platform** built as a public portfolio/interview project — designed to *read* like production, not to be one. It is currently at the **planning stage**: only design/plan docs exist; there is no source code or build tooling yet.
 
 Two docs under `private/` (gitignored, never committed) are the **source of truth** — read them before scaffolding or implementing, and keep new work consistent with the structure and phase they define:
-- the **delivery plan** (`private/Build-Delivery-Plan-v2.md`) — scope, phase sequencing (Phases 0–10, organized into workstreams WS-A…WS-G), target directory layout, built-vs-designed-only. This v2 supersedes the older `Build-Delivery-Plan-and-Repo-Structure.md` in the same folder.
+- the **delivery plan** (`private/Build-Delivery-Plan-v3.md`) — scope, phase sequencing (Phases 0–10, organized into workstreams WS-A…WS-G), target directory layout, built-vs-designed-only. This v3 supersedes `Build-Delivery-Plan-v2.md` (and the older `Build-Delivery-Plan-and-Repo-Structure.md`) in the same folder; v3 syncs ADRs to the 9 explicit decision records and elevates comparative trade-offs as a first-class, scored deliverable.
 - the **consolidated design doc** (`private/Design-Doc-v3-Consolidated.md`) — the architecture: four tiers (presentation → serving → forecast batch → ingestion), interface seams, decision records, the per-component deep-dive, the connection/data-flow catalog, and the canonical data shapes (`SaleEvent` → `AggregateRow` → `ForecastRow`/serving row → `TopKResponse`). v3 supersedes the earlier HLD v2 and the standalone component deep-dive.
 
 ## How to work in this repo
