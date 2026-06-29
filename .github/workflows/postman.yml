@@ -62,7 +62,7 @@ jobs:
       - name: Set up Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
 
       # Install only the modules the gate needs (API + datagen) plus their deps, so the
       # background spring-boot:run and `make seed` both resolve everything from the local repo.
