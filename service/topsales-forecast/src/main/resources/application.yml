@@ -51,6 +51,13 @@ topsales:
       max-folds: 12
       wape-dense-max: 0.20
       wape-sparse-min: 0.40
+  # GenAI insight (Phase 5). Mirrors topsales-api so the topsales.* tree binds consistently here too;
+  # the batch does not generate insight, but keeping the trees in sync keeps TopsalesProperties happy.
+  insight:
+    enabled: true
+    provider: template          # 'template' (local floor) | 'bedrock' (designed)
+    model-id: anthropic.claude-haiku-4-5   # Bedrock id; only read by the Bedrock impl
+    timeout: 1500ms
 
 logging:
   level:

@@ -74,5 +74,14 @@ topsales:
     base-ttl: 15m
     jitter-pct: 20
     lock-ttl: 2s
+  # GenAI insight (Phase 5). provider selects the InsightGenerator impl: 'template' is the
+  # deterministic local floor; 'bedrock' is the designed cloud impl (model-id is read only by it).
+  # timeout bounds a generation call before falling back to the template, so a slow model never
+  # stalls a read.
+  insight:
+    enabled: true
+    provider: template          # 'template' (local floor) | 'bedrock' (designed)
+    model-id: anthropic.claude-haiku-4-5   # Bedrock id; only read by the Bedrock impl
+    timeout: 1500ms
   rawlog:
     dir: ./data/rawlog       # local S3 stand-in for the immutable raw event log

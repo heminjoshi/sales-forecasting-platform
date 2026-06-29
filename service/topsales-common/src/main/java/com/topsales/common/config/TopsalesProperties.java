@@ -22,7 +22,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "topsales")
 public record TopsalesProperties(
-        Read read, WindowDays windowDays, Forecast forecast, Cache cache, Rawlog rawlog) {
+        Read read,
+        WindowDays windowDays,
+        Forecast forecast,
+        Cache cache,
+        Insight insight,
+        Rawlog rawlog) {
 
     /**
      * Read/serving endpoint tunables: the dashboard's {@code k} choices and the request-param
@@ -100,6 +105,17 @@ public record TopsalesProperties(
      * wedge a hot key.
      */
     public record Cache(Duration baseTtl, int jitterPct, Duration lockTtl) {}
+
+    /**
+     * GenAI insight knobs (Phase 5). {@code enabled} gates insight generation entirely (off → the
+     * response's {@code insight} stays null and the dashboard hides the line). {@code provider}
+     * selects the impl behind the {@code InsightGenerator} seam — {@code template} is the deterministic
+     * local floor, {@code bedrock} is the designed cloud impl (selected via {@code @ConditionalOnProperty}
+     * + {@code @Primary}, not a Spring profile). {@code modelId} is the Bedrock model identifier read
+     * only by the Bedrock impl. {@code timeout} bounds a generation call before falling back to the
+     * template, so a slow/failing model never stalls a read.
+     */
+    public record Insight(boolean enabled, String provider, String modelId, Duration timeout) {}
 
     /** Local immutable raw-event-log directory (the S3 stand-in). */
     public record Rawlog(String dir) {}

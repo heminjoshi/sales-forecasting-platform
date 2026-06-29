@@ -58,7 +58,7 @@ class JdbcEventLedgerIT {
         ObjectMapper mapper = JsonMapper.builder().build();
         TopsalesProperties props =
                 new TopsalesProperties(
-                        null, null, null, null, new TopsalesProperties.Rawlog(rawLogDir.toString()));
+                        null, null, null, null, null, new TopsalesProperties.Rawlog(rawLogDir.toString()));
         ledger = new JdbcEventLedger(jdbc, mapper, props);
     }
 

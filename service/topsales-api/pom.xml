@@ -39,6 +39,14 @@
             <artifactId>topsales-forecast</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- Phase 5: the read app wires an InsightGenerator bean (local TemplateInsight by default).
+             bedrockruntime is optional in the insight pom, so the AWS SDK does NOT reach this classpath
+             — mirrors how the optional datagen dep stays off the api graph via topsales-forecast. -->
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-insight</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
