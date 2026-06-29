@@ -3,11 +3,15 @@ name: web
 on:
   push:
     branches: [main]
+    paths: ["web/**"]
   pull_request:
     branches: [main]
+    paths: ["web/**"]
 
 # Lightweight guard for the production SPA (web/, Vite + Recharts). Just builds
 # it to catch breaks early; Vercel does the authoritative deploy build on push.
+# Path-scoped to web/** — the SPA lands in the UI PR, so this stays inert (and
+# green) on infra-only changes that never touch web/.
 jobs:
   build:
     name: build SPA
