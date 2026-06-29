@@ -50,7 +50,8 @@ class TopCategoriesReadIT {
         // eventTime is relative to now so the events always land inside the trailing month window.
         String eventTime = Instant.now().minus(1, ChronoUnit.DAYS).toString();
         return String.format(
-                "{\"tenantId\":\"t_demo\",\"orderId\":\"%s\",\"categoryId\":\"%s\",\"amount\":%s,"
+                "{\"tenantId\":\"t_demo\",\"orderId\":\"%s\",\"categoryId\":\"%s\","
+                        + "\"channel\":\"ONLINE\",\"amount\":%s,"
                         + "\"currency\":\"USD\",\"eventType\":\"SALE\",\"eventTime\":\"%s\"}",
                 orderId, category, amount, eventTime);
     }

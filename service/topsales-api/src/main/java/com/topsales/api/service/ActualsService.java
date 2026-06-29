@@ -64,10 +64,12 @@ public class ActualsService {
         int days = WINDOW_DAYS.get(query.window());
         LocalDate from = to.minusDays(days - 1L);
 
-        List<AggregateRow> rows = aggregates.rangeByCategory(query.tenantId(), from, to);
+        List<AggregateRow> rows =
+                aggregates.rangeByCategory(query.tenantId(), from, to, query.channel());
 
-        // Sum each category's per-day rollups into a single window total. LinkedHashMap is only for
-        // determinism of iteration before the explicit sort below.
+        // Sum each category's per-day rollups into a single window total. For channel=ALL this also
+        // sums across both channels (the read-time `all` rollup); a single channel filters in SQL.
+        // LinkedHashMap is only for determinism of iteration before the explicit sort below.
         Map<String, BigDecimal> totals = new LinkedHashMap<>();
         for (AggregateRow row : rows) {
             totals.merge(row.categoryId(), row.sumAmount(), BigDecimal::add);

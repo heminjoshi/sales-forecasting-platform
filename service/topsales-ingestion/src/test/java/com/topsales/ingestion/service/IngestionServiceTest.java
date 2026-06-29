@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.topsales.common.domain.AggregateDelta;
+import com.topsales.common.domain.Channel;
 import com.topsales.common.domain.EventType;
 import com.topsales.common.domain.SaleEvent;
 import com.topsales.common.domain.TenantConfig;
@@ -71,7 +72,8 @@ class IngestionServiceTest {
 
     private SaleEvent sale(String orderId, BigDecimal amount, Instant eventTime) {
         return new SaleEvent(
-                "t_body", orderId, "cat_office", amount, "USD", EventType.SALE, eventTime, null);
+                "t_body", orderId, "cat_office", Channel.ONLINE, amount, "USD", EventType.SALE,
+                eventTime, null);
     }
 
     @Test
@@ -82,6 +84,7 @@ class IngestionServiceTest {
                         "t_body",
                         "o_1",
                         null, // missing categoryId
+                        Channel.ONLINE,
                         new BigDecimal("10.00"),
                         "USD",
                         EventType.SALE,
@@ -93,6 +96,28 @@ class IngestionServiceTest {
         assertThat(result).isEqualTo(new IngestResult(1, 0, 0, 1));
         verify(quarantine).quarantine(eq(AUTHED), any(), eq("missing categoryId"));
         verify(ledger, never()).record(any(), any());
+        verify(aggregates, never()).upsertAdditive(any());
+    }
+
+    @Test
+    void missingChannel_isQuarantined_andNeverPersisted() {
+        knownTenant();
+        SaleEvent bad =
+                new SaleEvent(
+                        "t_body",
+                        "o_1",
+                        "cat_office",
+                        null, // missing channel
+                        new BigDecimal("10.00"),
+                        "USD",
+                        EventType.SALE,
+                        Instant.parse("2026-06-20T14:03:00Z"),
+                        null);
+
+        IngestResult result = service.ingest(AUTHED, bad);
+
+        assertThat(result).isEqualTo(new IngestResult(1, 0, 0, 1));
+        verify(quarantine).quarantine(eq(AUTHED), any(), eq("missing channel"));
         verify(aggregates, never()).upsertAdditive(any());
     }
 
@@ -156,6 +181,7 @@ class IngestionServiceTest {
                         "t_body",
                         "o_5",
                         "cat_office",
+                        Channel.OFFLINE,
                         new BigDecimal("-19.99"),
                         "USD",
                         EventType.RETURN,
@@ -167,6 +193,7 @@ class IngestionServiceTest {
         ArgumentCaptor<AggregateDelta> delta = ArgumentCaptor.forClass(AggregateDelta.class);
         verify(aggregates).upsertAdditive(delta.capture());
         assertThat(delta.getValue().amount()).isEqualByComparingTo("-19.99");
+        assertThat(delta.getValue().channel()).isEqualTo(Channel.OFFLINE);
     }
 
     @Test

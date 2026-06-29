@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: topsales-datagen
+  profiles:
+    default: local
+  main:
+    web-application-type: none      # one-shot CommandLineRunner, no embedded server
+    banner-mode: "off"
+
+  # Same local Postgres as the API (local/docker-compose.yml).
+  datasource:
+    url: jdbc:postgresql://localhost:5432/topsales
+    username: topsales
+    password: topsales
+  # `make seed` migrates on startup so a cold clone works without booting the API first.
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# Generator config (ADR-0010). The seed dataset (catalog, seasonality, HVE calendar, GLOBAL_SEED)
+# is the committed source of truth at data/seed/seed-config.json; override the path here if needed.
+topsales:
+  datagen:
+    seed-config: data/seed/seed-config.json
+    api-base-url: http://localhost:8080   # trickle posts here (the running API)
+
+logging:
+  level:
+    root: WARN
+    com.topsales.datagen: INFO

@@ -4,6 +4,7 @@ import com.topsales.api.error.TenantMismatchException;
 import com.topsales.api.service.ActualsService;
 import com.topsales.common.api.TopKQuery;
 import com.topsales.common.api.TopKResponse;
+import com.topsales.common.domain.ChannelFilter;
 import com.topsales.common.domain.Mode;
 import com.topsales.common.domain.Status;
 import com.topsales.common.domain.Window;
@@ -42,16 +43,19 @@ public class TopCategoriesController {
             @RequestParam(defaultValue = "forecast") String mode,
             @RequestParam(defaultValue = "month") String window,
             @RequestParam(defaultValue = "10") int k,
+            @RequestParam(defaultValue = "all") String channel,
             HttpServletRequest request) {
 
-        // 400s first: validate shape before authorization. Window/Mode parse case-insensitively via
-        // the enums' @JsonCreator factory (Spring's default enum converter is case-sensitive and
-        // would reject the lowercase wire values), throwing IllegalArgumentException → 400.
+        // 400s first: validate shape before authorization. Window/Mode/ChannelFilter parse
+        // case-insensitively via the enums' @JsonCreator factory (Spring's default enum converter is
+        // case-sensitive and would reject the lowercase wire values), throwing
+        // IllegalArgumentException → 400.
         if (k < MIN_K || k > MAX_K) {
             throw new IllegalArgumentException("k must be between " + MIN_K + " and " + MAX_K + ", got " + k);
         }
         Mode parsedMode = Mode.from(mode);
         Window parsedWindow = Window.from(window);
+        ChannelFilter parsedChannel = ChannelFilter.from(channel);
 
         // 403: the path tenant must equal the authenticated tenant published by TenantScopeFilter.
         String authed = (String) request.getAttribute(TenantScopeFilter.AUTHED_TENANT_ATTR);
@@ -59,7 +63,7 @@ public class TopCategoriesController {
             throw new TenantMismatchException(tenantId);
         }
 
-        TopKQuery query = new TopKQuery(tenantId, parsedWindow, parsedMode, k);
+        TopKQuery query = new TopKQuery(tenantId, parsedWindow, parsedMode, k, parsedChannel);
         TopKResponse response = actualsService.topCategories(query); // 404 if unknown tenant
 
         if (parsedMode == Mode.FORECAST) {

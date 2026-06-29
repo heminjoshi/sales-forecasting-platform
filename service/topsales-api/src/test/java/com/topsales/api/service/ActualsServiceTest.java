@@ -12,6 +12,8 @@ import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKQuery;
 import com.topsales.common.api.TopKResponse;
 import com.topsales.common.domain.AggregateRow;
+import com.topsales.common.domain.Channel;
+import com.topsales.common.domain.ChannelFilter;
 import com.topsales.common.domain.Mode;
 import com.topsales.common.domain.Status;
 import com.topsales.common.domain.TenantConfig;
@@ -52,11 +54,12 @@ class ActualsServiceTest {
 
     private AggregateRow row(String category, String amount) {
         return new AggregateRow(
-                TENANT, category, LocalDate.of(2026, 6, 20), new BigDecimal(amount), 1, "USD");
+                TENANT, category, Channel.ONLINE, LocalDate.of(2026, 6, 20),
+                new BigDecimal(amount), 1, "USD");
     }
 
     private TopKQuery query(Window window, int k) {
-        return new TopKQuery(TENANT, window, Mode.ACTUALS, k);
+        return new TopKQuery(TENANT, window, Mode.ACTUALS, k, ChannelFilter.ALL);
     }
 
     @Test
@@ -66,7 +69,7 @@ class ActualsServiceTest {
         for (int i = 0; i < 12; i++) {
             rows.add(row(String.format("cat_%02d", i), String.valueOf(1000 - i * 10)));
         }
-        when(aggregates.rangeByCategory(eq(TENANT), any(), any())).thenReturn(rows);
+        when(aggregates.rangeByCategory(eq(TENANT), any(), any(), any())).thenReturn(rows);
 
         TopKResponse response = service.topCategories(query(Window.MONTH, 10));
 
@@ -89,7 +92,7 @@ class ActualsServiceTest {
 
     @Test
     void stableTieBreak_byCategoryIdAscending_whenSumsEqual() {
-        when(aggregates.rangeByCategory(eq(TENANT), any(), any()))
+        when(aggregates.rangeByCategory(eq(TENANT), any(), any(), any()))
                 .thenReturn(List.of(row("cat_z", "100"), row("cat_a", "100"), row("cat_m", "100")));
 
         TopKResponse response = service.topCategories(query(Window.MONTH, 10));
@@ -101,10 +104,12 @@ class ActualsServiceTest {
     @Test
     void sumsAmountAcrossMultipleDays_forOneCategory() {
         AggregateRow d1 = new AggregateRow(
-                TENANT, "cat_office", LocalDate.of(2026, 6, 19), new BigDecimal("10.00"), 1, "USD");
+                TENANT, "cat_office", Channel.ONLINE, LocalDate.of(2026, 6, 19),
+                new BigDecimal("10.00"), 1, "USD");
         AggregateRow d2 = new AggregateRow(
-                TENANT, "cat_office", LocalDate.of(2026, 6, 20), new BigDecimal("5.50"), 1, "USD");
-        when(aggregates.rangeByCategory(eq(TENANT), any(), any())).thenReturn(List.of(d1, d2));
+                TENANT, "cat_office", Channel.OFFLINE, LocalDate.of(2026, 6, 20),
+                new BigDecimal("5.50"), 1, "USD");
+        when(aggregates.rangeByCategory(eq(TENANT), any(), any(), any())).thenReturn(List.of(d1, d2));
 
         TopKResponse response = service.topCategories(query(Window.MONTH, 10));
 
@@ -128,14 +133,14 @@ class ActualsServiceTest {
     }
 
     private void assertWindowSpan(Window window, int days) {
-        when(aggregates.rangeByCategory(eq(TENANT), any(), any())).thenReturn(List.of());
+        when(aggregates.rangeByCategory(eq(TENANT), any(), any(), any())).thenReturn(List.of());
 
         service.topCategories(query(window, 10));
 
         ArgumentCaptor<LocalDate> from = ArgumentCaptor.forClass(LocalDate.class);
         ArgumentCaptor<LocalDate> to = ArgumentCaptor.forClass(LocalDate.class);
         org.mockito.Mockito.verify(aggregates)
-                .rangeByCategory(eq(TENANT), from.capture(), to.capture());
+                .rangeByCategory(eq(TENANT), from.capture(), to.capture(), any());
 
         assertThat(to.getValue()).isEqualTo(LocalDate.now(ZONE)); // trailing window ends today (tz)
         // inclusive window of exactly `days` calendar days → span between endpoints is days-1
@@ -149,7 +154,26 @@ class ActualsServiceTest {
         assertThatThrownBy(
                         () ->
                                 service.topCategories(
-                                        new TopKQuery("t_missing", Window.MONTH, Mode.ACTUALS, 10)))
+                                        new TopKQuery(
+                                                "t_missing",
+                                                Window.MONTH,
+                                                Mode.ACTUALS,
+                                                10,
+                                                ChannelFilter.ALL)))
                 .isInstanceOf(UnknownTenantException.class);
+    }
+
+    @Test
+    void forwardsChannelFilter_toRepository() {
+        when(aggregates.rangeByCategory(eq(TENANT), any(), any(), eq(ChannelFilter.ONLINE)))
+                .thenReturn(List.of(row("cat_office", "10.00")));
+
+        TopKResponse response =
+                service.topCategories(
+                        new TopKQuery(TENANT, Window.MONTH, Mode.ACTUALS, 10, ChannelFilter.ONLINE));
+
+        assertThat(response.items()).hasSize(1);
+        org.mockito.Mockito.verify(aggregates)
+                .rangeByCategory(eq(TENANT), any(), any(), eq(ChannelFilter.ONLINE));
     }
 }

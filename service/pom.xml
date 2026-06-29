@@ -43,6 +43,7 @@
         <module>topsales-forecast</module>
         <module>topsales-insight</module>
         <module>topsales-api</module>
+        <module>topsales-datagen</module>
     </modules>
 
     <build>

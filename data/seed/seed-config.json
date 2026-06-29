@@ -1,0 +1,17 @@
+{
+  "globalSeed": 42,
+  "tenant": "t_demo",
+  "currency": "USD",
+  "historyDays": 540,
+  "trendAnnual": 0.15,
+  "returnRate": 0.07,
+  "categories": [
+    { "id": "cat_electronics",  "base": 1200, "aov": 180, "onlineShare": 0.70, "sparse": false },
+    { "id": "cat_grocery",      "base": 950,  "aov": 45,  "onlineShare": 0.30, "sparse": false },
+    { "id": "cat_apparel",      "base": 620,  "aov": 75,  "onlineShare": 0.60, "sparse": false },
+    { "id": "cat_home",         "base": 780,  "aov": 120, "onlineShare": 0.50, "sparse": false },
+    { "id": "cat_toys",         "base": 410,  "aov": 35,  "onlineShare": 0.55, "sparse": false },
+    { "id": "cat_collectibles", "base": 60,   "aov": 240, "onlineShare": 0.80, "sparse": true  }
+  ],
+  "outlier": { "category": "cat_home", "channel": "ONLINE", "daysAgo": 70, "multiplier": 10 }
+}

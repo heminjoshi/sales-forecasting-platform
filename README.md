@@ -26,13 +26,15 @@ Then open <http://localhost:8080> for the dashboard and POST a few sample events
 ```bash
 curl -H "Content-Type: application/json" -H "X-Tenant-Id: t_demo" \
   -X POST http://localhost:8080/api/v1/events \
-  -d '{"orderId":"o1","categoryId":"Office Supplies","amount":120.00,"currency":"USD","eventType":"SALE","eventTime":"2026-06-20T14:03:00Z"}'
+  -d '{"orderId":"o1","categoryId":"Office Supplies","channel":"ONLINE","amount":120.00,"currency":"USD","eventType":"SALE","eventTime":"2026-06-20T14:03:00Z"}'
 
+# channel = all | online | offline (default all); all is the summed rollup
 curl -H "X-Tenant-Id: t_demo" \
-  "http://localhost:8080/api/v1/tenants/t_demo/top-categories?mode=actuals&window=month&k=10"
+  "http://localhost:8080/api/v1/tenants/t_demo/top-categories?mode=actuals&window=month&channel=all&k=10"
 ```
 
-A one-command seeded demo (`make seed`/`make demo`) is wired in Phase 8.
+For a realistic demo, `make seed` bulk-backfills months of seasonal, channel-split history, and
+`make trickle` posts live events that continue it so the dashboard moves (see `data/seed/`).
 
 Prerequisites: Docker Desktop, JDK 21+, Maven, a browser. No Node, no AWS account required.
 Tests: `make test` (fast unit tests, no Docker) · `make verify` (adds Testcontainers integration tests).

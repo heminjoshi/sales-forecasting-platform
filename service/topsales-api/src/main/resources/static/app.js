@@ -12,6 +12,7 @@
     tenantId: $("tenantId"),
     mode: $("mode"),
     window: $("window"),
+    channel: $("channel"),
     k: $("k"),
     loadBtn: $("loadBtn"),
     meta: $("meta"),
@@ -191,6 +192,7 @@
     }
     const mode = els.mode.value;
     const window = els.window.value;
+    const channel = els.channel.value;
     const k = els.k.value;
 
     const url =
@@ -200,6 +202,8 @@
       encodeURIComponent(mode) +
       "&window=" +
       encodeURIComponent(window) +
+      "&channel=" +
+      encodeURIComponent(channel) +
       "&k=" +
       encodeURIComponent(k);
 

@@ -13,6 +13,7 @@ public record SaleEvent(
         String tenantId,
         String orderId,
         String categoryId,
+        Channel channel,
         BigDecimal amount,
         String currency,
         EventType eventType,

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.topsales</groupId>
+        <artifactId>topsales-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>topsales-datagen</artifactId>
+    <packaging>jar</packaging>
+    <name>topsales-datagen</name>
+    <description>Dev-only synthetic-data generator (ADR-0010): `seed` bulk-backfills pre-summed, seasonal, channel-split aggregates; `trickle` posts live SaleEvents to the running API. Nothing depends on this module, so it never enters the bootable api graph.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Reuses JdbcAggregateRepository (the local data plane) for the bulk seed write. -->
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-ingestion</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Core context + JdbcTemplate (no web server: this is a one-shot CommandLineRunner). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!-- RestClient (spring-web) for the trickle POST; brought in without an embedded server. -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+        <!-- Boot 4 modular autoconfig: Flyway runs migrations on startup so `make seed` works on a
+             cold clone without booting the API first. flyway-core + the SQL come from common. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- `make seed` / `make trickle` launch this app via spring-boot:run, passing the mode as
+                 a program argument. Working dir is the repo root (set by the Makefile invocation). -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

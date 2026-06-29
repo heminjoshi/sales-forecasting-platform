@@ -2,6 +2,7 @@ package com.topsales.ingestion.repo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.topsales.common.domain.Channel;
 import com.topsales.common.domain.EventType;
 import com.topsales.common.domain.SaleEvent;
 
@@ -62,6 +63,7 @@ class JdbcEventLedgerIT {
                 "t_demo",
                 "o_1",
                 "cat_office",
+                Channel.ONLINE,
                 new BigDecimal("42.50"),
                 "USD",
                 EventType.SALE,

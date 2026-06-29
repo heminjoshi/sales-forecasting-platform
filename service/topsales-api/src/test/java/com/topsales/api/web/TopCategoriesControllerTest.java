@@ -136,4 +136,26 @@ class TopCategoriesControllerTest {
                                 .header("X-Tenant-Id", TENANT))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void badChannelEnum_returns400() throws Exception {
+        mvc.perform(
+                        get("/api/v1/tenants/{t}/top-categories", TENANT)
+                                .param("channel", "instore")
+                                .requestAttr(TenantScopeFilter.AUTHED_TENANT_ATTR, TENANT)
+                                .header("X-Tenant-Id", TENANT))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void defaultChannelAll_returns200() throws Exception {
+        when(actualsService.topCategories(any())).thenReturn(response(Mode.ACTUALS, Status.FRESH));
+
+        mvc.perform(
+                        get("/api/v1/tenants/{t}/top-categories", TENANT)
+                                .param("mode", "actuals")
+                                .requestAttr(TenantScopeFilter.AUTHED_TENANT_ATTR, TENANT)
+                                .header("X-Tenant-Id", TENANT))
+                .andExpect(status().isOk());
+    }
 }
