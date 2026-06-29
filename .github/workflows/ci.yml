@@ -10,6 +10,35 @@ jobs:
   build:
     name: build & test (service)
     runs-on: ubuntu-latest
+
+    # Real backing stores for the full-stack ITs (AbstractPostgresRedisIT) at the application.yml
+    # defaults — localhost:5432 / :6379. The single-store repository ITs (Jdbc*IT, TopCategoriesReadIT)
+    # ignore these and spin their own Testcontainers via @ServiceConnection; no port conflict
+    # (Testcontainers maps to random host ports). Flyway owns the schema, so no init.sql is needed.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: topsales
+          POSTGRES_USER: topsales
+          POSTGRES_PASSWORD: topsales
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U topsales"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
