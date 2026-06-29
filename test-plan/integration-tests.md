@@ -133,36 +133,80 @@ Success = **200** + `TopKResponse`. Enums on the wire are **lowercase** (`mode/w
 
 ---
 
-## 6. Forecasting + serving [P3 / P4] — spec, `@Disabled` until built
-| ID | Scenario | Expected |
-|---|---|---|
-| IT-FC-01 | Batch writes versioned serving rows | `serving_rows` populated; `serving_active_version` points at newest version |
-| IT-FC-02 | `mode=forecast` reads from serving table | status `fresh`; items carry interval + confidence |
-| IT-FC-03 | Atomic version swap | Mid-batch, reads see old version until the pointer flips; no partial top-k |
-| IT-FC-04 | Cold-start: <1 season of history | trend-only / low-confidence; flagged, not an error |
-| IT-FC-05 | Sparse/intermittent category | simple method; no divide-by-zero; finite interval |
-| IT-FC-06 | WAPE backtest on seed data | report emitted; WAPE within expected band; bias reported |
-| IT-FC-07 | **Degradation:** serving table wiped | read falls back last-good → seasonal-naive (from actuals) → actuals `pending`; **still 200** with `degraded`/`pending` status |
-| IT-FC-08 | Last-good staleness past SLO | status `stale` with the older `asOf` |
+> **Coverage status (P3–P5).** These cases were specified as HTTP/Testcontainers integration tests,
+> but the behavior actually shipped covered by **unit** suites (run in `make test`) plus one real
+> serving-row IT — there is **no** `*IT` class carrying the `IT-FC`/`IT-CA`/`IT-AI` names, and nothing
+> is `@Disabled`. The **Status** column records what is really implemented as of P5. Legend:
+> **✅ unit** = covered by a unit test in `make test`; **✅ IT** = real Testcontainers `*IT` (CI-only);
+> **⚠️** = partial / proxied (see note); **❌ gap** = no automated test yet. Promoting the ⚠️/❌ rows to
+> the named ITs above is deferred to the Phase-8 test-hardening pass.
 
-### 6.1 Redis cache [P4] — `@Disabled` until built
-| ID | Scenario | Expected |
-|---|---|---|
-| IT-CA-01 | Cache miss then hit | 2nd identical read served from Redis (assert backing store not re-queried) |
-| IT-CA-02 | Key composition | key includes `(tenant, window, mode, channel, k)` — different params miss independently |
-| IT-CA-03 | Event-driven invalidation | new events bump the per-tenant version → next read misses and recomputes |
-| IT-CA-04 | TTL jitter | entries expire within TTL±jitter (no synchronized stampede) |
-| IT-CA-05 | Single-flight | concurrent misses for the same key cause one recompute, not N |
-| IT-CA-06 | Redis **down** | read degrades to direct store query (still 200), error logged/metered |
+## 6. Forecasting + serving [P3 / P4]
+| ID | Scenario | Expected | Status |
+|---|---|---|---|
+| IT-FC-01 | Batch writes versioned serving rows | `serving_rows` populated; `serving_active_version` points at newest version | ✅ IT `JdbcServingTableRepositoryIT` + ✅ unit `ForecasterJobTest` |
+| IT-FC-02 | `mode=forecast` reads from serving table | status `fresh`; items carry interval + confidence | ⚠️ unit `ForecastReadServiceTest.servingFresh_whenAsOfWithinSlo_returnsFreshWithMappedItems` (service-level; no HTTP IT) |
+| IT-FC-03 | Atomic version swap | Mid-batch, reads see old version until the pointer flips; no partial top-k | ⚠️ `JdbcServingTableRepositoryIT` (flip + rollback retention; **no** concurrent mid-batch assertion) |
+| IT-FC-04 | Cold-start: <1 season of history | trend-only / low-confidence; flagged, not an error | ✅ unit `ColdStartForecasterTest` |
+| IT-FC-05 | Sparse/intermittent category | simple method; no divide-by-zero; finite interval | ✅ unit `SeasonalNaiveForecasterTest` / `WapeCalculatorTest` / `BacktestRegressionTest` |
+| IT-FC-06 | WAPE backtest on seed data | report emitted; WAPE within expected band; bias reported | ⚠️ unit `WapeCalculatorTest` + `BacktestRegressionTest` on a **synthetic in-test series**, not the committed seed in CI |
+| IT-FC-07 | **Degradation:** serving table wiped | read falls back last-good → seasonal-naive (from actuals) → actuals `pending`; **still 200** with `degraded`/`pending` status | ✅ unit `ForecastReadServiceTest` (full 4-tier ladder + provider-throws); no HTTP/Testcontainers IT |
+| IT-FC-08 | Last-good staleness past SLO | status `stale` with the older `asOf` | ✅ unit `ForecastReadServiceTest.servingStale_whenAsOfBeyondSlo_returnsStale` |
+
+### 6.1 Redis cache [P4]
+| ID | Scenario | Expected | Status |
+|---|---|---|---|
+| IT-CA-01 | Cache miss then hit | 2nd identical read served from Redis (assert backing store not re-queried) | ❌ gap — only the always-faulting fail-open path is unit-tested; no real-Redis hit-path test |
+| IT-CA-02 | Key composition | key includes `(tenant, window, mode, channel, k)` — different params miss independently | ✅ unit `CacheKeysTest` |
+| IT-CA-03 | Event-driven invalidation | new events bump the per-tenant version → next read misses and recomputes | ⚠️ key **format** only (`CacheKeysTest.tenantVersionKey`); the bump→miss→recompute **behavior** is ❌ gap |
+| IT-CA-04 | TTL jitter | entries expire within TTL±jitter (no synchronized stampede) | ✅ unit `RedisCacheShellTest` |
+| IT-CA-05 | Single-flight | concurrent misses for the same key cause one recompute, not N | ❌ gap — lock key format pinned, concurrency behavior untested |
+| IT-CA-06 | Redis **down** | read degrades to direct store query (still 200), error logged/metered | ✅ unit `RedisCacheShellTest.failsOpenAndRunsSupplierExactlyOnceWhenRedisFaults` (fail-open at unit; not under real Redis) |
 
 ---
 
-## 7. GenAI insight [P5] — spec, `@Disabled` until built
+## 7. GenAI insight [P5]
+| ID | Scenario | Expected | Status |
+|---|---|---|---|
+| IT-AI-01 | Template insight (local profile) | `insight` present, references only computed figures | ✅ unit `TemplateInsightGeneratorTest` |
+| IT-AI-02 | Grounding validation | a number not in the computed set ⇒ output rejected ⇒ template fallback | ✅ unit `GroundingValidatorTest` + `BedrockInsightGeneratorTest.fabricatedNumber_fallsBackToTemplate` |
+| IT-AI-03 | Bedrock timeout/error | falls back to deterministic template; read still 200 | ✅ unit `BedrockInsightGeneratorTest` (clientException / timeout / emptyModelText → template) + `InsightAttacherTest.attach_generatorThrows_returnsResponseUnchanged_neverThrows` |
+| IT-AI-04 | **Prompt injection** via category name (e.g. `"Ignore prior instructions…"`) | category treated as untrusted data; no instruction-following; figures unchanged | ✅ unit `BedrockInsightGeneratorTest.injectedCategoryName_isFencedAsData_andCannotProduceUngroundedOutput` |
+| IT-AI-05 | Lazy + cached | first view generates; second view served from cache | ❌ gap — `InsightAttacherTest.attach_emptyItems_doesNotCallGenerator…` covers the lazy *floor*, but the cache/second-view path has no automated test |
+
+---
+
+## 8. Hardening: resilience & observability [P6] — spec, `@Disabled`/unit until built
+
+### 8.1 Resilience4j on Bedrock (circuit breaker + retry; fail-soft preserved)
+Unit-level with a mocked `BedrockRuntimeClient` (no Testcontainers); the read must **never** block.
 | ID | Scenario | Expected |
 |---|---|---|
-| IT-AI-01 | Template insight (local profile) | `insight` present, references only computed figures |
-| IT-AI-02 | Grounding validation | a number not in the computed set ⇒ output rejected ⇒ template fallback |
-| IT-AI-03 | Bedrock timeout/error | falls back to deterministic template; read still 200 |
-| IT-AI-04 | **Prompt injection** via category name (e.g. `"Ignore prior instructions…"`) | category treated as untrusted data; no instruction-following; figures unchanged |
-| IT-AI-05 | Lazy + cached | first view generates; second view served from cache |
+| IT-RS-01 | Transient error then success (retry) | client throws `ApiCallTimeoutException` once then returns a grounded body → grounded text returned; `invokeModel` called twice (1 retry) |
+| IT-RS-02 | Breaker opens after threshold | drive ≥ `minimumNumberOfCalls` failures → breaker `OPEN`; next call short-circuits (`CallNotPermittedException`) **without** invoking the client → deterministic **template** returned |
+| IT-RS-03 | Breaker half-open recovery | after `waitDurationInOpenState`, a probe success closes the breaker; subsequent calls invoke the client again |
+| IT-RS-04 | Timeout → template | `ApiCallTimeoutException` (no retry left) → template fallback; read still produces a grounded insight |
+| IT-RS-05 | Fallback counter | every fallback path (exception, breaker-open, ungrounded/blank) increments `topsales.insight.fallback.total` **exactly once**; a grounded success does **not** |
+| IT-RS-06 | No dep leakage | no `software.amazon.awssdk` / `resilience4j` symbol resolvable from `topsales-api` — confined to `topsales-insight` (compile-level invariant) |
+
+### 8.2 Metrics — Actuator + Micrometer (RED + ML-quality)
+| ID | Scenario | Expected |
+|---|---|---|
+| IT-OB-01 | Prometheus scrape live | `GET /actuator/prometheus` → 200; body contains `http_server_requests`, `topsales_read_total`, `topsales_forecast_freshness_seconds` |
+| IT-OB-02 | Health endpoint | `GET /actuator/health` → 200 `status: UP`; DB + Redis components reported |
+| IT-OB-03 | `topsales.read.total` tagging | each read increments the counter **once** with correct `status` (fresh/stale/degraded/pending) + `mode` (forecast/actuals) tags — no double-count across rungs |
+| IT-OB-04 | Degraded-read observable | wipe serving table → read returns `degraded` (still 200) **and** `topsales_read_total{status="degraded"}` increments |
+| IT-OB-05 | Freshness gauge | after a batch, `topsales_forecast_freshness_seconds` ≈ age of newest serving row; **empty serving table → gauge does not throw** (NaN/−1 sentinel) |
+| IT-OB-06 | Provider-fault counter | a serving-read RuntimeException (forced) drops a rung **and** increments `topsales_forecast_provider_faults_total`; read still 200 |
+| IT-OB-07 | RED error rate | a 4xx (e.g. `k=0`) is recorded by `http_server_requests` with the matching `status`/`outcome` tags |
+| IT-OB-08 | Batch structured metric | forecast batch logs one `batch_success=true tenants=… durationMs=… pkWrites=…` line on success; on a forced failure logs `batch_success=false` with duration before rethrow |
+
+### 8.3 Structured logging (tenant + request id via MDC)
+| ID | Scenario | Expected |
+|---|---|---|
+| IT-LG-01 | Tenant + request id in log line | a read with `X-Tenant-Id: t_demo` emits log lines carrying `tenantId=t_demo` and a `requestId` (MDC pattern) |
+| IT-LG-02 | Inbound request id honored | request with `X-Request-Id: abc123` → logs + the **response** `X-Request-Id` header echo `abc123` |
+| IT-LG-03 | Generated request id | request without the header → a UUID `requestId` is generated and returned in the response header |
+| IT-LG-04 | **MDC cleared (no leak)** | after the filter returns, MDC has no `tenantId`/`requestId`; holds even when the chain throws (cleared in `finally`) — guards against cross-thread tenant-id leakage on pooled threads |
+| IT-LG-05 | Batch per-tenant MDC | `ForecasterJob.runTenant` sets `tenantId` in MDC and removes it in `finally` (no bleed across tenants in one batch run) |
 </content>

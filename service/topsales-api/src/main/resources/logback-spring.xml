@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Minimal logging overlay (Phase 6, structured logging).
+
+  Adds the per-request MDC keys seeded by TenantScopeFilter — tenantId + requestId — to every
+  console line so logs are filterable per tenant/correlation id. The `:-` default keeps the bracket
+  readable when a key is absent (e.g. unauthenticated request, or batch lines with no tenant).
+
+  Single console appender at root INFO; this overlays Spring Boot's default without fighting it.
+-->
+<configuration>
+    <property name="LOG_PATTERN"
+              value="%d{HH:mm:ss.SSS} %-5level [%X{tenantId:-} %X{requestId:-}] %logger{36} - %msg%n"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

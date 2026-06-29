@@ -55,6 +55,21 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Phase 6: Resilience4j core libs (circuit breaker + retry) guarding the Bedrock insight
+             call. NOT in the Spring Boot BOM, so an explicit version is required. Plain core libs
+             (slf4j + vavr only) — no AWS/Spring pulled in, same spirit as the optional bedrockruntime
+             dep above. Not optional: the insight module's own code uses these directly. -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-retry</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+
         <!-- junit + assertj + mockito (bundled by starter-test), matching every sibling module. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

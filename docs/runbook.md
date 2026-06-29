@@ -3,31 +3,54 @@
 Operational guide for the serving + batch planes. Architecture in [`hld.md`](hld.md); component
 behaviour in [`component-deep-dive.md`](component-deep-dive.md); degradation spec in [`lld.md`](lld.md) §5.
 
-> Built locally on Micrometer + actuator; in `aws` the same metric names back CloudWatch alarms → SNS.
+> Built locally on Micrometer + actuator; metrics are scraped from `/actuator/prometheus` (see §1.1).
+> In `aws` the **same metric names** back CloudWatch alarms → SNS (the Phase-7 Monitoring stack alarms
+> on the identifiers below). Prometheus exposition lower-cases dots/braces to `_`, so the dotted
+> Micrometer names (`topsales.read.total`) appear on the scrape as `topsales_read_total`.
 
 ## 1. SLOs
 
 | SLO | Target | Source metric |
 |---|---|---|
-| Read availability | 99.9%+ (survives full ML-plane outage via degradation) | RED error rate on the read path |
-| Read latency | p99 < ~150 ms | request timer |
-| Forecast freshness | ≥ X% of tenants within cadence (default SLO 36h) | `forecast_freshness_ratio` |
-| Ingestion lag | bounded; consumers keep up with stream | stream lag / queue depth |
-| Durability | no loss of the raw event log | S3 / raw-log write success |
+| Read availability | 99.9%+ (survives full ML-plane outage via degradation) | `http.server.requests` error rate (from the `outcome`/`status` tags) |
+| Read latency | p99 < ~150 ms | `http.server.requests` timer (p99) |
+| Forecast freshness | newest serving row within cadence (default SLO 36h) | `topsales.forecast.freshness.seconds` gauge; freshness ratio = `fresh / total` from `topsales.read.total` |
+| Ingestion lag | bounded; consumers keep up with stream | stream lag / queue depth (designed) |
+| Durability | no loss of the raw event log | S3 / raw-log write success (designed) |
+
+### 1.1 Metrics: how to scrape
+
+- **Local (no AWS account):** `GET /actuator/prometheus` — the Micrometer Prometheus registry
+  (`micrometer-registry-prometheus`) exposes all names below in OpenMetrics text. `actuator/metrics`
+  lists them as dotted names; `actuator/prometheus` is the scrape endpoint.
+- **`aws` profile (designed):** swaps in `micrometer-registry-cloudwatch2` — the same instrument
+  names publish to CloudWatch, where the Phase-7 Monitoring stack defines the alarms in §2.
+- Names emitted now: `http_server_requests` (built-in RED), `topsales_read_total`
+  (tagged `status="fresh|stale|degraded|pending"`), `topsales_forecast_freshness_seconds`,
+  `topsales_insight_fallback_total`.
 
 ## 2. Alarms (metric → threshold → meaning → first action)
 
 | Metric | Alarm when | Means | First action |
 |---|---|---|---|
-| `read_error_rate` | > 1% 5-min | reads failing (not just degraded) | check DB + cache health; §4.1 |
-| `read_p99_ms` | > 150 ms sustained | latency regression | check Redis hit rate, hot partitions |
-| `degraded_read_count` | spike | serving table missing/stale → JVM fallback active | check last batch success; §4.2 |
-| `forecast_freshness_ratio` | < SLO | batch behind / failed | inspect Forecaster Job; §4.2 |
-| `batch_success` | = 0 for a cadence | forecast batch failed | rerun batch (idempotent); §4.2 |
-| `wape_rolling` | > segment threshold | model drift | trigger refit / champion-challenger; §4.4 |
-| `stream_lag` / queue depth | rising | consumers behind | scale consumers; check poison events |
-| `dlq_depth` | > 0 | malformed/poison events quarantined | inspect DLQ; §4.3 |
-| `insight_fallback_rate` | high | Bedrock timing out/erroring | template floor active; check model/SSM config |
+| `http.server.requests` error rate (5xx from `outcome`/`status` tags) | > 1% 5-min | reads failing (not just degraded) | check DB + cache health; §4.1 |
+| `http.server.requests` p99 (timer) | > 150 ms sustained | latency regression | check Redis hit rate, hot partitions |
+| `topsales.read.total{status="degraded"}` | spike | serving table missing/stale → JVM fallback active | check last batch success; §4.2 |
+| `topsales.forecast.freshness.seconds` | > SLO (default 36h) | batch behind / failed (global newest-serving-row age) | inspect Forecaster Job; §4.2 |
+| `batch_success` (structured log) | absent for a cadence | forecast batch failed | rerun batch (idempotent); §4.2 |
+| `wape_rolling` (offline / designed) | > segment threshold | model drift | trigger refit / champion-challenger; §4.4 |
+| `stream_lag` / queue depth (designed) | rising | consumers behind | scale consumers; check poison events |
+| `dlq_depth` (designed) | > 0 | malformed/poison events quarantined | inspect DLQ; §4.3 |
+| `topsales.insight.fallback.total` | high rate | Bedrock timing out/erroring | template floor active; check model/SSM config |
+
+> **What's a live scraped metric vs. not.** `http.server.requests`, `topsales.read.total`,
+> `topsales.forecast.freshness.seconds`, and `topsales.insight.fallback.total` are live on
+> `/actuator/prometheus` (§1.1). **`batch_success` is NOT scraped** — the forecast batch is an
+> ephemeral one-shot JVM, so it emits a **structured log line** instead
+> (`batch_success=… durationMs=… pkWrites=…`); in prod that line is pushed via CloudWatch EMF /
+> Pushgateway (designed). **WAPE is not live either** — the authoritative figure is the offline
+> `EvalMain` backtest report ([`forecast-eval-report.md`](forecast-eval-report.md)); a live
+> `wape_rolling` is a documented residual / designed-only.
 
 ## 3. Degradation chain (expected, not an outage)
 
@@ -48,7 +71,7 @@ actuals unavailable).
    restore the DB.
 
 ### 4.2 Forecasts stale / batch failed
-1. Confirm via `batch_success` / `forecast_freshness_ratio`.
+1. Confirm via the `batch_success` log line and the `topsales.forecast.freshness.seconds` gauge.
 2. Reads are already covered by the degradation chain (`stale`/`degraded`/`pending`) — no read outage.
 3. Rerun the batch (`make forecast`); it is **idempotent** and writes a new version + flips the
    pointer atomically. If the new version looks wrong, **roll back** by pointing
@@ -59,7 +82,8 @@ actuals unavailable).
 2. Inspect the event + reason; fix the producer or transform; reprocess from the DLQ.
 
 ### 4.4 Model drift
-1. `wape_rolling` over threshold for a segment → champion/challenger evaluates a candidate model.
+1. WAPE over threshold for a segment (offline `EvalMain` report; live `wape_rolling` designed-only) →
+   champion/challenger evaluates a candidate model.
 2. Promote only on improvement; the `Forecaster` seam makes the swap a drop-in (ADR-0005).
 
 ## 5. Replay / disaster recovery

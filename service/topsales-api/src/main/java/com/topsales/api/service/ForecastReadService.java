@@ -1,6 +1,7 @@
 package com.topsales.api.service;
 
 import com.topsales.api.error.UnknownTenantException;
+import com.topsales.api.metrics.MetricNames;
 import com.topsales.common.api.Interval;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKQuery;
@@ -11,11 +12,14 @@ import com.topsales.common.forecast.ForecastProvider;
 import com.topsales.common.forecast.ServingResult;
 import com.topsales.common.forecast.ServingRow;
 
+import io.micrometer.core.instrument.MeterRegistry;
+
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -48,16 +52,19 @@ public class ForecastReadService {
     private final SeasonalNaiveFallback seasonalNaiveFallback;
     private final ActualsService actualsService;
     private final TopsalesProperties props;
+    private final MeterRegistry meterRegistry;
 
     public ForecastReadService(
             ForecastProvider provider,
             SeasonalNaiveFallback seasonalNaiveFallback,
             ActualsService actualsService,
-            TopsalesProperties props) {
+            TopsalesProperties props,
+            MeterRegistry meterRegistry) {
         this.provider = provider;
         this.seasonalNaiveFallback = seasonalNaiveFallback;
         this.actualsService = actualsService;
         this.props = props;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -67,6 +74,21 @@ public class ForecastReadService {
      *     the actuals floor on rung 4
      */
     public TopKResponse handle(TopKQuery query) {
+        // Resolve the ladder, then count exactly once from the final status so all four rungs share a
+        // single emission point (no per-rung drift). UnknownTenantException escapes resolve() before
+        // we get here, so 404s are intentionally not counted as reads.
+        TopKResponse response = resolve(query);
+        meterRegistry
+                .counter(
+                        MetricNames.READ_TOTAL,
+                        "status", response.status().name().toLowerCase(Locale.ROOT),
+                        "mode", query.mode().name().toLowerCase(Locale.ROOT))
+                .increment();
+        return response;
+    }
+
+    /** Walk the four-rung degradation ladder (§5) and return the highest-fidelity response available. */
+    private TopKResponse resolve(TopKQuery query) {
         // Rungs 1–2: precomputed serving rows. A read fault is a miss, never a thrown 5xx.
         Optional<ServingResult> serving = readServing(query);
         if (serving.isPresent() && !serving.get().rows().isEmpty()) {
@@ -88,6 +110,10 @@ public class ForecastReadService {
         try {
             return provider.getTopK(query);
         } catch (RuntimeException e) {
+            // Fail-soft: a serving-read fault drops this rung and falls through to a lower, still-honest
+            // one. Count it so the dropped rung is observable (it would otherwise be invisible — the
+            // request still succeeds at a lower tier).
+            meterRegistry.counter(MetricNames.PROVIDER_FAULT).increment();
             return Optional.empty();
         }
     }

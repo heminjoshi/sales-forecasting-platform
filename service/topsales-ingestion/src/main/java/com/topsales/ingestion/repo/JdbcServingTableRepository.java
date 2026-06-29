@@ -74,6 +74,10 @@ public class JdbcServingTableRepository implements ServingTableRepository {
             ORDER BY sr.rank
             """;
 
+    /** Newest active-pointer {@code as_of} across all pks (global); {@code NULL} when nothing written. */
+    private static final String SELECT_NEWEST_AS_OF =
+            "SELECT max(as_of) FROM serving_active_version";
+
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
     private final int versionKeep;
@@ -154,5 +158,13 @@ public class JdbcServingTableRepository implements ServingTableRepository {
                             : Optional.of(new ServingResult(rows, version, asOf));
                 },
                 pk);
+    }
+
+    @Override
+    public Optional<Instant> newestAsOf() {
+        // max(as_of) is NULL on an empty table; map that to empty rather than a null Instant.
+        OffsetDateTime newest =
+                jdbc.queryForObject(SELECT_NEWEST_AS_OF, OffsetDateTime.class);
+        return Optional.ofNullable(newest).map(OffsetDateTime::toInstant);
     }
 }

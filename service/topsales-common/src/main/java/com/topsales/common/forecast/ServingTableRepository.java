@@ -16,6 +16,13 @@ public interface ServingTableRepository {
     Optional<ServingResult> readActive(String pk);
 
     /**
+     * The newest {@code as_of} across all active serving pointers (global, no tenant scope), or empty
+     * when nothing has been written yet. Drives the forecast-freshness gauge (Phase-6 metrics); kept
+     * global to keep Prometheus cardinality trivial.
+     */
+    Optional<Instant> newestAsOf();
+
+    /**
      * Insert {@code rows} as a new version ({@code max(version)+1}) for {@code pk}, then atomically
      * flip {@code serving_active_version} to it (last-good stays intact until the swap); old versions
      * beyond the retained window are pruned. Returns the new active version. Safe to re-run.

@@ -28,6 +28,10 @@ Read, for the target phase:
 - **Every prior `claude-sessions/handoff-docs/phase-*.md`** in order — the new work must build on
   them, not restate or contradict. Pay attention to "Open items", "Carried forward", and "Work done
   outside the plan". Also read any `claude-sessions/implementation-plan/phase-*.md`.
+- **`test-plan/`** (tracked, public) — the `README.md` (phase-gating list + conventions) and the
+  relevant plan files (`integration-tests.md`, `load-tests.md`, `stress-tests.md`, `canary-tests.md`,
+  `manual-qa-test.md`). The `[P<N>]`-tagged cases are the **test spec** the phase must satisfy; read
+  the prior phases' cases so the new ones extend rather than duplicate them.
 
 ## 2. Audit current state (parallel, read-only sub-agents)
 
@@ -53,6 +57,24 @@ found), the recommended approach only, the **critical files** (reuse existing se
 paths; don't rebuild `InsightGenerator`, `ForecastProvider`, `CacheShell`, repositories, etc.), and a
 **Verification** section (`make test`, the phase's live acceptance checks). Use `AskUserQuestion` for
 genuine scoping forks. Get sign-off with `ExitPlanMode`. Keep it scannable.
+
+**Then persist the approved plan as a durable phase doc** (the ephemeral `~/.claude/plans/*` file is
+not tracked and disappears): write `claude-sessions/implementation-plan/phase-<N>-<slug>.md` following
+the shape in that dir's `README.md` (Objective & acceptance · Current state · Decisions to lock ·
+Steps · Acceptance checklist · Out of scope), and flip the phase's row in the index
+(`claude-sessions/implementation-plan/README.md`) from `_todo_` to the new doc link. Do this **before**
+orchestrating — the doc is the build's working reference and the handoff links to it. (Phase 5 skipped
+this and left a `_(approved exec plan)_` gap — don't repeat it.)
+
+**Also author the phase's test cases in `test-plan/` (tracked, public).** The plan *is* the spec the
+phase must satisfy, so write the cases as you plan — don't defer them to close-out. For each test type
+the phase touches, add `[P<N>]`-tagged cases to the right plan file (`integration-tests.md`,
+`load-tests.md`, `stress-tests.md`, `canary-tests.md`, `manual-qa-test.md`) covering happy paths **and**
+the edge/corner/error cases, and where an error is the correct outcome document the exact status + RFC
+7807 problem (follow that dir's README conventions and the existing case-ID/table style, e.g.
+`IT-XX-NN`). Add the phase to the README's **phase-gating** list. Keep these **generic** — `test-plan/`
+is committed to the public repo, unlike the gitignored `claude-sessions/` docs, so no employer/interview
+framing. A case for behavior not yet built is written now and marked `@Disabled`/skipped until it lands.
 
 ## 4. Orchestrate the implementation (deterministic Workflow)
 
@@ -84,15 +106,21 @@ stage's result before the next; surface anything the agents couldn't finish.
 - `make test` — the full-reactor unit gate (no Docker). Must be green.
 - `make up && make seed && make run` (+ phase-specific targets like `make forecast`) and walk the
   phase's **acceptance criteria** live — e.g. for Phase 4, wipe the serving table → dashboard still
-  renders `degraded`. Capture actual command output.
-- `*IT`s are CI-only on this host — write them correct-for-CI, don't gate on local execution.
+  renders `degraded`. Capture actual command output. These live checks should map back to the
+  `manual-qa-test.md` / `canary-tests.md` cases you authored in §3 — run them, don't just assert them.
+- `*IT`s are CI-only on this host — write them correct-for-CI, don't gate on local execution. The
+  integration tests you added to `test-plan/integration-tests.md` are the spec for these `*IT` classes.
 
 ## 6. Close out
 
 - Invoke the **`handoff`** skill to write `claude-sessions/handoff-docs/phase-<N>-handoff.md` and
-  wire the implementation-plan index. (Handoff docs are private/gitignored — never committed.)
+  wire the implementation-plan index (set the phase row's **Status** to ✅ done and confirm its
+  **Plan doc** column points at the `phase-<N>-*.md` you persisted in §3, not `_todo_`). (Handoff and
+  plan docs both live under `claude-sessions/` — private/gitignored, never committed.)
 - Commit in slices with the repo's `feat(phase<N>): …` convention; sync tracked docs (`CLAUDE.md`
-  status line, `README.md` built-vs-designed, `docs/lld.md`, `docs/api/openapi.yaml`).
+  status line, `README.md` built-vs-designed, `docs/lld.md`, `docs/api/openapi.yaml`, and the
+  `test-plan/` files — reconcile the cases you authored in §3 against what actually shipped, flipping
+  any that were `@Disabled`-pending to live where the phase now satisfies them).
 - Run **`public-repo-check`** before any push; open the PR to `main`.
 
 ## Output

@@ -7,7 +7,7 @@
 > natural-language insight, and presents it in a dashboard. Java / Spring Boot, runnable locally
 > with one `docker compose up`; AWS path designed in CDK behind the same interfaces.
 
- > **Status:** 🟢 Runnable through **Phase 5**. Ingest events → idempotent per-tenant, per-channel
+ > **Status:** 🟢 Runnable through **Phase 6**. Ingest events → idempotent per-tenant, per-channel
 > category aggregates → ranked top-k over the REST API → served dashboard. On top of that:
 > the **channel** first-class dimension + a deterministic seasonal synthetic-data generator
 > (Phase 2.5), a **central config** surface (`TopsalesProperties`), the **forecasting engine**
@@ -19,7 +19,11 @@
 > `pending` — with the dashboard surfacing a **status badge**, `asOf`, confidence, and prediction
 > intervals), and the **grounded GenAI insight** layer (Phase 5 — a deterministic template floor
 > behind the `InsightGenerator` seam, `GroundingValidator`-checked, injection-safe, lazy+cached in the
-> existing per-tenant Redis key). Next: the AWS CDK + productionization (Phases 6–8).
+> existing per-tenant Redis key), and the **hardening** layer (Phase 6 — a **Resilience4j**
+> circuit-breaker + retry around the Bedrock call (still failing soft to the template), **Actuator +
+> Micrometer** metrics scraped at `/actuator/prometheus` (RED + custom ML-quality meters: read-status,
+> forecast freshness, provider faults, insight fallbacks), and **structured logging** with a tenant +
+> request id in every log line via MDC). Next: the UI production path + AWS CDK infra validation (Phase 7).
 
 ## Quick start
 
@@ -112,6 +116,15 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
     data (**prompt-injection-safe**). The insight is generated **lazily inside the Phase-4 forecast cache
     supplier** and cached under the **same per-tenant Redis key** (invalidated by the same batch
     version-bump); `TopKResponse.insight` is populated on both forecast and actuals.
+  - **Hardening — resilience & observability** (Phase 6) — a **Resilience4j** circuit-breaker + retry
+    around the single Bedrock `InvokeModel` call (confined to `topsales-insight`, still failing soft to
+    the template on open-breaker/timeout); **Actuator + Micrometer** on a Prometheus registry scraped at
+    `/actuator/prometheus` — RED via `http.server.requests` plus custom **ML-quality** meters
+    (`topsales.read.total{status,mode}`, `topsales.forecast.freshness.seconds`,
+    `topsales.forecast.provider.faults.total`, `topsales.insight.fallback.total`); and **structured
+    logging** with `tenantId`+`requestId` in every line via SLF4J MDC (set/cleared in `TenantScopeFilter`,
+    `X-Request-Id` echoed). Idempotency/dedupe/quarantine (built in Phase 2/2.5) are now observable.
+    CloudWatch is the designed `aws`-profile registry swap. See [`docs/runbook.md`](docs/runbook.md).
   - Postgres + Flyway via Docker Compose.
 - **Designed behind the same interfaces (later phases / `aws` profile):** the cloud insight impl
   (**`BedrockInsightGenerator`** — built but creds-gated; activates only with

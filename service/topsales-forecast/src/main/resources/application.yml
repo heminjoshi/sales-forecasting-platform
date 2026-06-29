@@ -63,3 +63,7 @@ logging:
   level:
     root: WARN
     com.topsales.forecast: INFO
+  # Surface the per-tenant MDC (set by ForecasterJob) in batch logs — same key/format as the API's
+  # logback-spring.xml so tenantId shows for every line. requestId is N/A for the batch (no request).
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{tenantId:-} %X{requestId:-}] %logger{36} - %msg%n"

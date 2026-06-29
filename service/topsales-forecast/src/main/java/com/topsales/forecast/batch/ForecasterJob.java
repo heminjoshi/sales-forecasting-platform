@@ -32,6 +32,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -101,58 +102,93 @@ public class ForecasterJob implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         Instant asOf = Instant.now();
+        long startNanos = System.nanoTime();
         List<String> tenants = tenantConfig.allTenantIds();
         log.info("Forecast batch starting: tenants={}", tenants.size());
-        for (String tenant : tenants) {
-            runTenant(tenant, asOf);
+        int totalWrites = 0;
+        boolean success = false;
+        try {
+            for (String tenant : tenants) {
+                totalWrites += runTenant(tenant, asOf);
+            }
+            log.info("Forecast batch complete: tenants={}", tenants.size());
+            success = true;
+        } finally {
+            // One structured, parse-friendly metrics line per run (success or failure). The forecast
+            // module pulls in no micrometer dep — this log is the batch's only "metric" surface; a log
+            // pipeline (or the verify layer) lifts batch_success / durationMs / pkWrites from it.
+            long durationMs = (System.nanoTime() - startNanos) / 1_000_000L;
+            log.info(
+                    "batch metrics: batch_success={} tenants={} durationMs={} pkWrites={}",
+                    success,
+                    tenants.size(),
+                    durationMs,
+                    totalWrites);
         }
-        log.info("Forecast batch complete: tenants={}", tenants.size());
     }
 
-    /** Forecast, roll up, rank, and write the 9 serving keys for one tenant. */
-    void runTenant(String tenant, Instant asOf) {
-        ZoneId tz =
-                tenantConfig.find(tenant).map(TenantConfig::timezone).orElse(ZoneOffset.UTC);
-        LocalDate today = LocalDate.now(tz);
-        LocalDate from = today.minusDays(historyDays - 1L);
+    /**
+     * Forecast, roll up, rank, and write the 9 serving keys for one tenant. Returns the number of
+     * serving-key writes (always 9 on success) so {@link #run} can total {@code pkWrites}.
+     */
+    int runTenant(String tenant, Instant asOf) {
+        // Per-tenant MDC so every log line emitted while this tenant is processing carries tenantId
+        // (structured-log correlation); removed in finally so the thread never leaks the tag.
+        MDC.put("tenantId", tenant);
+        try {
+            ZoneId tz =
+                    tenantConfig.find(tenant).map(TenantConfig::timezone).orElse(ZoneOffset.UTC);
+            LocalDate today = LocalDate.now(tz);
+            LocalDate from = today.minusDays(historyDays - 1L);
 
-        List<AggregateRow> rows =
-                aggregates.rangeByCategory(tenant, from, today, ChannelFilter.ALL);
-        Map<SeriesKey, List<AggregateRow>> bySeries = groupBySeries(rows);
+            List<AggregateRow> rows =
+                    aggregates.rangeByCategory(tenant, from, today, ChannelFilter.ALL);
+            Map<SeriesKey, List<AggregateRow>> bySeries = groupBySeries(rows);
 
-        // Call the forecaster once per series (contract: one call, all horizons), index by window.
-        Map<SeriesKey, Map<Window, Prediction>> forecasts = new LinkedHashMap<>();
-        for (Map.Entry<SeriesKey, List<AggregateRow>> e : bySeries.entrySet()) {
-            SeriesKey key = e.getKey();
-            List<ForecastValue> values =
-                    forecaster.forecast(
-                            e.getValue(),
-                            new ForecastContext(tenant, key.categoryId(), horizons, Window.WEEK));
-            forecasts.put(key, indexByWindow(values));
-        }
+            // Call the forecaster once per series (contract: one call, all horizons), index by window.
+            Map<SeriesKey, Map<Window, Prediction>> forecasts = new LinkedHashMap<>();
+            for (Map.Entry<SeriesKey, List<AggregateRow>> e : bySeries.entrySet()) {
+                SeriesKey key = e.getKey();
+                List<ForecastValue> values =
+                        forecaster.forecast(
+                                e.getValue(),
+                                new ForecastContext(
+                                        tenant, key.categoryId(), horizons, Window.WEEK));
+                forecasts.put(key, indexByWindow(values));
+            }
 
-        int writes = 0;
-        for (Window window : WINDOWS) {
-            int days = props.windowDays().forWindow(window);
-            for (Channel channel : Channel.values()) {
-                List<ServingRow> ranked =
-                        rankChannel(window, channel, forecasts, bySeries, today, days);
+            int writes = 0;
+            for (Window window : WINDOWS) {
+                int days = props.windowDays().forWindow(window);
+                for (Channel channel : Channel.values()) {
+                    List<ServingRow> ranked =
+                            rankChannel(window, channel, forecasts, bySeries, today, days);
+                    servingTable.writeVersionAndSwap(
+                            ServingKey.of(tenant, window, Mode.FORECAST, filterFor(channel)),
+                            ranked,
+                            asOf);
+                    writes++;
+                }
+                List<ServingRow> rankedAll = rankAll(window, forecasts, bySeries, today, days);
                 servingTable.writeVersionAndSwap(
-                        ServingKey.of(tenant, window, Mode.FORECAST, filterFor(channel)),
-                        ranked,
+                        ServingKey.of(tenant, window, Mode.FORECAST, ChannelFilter.ALL),
+                        rankedAll,
                         asOf);
                 writes++;
             }
-            List<ServingRow> rankedAll = rankAll(window, forecasts, bySeries, today, days);
-            servingTable.writeVersionAndSwap(
-                    ServingKey.of(tenant, window, Mode.FORECAST, ChannelFilter.ALL), rankedAll, asOf);
-            writes++;
+            // All 9 serving keys for this tenant are written — invalidate its cache so the new
+            // forecasts are served immediately (event-driven, O(1); fails open if Redis is down,
+            // docs/lld.md §7).
+            cacheVersionBumper.bump(tenant);
+            log.info(
+                    "Forecast batch: tenant={} series={} pkWrites={}",
+                    tenant,
+                    bySeries.size(),
+                    writes);
+            return writes;
+        } finally {
+            MDC.remove("tenantId");
         }
-        // All 9 serving keys for this tenant are written — invalidate its cache so the new forecasts
-        // are served immediately (event-driven, O(1); fails open if Redis is down, docs/lld.md §7).
-        cacheVersionBumper.bump(tenant);
-        log.info(
-                "Forecast batch: tenant={} series={} pkWrites={}", tenant, bySeries.size(), writes);
     }
 
     // --- pure helpers (package-private for unit testing) ----------------------------------------

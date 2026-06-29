@@ -85,3 +85,15 @@ topsales:
     timeout: 1500ms
   rawlog:
     dir: ./data/rawlog       # local S3 stand-in for the immutable raw event log
+
+# Observability: Prometheus registry (local, scrape /actuator/prometheus). aws profile swaps in
+# micrometer-registry-cloudwatch2 + management.cloudwatch.metrics.export.* — designed-only (Phase 7
+# Monitoring stack).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    tags:
+      application: topsales-api

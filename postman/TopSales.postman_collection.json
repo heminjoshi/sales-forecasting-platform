@@ -295,6 +295,41 @@
               }
             }
           ]
+        },
+        {
+          "name": "Observability — degraded sample on /actuator/prometheus",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "text/plain" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/prometheus",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "prometheus"]
+            },
+            "description": "Run AFTER the degraded read above. The read-path counter records the served status, so the scrape must now carry a topsales_read_total sample tagged status=\"degraded\" — proving degradation is observable, not silent."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 OK', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var body = pm.response.text();",
+                  "pm.test('exposes the read-path counter', function () {",
+                  "  pm.expect(body).to.include('topsales_read_total{');",
+                  "});",
+                  "pm.test('carries a status=\"degraded\" sample (degradation is observable)', function () {",
+                  "  pm.expect(body).to.include('status=\"degraded\"');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -387,6 +422,44 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "8. Observability — Prometheus scrape",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "text/plain" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/actuator/prometheus",
+          "host": ["{{baseUrl}}"],
+          "path": ["actuator", "prometheus"]
+        },
+        "description": "Phase 6 observability: the Micrometer Prometheus registry exposes the SLO/alarm metrics locally (no AWS account). The aws profile swaps in micrometer-registry-cloudwatch2 with the same names (docs/runbook.md §1.1). Asserts the scrape exposes the read counter, the forecast-freshness gauge, and the built-in RED timer."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200 OK', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var body = pm.response.text();",
+              "pm.test('exposes topsales_read_total (degradation/freshness ratio)', function () {",
+              "  pm.expect(body).to.include('topsales_read_total');",
+              "});",
+              "pm.test('exposes topsales_forecast_freshness_seconds (freshness gauge)', function () {",
+              "  pm.expect(body).to.include('topsales_forecast_freshness_seconds');",
+              "});",
+              "pm.test('exposes http_server_requests (RED)', function () {",
+              "  pm.expect(body).to.include('http_server_requests');",
+              "});"
+            ]
+          }
         }
       ]
     }
