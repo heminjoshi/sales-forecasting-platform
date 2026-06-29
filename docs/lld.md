@@ -13,7 +13,7 @@ opaque strings. Enums are lowercase on the wire unless noted.
 1. Module map · 2. Data model & DDL · 3. Public API contract · 4. Interface seams ·
 5. Read pipeline & degradation chain · 6. Ingestion & idempotency · 7. Cache design ·
 8. Forecast batch · 9. Insight generation · 10. Profile wiring · 11. Tenant scoping & security ·
-12. Sizing math · 13. UI contract · 14. Error model
+12. Sizing math · 13. UI contract · 14. Error model · 15. Hardening — resilience & observability
 
 ---
 
@@ -459,3 +459,44 @@ Errors are `application/problem+json` (RFC 7807):
 | `200` + `status` flag | **read degraded** — never a 5xx for a degraded forecast; the body's `status` tells the truth |
 | `5xx` | only genuine infra failure (DB + cache + actuals all unavailable) |
 ```
+
+---
+
+## 15. Hardening — resilience & observability (Phase 6)
+
+**Resilience on the Bedrock call.** The single `InvokeModel` call in `BedrockInsightGenerator` is wrapped
+with **Resilience4j** — a `CircuitBreaker` (count window 10, opens at 50% over ≥5 calls, 30s open) inside a
+`Retry` (1 extra attempt on `ApiCallTimeoutException`/`SdkException`; a grounding rejection is *not*
+retried). Both are built in the module's `create(...)` factory so every `resilience4j`/`software.amazon.awssdk`
+symbol stays confined to `topsales-insight` (the api graph never sees them). The breaker preserves the
+existing fail-soft: an open breaker (`CallNotPermittedException`) and a timeout both fall through to the
+deterministic template — the read never blocks (DR-1, DR-6). Each fallback fires a callback that increments
+`topsales.insight.fallback.total`.
+
+**Metrics (Actuator + Micrometer).** `topsales-api` exposes `/actuator/health` and `/actuator/prometheus`
+(a Prometheus registry; CloudWatch is the designed `aws`-profile registry swap — same instrumentation, the
+registry dep picks the backend). Signals:
+
+| Metric | Type | Source |
+|---|---|---|
+| `http.server.requests` | timer (RED) | actuator auto — rate/errors/duration per route |
+| `topsales.read.total{status,mode}` | counter | `ForecastReadService.handle` — one increment per read at the resolved tier; `status=degraded` is the degraded-read signal, `fresh/total` the freshness ratio |
+| `topsales.forecast.freshness.seconds` | gauge | newest serving-row `as_of` age (global; `NaN` when the serving table is empty) |
+| `topsales.forecast.provider.faults.total` | counter | a swallowed serving-read fault that drops a degradation rung |
+| `topsales.insight.fallback.total` | counter | a Bedrock→template fallback |
+
+> The forecast **batch** is an ephemeral one-shot JVM (no web server to scrape); it emits a structured
+> `batch metrics: batch_success=… durationMs=… pkWrites=…` log line instead, and would push to CloudWatch
+> EMF / a Pushgateway in `aws` (designed). Live `wape_rolling` stays the offline `make eval` report
+> (`docs/forecast-eval-report.md`) — a documented residual. `topsales.read.total` covers `mode=forecast`
+> (the path through `handle`); `mode=actuals` reads are observed via `http.server.requests`.
+
+**Structured logging.** `TenantScopeFilter` seeds SLF4J **MDC** with `tenantId` and a `requestId` (inbound
+`X-Request-Id` or a generated UUID, echoed on the response header), and **clears both in a `finally`** so a
+tenant id can never leak across pooled servlet threads. `logback-spring.xml` puts `[%X{tenantId} %X{requestId}]`
+in every line; the batch sets `tenantId` per tenant in `ForecasterJob.runTenant` (cleared in `finally`).
+
+**Idempotency / dedupe / quarantine** were already built in Phase 2/2.5 (`events.idempotency_key` UNIQUE +
+`ON CONFLICT DO NOTHING`; the `quarantine` dead-letter table — §6); Phase 6 made them **observable** rather
+than re-plumbing them. The `aws` evolution routes quarantine to an **SQS DLQ** (designed). See
+`docs/runbook.md` for the SLO/alarm tables and procedures.

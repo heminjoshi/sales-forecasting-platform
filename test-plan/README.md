@@ -21,9 +21,11 @@ The platform is built phase-by-phase ([`../docs/`](../docs/), Build-Delivery-Pla
 - **[P3]** — forecasting engine (Holt-Winters / seasonal-naive, WAPE eval).
 - **[P4]** — forecast serving, degradation chain, Redis cache.
 - **[P5]** — GenAI insight layer (grounding, injection safety).
+- **[P6]** — hardening: resilience & observability (health/readiness, metrics, structured logs).
 
 A `[P3+]` case is written now but **expected to be skipped/`@Disabled`** until that phase lands; the
-plan is the spec the phase must satisfy.
+plan is the spec the phase must satisfy. These plans are authored and kept current phase-by-phase by
+the `implement-phase` skill — each phase adds its `[P<N>]`-tagged cases here as part of planning.
 
 ## Conventions
 

@@ -65,6 +65,15 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 | MQ-50 | View a populated forecast (local/template) | A grounded one-line insight appears, citing only figures shown in the table |
 | MQ-51 | (Bedrock enabled) same view | Insight still grounded; on timeout/error it silently falls back to the template (no error to the user) |
 
+## 6.5 Observability & resilience [P6]
+| ID | Step | Expected |
+|---|---|---|
+| MQ-55 | `curl localhost:8080/actuator/prometheus` | 200 plain-text; grep shows `http_server_requests`, `topsales_read_total`, `topsales_forecast_freshness_seconds` |
+| MQ-56 | `curl localhost:8080/actuator/health` | 200 `{"status":"UP"}` with DB + Redis components UP |
+| MQ-57 | Do MQ-41 (wipe serving) then re-scrape | `topsales_read_total{status="degraded"}` sample present and climbing — the degraded read is **observable**, not just visible in the UI |
+| MQ-58 | Tail app logs during any read | each line carries `[t_demo <requestId>]` (tenant + request id from MDC); a request sent with `X-Request-Id: demo1` echoes `demo1` in the response header and the logs |
+| MQ-59 | Bedrock-down resilience (`provider=bedrock`, no AWS creds) | insight still renders the **template** (no error, read not blocked); after repeated calls the breaker opens and `topsales_insight_fallback_total` keeps climbing |
+
 ## 7. Cross-browser / responsiveness / a11y (smoke)
 | ID | Step | Expected |
 |---|---|---|
