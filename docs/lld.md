@@ -230,7 +230,10 @@ agnostic; step 4/5 differ by mode.
    (e.g. serving rows unreadable) is **treated as a miss** and falls through to the seasonal-naive
    `degraded` rung; only `UnknownTenantException` (→ `404`) escapes the chain. The `degraded` rung is an
    in-JVM seasonal-naive recompute from `aggregates` and carries `LOW` confidence with no interval/delta.
-6. **Insight** — `InsightGenerator.generate` (lazy; Bedrock with timeout → template; cached, §9).
+6. **Insight** — `InsightGenerator.generate`, generated lazily inside the cache supplier so it is cached
+   with the top-k under the same per-tenant key (§7). The `TemplateInsightGenerator` floor always
+   returns a grounded line; when `provider=bedrock`, `BedrockInsightGenerator` decorates it (timeout /
+   ungrounded → template). Never blocks the read (§9).
 7. **Assemble** — rank, `deltaVsPrior`, `confidence`, `status`, `asOf`; cache; return.
 
 **Freshness SLO** (drives `fresh` vs `stale`): `now - asOf <= forecast.freshness-slo` (default `36h`
@@ -311,15 +314,34 @@ live — the read-path degradation chain covers any gap.
 ## 9. Insight generation
 
 `InsightRequest` carries **only computed figures** (category labels + value + delta), never raw user
-free-text beyond the category name, which is treated as untrusted (prompt-injection, §11).
+free-text beyond the category name, which is treated as untrusted (prompt-injection, §11). The shared
+`InsightFigures` formatter derives the numbers-only **canonical allow-set** (values + deltas) that
+`GroundingValidator` checks output against; category labels never enter the allow-set.
 
-- **Built (`TemplateInsightGenerator`):** deterministic sentence from the top items, e.g.
-  *"{top} leads this {window} (~{+delta%}); {second} follows."* No model, no network.
-- **Designed (`BedrockInsightGenerator`):** `InvokeModel` (AWS SDK for Java), small model id from
-  config; **output validated** to contain only the provided numbers; **timeout (2s) / circuit breaker
-  → template**; guardrail (prod). Lazy (first view) + cached with the response (§7).
+- **Built — `TemplateInsightGenerator` (the always-on floor, `@Component`):** a deterministic sentence
+  built purely from the top-k figures, e.g. *"{top} leads this {window} (~{+delta%}); {second} follows."*
+  No model, no network, **never null** (DR-6 / ADR-0007). This is the local demo's insight.
+- **Designed — `BedrockInsightGenerator` (decorator, built but creds-gated):** builds the prompt from
+  **only** the computed figures, **fences the untrusted category names as escaped data** (so a name
+  can't break out of its tag), calls AWS Bedrock `InvokeModel` (Messages API, cheap model id from config,
+  default `anthropic.claude-haiku-4-5`), runs the output through **`GroundingValidator`** (rejects any
+  number not derivable from the request), and **falls back to the template** on timeout (default
+  `1500ms`) / exception / ungrounded output — it **never throws and never blocks the read**.
+- **Selection:** `TemplateInsightGenerator` is component-scanned as the floor. `BedrockInsightGenerator`
+  is wired only by `InsightWiring` (`@Configuration`, `@Bean @Primary InsightGenerator`) gated by
+  `@ConditionalOnProperty(prefix="topsales.insight", name="provider", havingValue="bedrock")`. The AWS
+  SDK (`software.amazon.awssdk:bedrockruntime`) is an `<optional>` dependency of `topsales-insight`; a
+  `BedrockInsightGenerator.create(...)` factory confines every AWS symbol to that module, keeping it off
+  the `topsales-api` runtime classpath so the local demo never needs AWS.
+- **Lazy + cached:** the insight is generated **inside the forecast cache supplier**, so it is computed
+  on first view and cached **with the top-k under the same per-tenant Redis key (§7)** — no separate
+  cache, invalidated by the same batch version-bump. `actuals` mode (cache-bypassed) attaches it inline.
 
 The response **always** carries an insight — the template is the floor; Bedrock never blocks.
+
+> **Residual:** `GroundingValidator` validates **numbers only**, so injected *non-numeric* prose with no
+> fabricated number could pass. Blast radius is small — a decorative, per-tenant cached string; the ranked
+> items are the contract. Closing it fully would need an output classifier (out of scope).
 
 ---
 

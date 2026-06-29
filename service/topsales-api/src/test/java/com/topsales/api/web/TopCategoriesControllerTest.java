@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 import com.topsales.api.cache.NoOpCacheShell;
 import com.topsales.api.service.ActualsService;
 import com.topsales.api.service.ForecastReadService;
+import com.topsales.api.service.InsightAttacher;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKResponse;
 import com.topsales.common.config.TopsalesProperties;
@@ -54,12 +55,16 @@ class TopCategoriesControllerTest {
                             new TopsalesProperties.Forecast.Interval(1.28, 0.15, 0.40),
                             new TopsalesProperties.Forecast.Eval(84, 7, 7, 12, 0.20, 0.40)),
                     new TopsalesProperties.Cache(Duration.ofMinutes(15), 20, Duration.ofSeconds(2)),
+                    null,
                     new TopsalesProperties.Rawlog("./data/rawlog"));
 
     @BeforeEach
     void setUp() {
         actualsService = mock(ActualsService.class);
         forecastReadService = mock(ForecastReadService.class);
+        // Real attacher over a deterministic fake generator — exercises the read-edge wiring without
+        // pulling in topsales-insight; these routing tests don't assert on the insight line.
+        InsightAttacher insightAttacher = new InsightAttacher(req -> "Top category leads the month.");
         // NoOpCacheShell is a pass-through: it runs the controller's supplier (forecastReadService)
         // unchanged, so these tests exercise the controller's routing, not the cache.
         mvc =
@@ -67,6 +72,7 @@ class TopCategoriesControllerTest {
                                 new TopCategoriesController(
                                         actualsService,
                                         forecastReadService,
+                                        insightAttacher,
                                         new NoOpCacheShell(),
                                         PROPS))
                         .setControllerAdvice(new ApiExceptionHandler())

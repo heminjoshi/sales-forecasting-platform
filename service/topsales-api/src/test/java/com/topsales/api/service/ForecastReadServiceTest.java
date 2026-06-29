@@ -50,6 +50,7 @@ class ForecastReadServiceTest {
                             new TopsalesProperties.Forecast.Interval(1.28, 0.15, 0.40),
                             new TopsalesProperties.Forecast.Eval(84, 7, 7, 12, 0.20, 0.40)),
                     new TopsalesProperties.Cache(Duration.ofMinutes(15), 20, Duration.ofSeconds(2)),
+                    null,
                     new TopsalesProperties.Rawlog("./data/rawlog"));
 
     private ForecastProvider provider;
@@ -97,7 +98,9 @@ class ForecastReadServiceTest {
         // Serving rows carry no date range — UI derives it from asOf + window.
         assertThat(response.windowFrom()).isNull();
         assertThat(response.windowTo()).isNull();
-        assertThat(response.insight()).isNull();
+        // Insight (Phase 5) is attached at the read edge by InsightAttacher (wired into the
+        // controller), not by this service; the raw degradation-ladder response leaves it unset. The
+        // populated, non-null insight is covered by InsightAttacherTest + EnumWireFormatThroughSpringTest.
 
         TopKItem item = response.items().get(0);
         assertThat(item.rank()).isEqualTo(1);
