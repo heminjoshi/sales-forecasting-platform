@@ -60,10 +60,18 @@
     <build>
         <plugins>
             <!-- `make seed` / `make trickle` launch this app via spring-boot:run, passing the mode as
-                 a program argument. Working dir is the repo root (set by the Makefile invocation). -->
+                 a program argument. Working dir is the repo root (set by the Makefile invocation).
+                 The repackaged executable jar is attached under the `app` classifier so the *main*
+                 artifact stays a plain library jar — topsales-forecast's WAPE eval depends on this
+                 module (SeedConfig + SeasonalityModel) at compile time and a Boot fat jar (classes
+                 under BOOT-INF/classes) is not usable as a compile/runtime dependency. spring-boot:run
+                 runs from target/classes, so `make seed`/`make trickle` are unaffected. -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <classifier>app</classifier>
+                </configuration>
             </plugin>
         </plugins>
     </build>
