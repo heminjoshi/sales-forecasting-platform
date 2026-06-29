@@ -59,7 +59,7 @@ class ActualsServiceTest {
                             new TopsalesProperties.Forecast.HoltWinters(0.3, 0.1, 0.3, 7),
                             new TopsalesProperties.Forecast.Interval(1.28, 0.15, 0.40),
                             new TopsalesProperties.Forecast.Eval(84, 7, 7, 12, 0.20, 0.40)),
-                    new TopsalesProperties.Cache(Duration.ofMinutes(15), 20),
+                    new TopsalesProperties.Cache(Duration.ofMinutes(15), 20, Duration.ofSeconds(2)),
                     new TopsalesProperties.Rawlog("./data/rawlog"));
 
     @BeforeEach

@@ -226,7 +226,10 @@ agnostic; step 4/5 differ by mode.
    | 4 | actuals top-k from `aggregates` | `pending` | none | no forecast version exists yet |
 
    The chain never throws: step 4 (`pending`) is pure aggregation and is the always-available floor.
-   `actuals` mode bypasses the chain — it is always `fresh` from aggregates.
+   `actuals` mode bypasses the chain — it is always `fresh` from aggregates. A provider `RuntimeException`
+   (e.g. serving rows unreadable) is **treated as a miss** and falls through to the seasonal-naive
+   `degraded` rung; only `UnknownTenantException` (→ `404`) escapes the chain. The `degraded` rung is an
+   in-JVM seasonal-naive recompute from `aggregates` and carries `LOW` confidence with no interval/delta.
 6. **Insight** — `InsightGenerator.generate` (lazy; Bedrock with timeout → template; cached, §9).
 7. **Assemble** — rank, `deltaVsPrior`, `confidence`, `status`, `asOf`; cache; return.
 
@@ -267,17 +270,21 @@ result independent of arrival order/lateness — each day-bucket is computed ind
 
 ## 7. Cache design (`CacheShell`, Redis)
 
-- **Key:** `topk:{tenantId}:{ver}:{window}:{mode}:{k}` where `{ver}` is the **per-tenant cache
-  version** integer held at `tenantver:{tenantId}`.
+- **Key:** `topk:{tenantId}:{ver}:{window}:{mode}:{channel}:{k}` where `{ver}` is the **per-tenant cache
+  version** integer held at `tenantver:{tenantId}` (absent ⇒ `0`). The `{channel}` segment was **added**
+  to the literal §7-design example as a correctness fix — without it, online/offline/all top-k for the
+  same tenant×window×mode×k would collide on one key (Phase-2.5 channel dimension).
 - **Value:** serialized `TopKResponse` (JSON).
 - **TTL:** base TTL (default `15m`) **+ random jitter** (±20%) to avoid lock-step expiry stampedes.
-- **Event-driven invalidation:** the forecast batch (and any aggregate-affecting admin op) **bumps**
-  `tenantver:{tenantId}` (`INCR`). Old keys embed the old `{ver}` and are simply never read again
-  (they expire out). This is O(1) invalidation without key scanning.
+- **Event-driven invalidation:** the forecast batch (`ForecasterJob`, and any aggregate-affecting admin
+  op) **bumps** `tenantver:{tenantId}` (`INCR`) **after each serving swap**, so freshly written
+  forecasts invalidate the cached top-k at once. Old keys embed the old `{ver}`, are simply never read
+  again, and TTL-expire (orphan). This is O(1) invalidation without key scanning.
 - **Single-flight:** on a miss, acquire a short Redis lease (`SET key:lock NX PX 2s`); the leader
   computes and populates, followers briefly poll/await — prevents cache stampede on hot tenants.
-- **Failure:** Redis down → fall through to the Serving Table / DB (correct, slower). The cache is an
-  accelerator, never a correctness dependency.
+- **Failure (full fail-open):** any Redis fault (get, lease, or set) → run the supplier **uncached**
+  (correct, slower) and return its result; a supplier exception **propagates** and is **never cached**.
+  The cache is an accelerator, never a correctness dependency.
 
 ---
 
@@ -397,11 +404,17 @@ The dashboard is a thin, read-only view over the API (no business logic). Respon
 
 - **Controls:** `mode` (forecast/actuals toggle), `window` (week/month/year), `channel`
   (all/online/offline toggle — Phase 2.5), `k`.
-- **Renders:** ranked table (rank, category, value, Δ vs prior, confidence), forecast-vs-actual chart
-  (Chart.js CDN, demo), the `insight` line, and a **status badge** `fresh|stale|pending|degraded` +
-  the `asOf` timestamp.
+- **Renders:** ranked table (rank, category, value, Δ vs prior, **confidence chips**), a Chart.js bar
+  chart (CDN) with **prediction-interval error bars** drawn by an inline Chart.js plugin, the `insight`
+  line, and a colour-coded **status badge** `fresh|stale|pending|degraded` (fresh=green, stale=amber,
+  degraded=orange, pending=grey) next to a human-readable `asOf`.
 - **States:** explicit loading / empty / error / **degraded** — the UI must always render something
-  honest; `interval`/`confidence` are absent in `actuals`/`pending` and the UI hides those columns.
+  honest; a `degraded`/`pending` banner explains the fallback, and `interval`/`confidence` are absent in
+  `actuals`/`pending` so the UI hides those columns and error bars.
+- **Designed extension (not built):** a true forecast-vs-actual per-category **time-series overlay** —
+  per-day forecast points persisted by the batch, a `GET .../categories/{cat}/series` endpoint, and a
+  Chart.js line + interval-band UI laid over the realized actuals. The current chart plots the
+  window-aggregated top-k, not a per-day series.
 
 ---
 

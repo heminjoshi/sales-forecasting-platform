@@ -15,6 +15,14 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  # Phase 4: after each tenant's serving swap the batch bumps the per-tenant cache version (Redis
+  # INCR) so the read cache invalidates at once (docs/lld.md §7). Lettuce connects lazily; the batch
+  # still completes with Redis down (the CacheVersion bump no-ops on failure).
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 500ms
 
 # Forecast knobs (mirrors topsales-api's application.yml; bound into TopsalesProperties).
 topsales:

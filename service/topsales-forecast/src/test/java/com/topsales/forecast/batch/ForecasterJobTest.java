@@ -55,6 +55,7 @@ class ForecasterJobTest {
                         new FixtureAggregates(),
                         new SingleTenantConfig(),
                         serving,
+                        tenant -> {}, // no-op CacheVersionBumper: invalidation is exercised elsewhere
                         props());
     }
 

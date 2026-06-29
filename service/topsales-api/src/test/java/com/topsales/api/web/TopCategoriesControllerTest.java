@@ -9,7 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
+import com.topsales.api.cache.NoOpCacheShell;
 import com.topsales.api.service.ActualsService;
+import com.topsales.api.service.ForecastReadService;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKResponse;
 import com.topsales.common.config.TopsalesProperties;
@@ -35,6 +37,7 @@ class TopCategoriesControllerTest {
 
     private MockMvc mvc;
     private ActualsService actualsService;
+    private ForecastReadService forecastReadService;
 
     // Mirrors application.yml's topsales.read.* / topsales.window-days.* (the defaults + bounds).
     private static final TopsalesProperties PROPS =
@@ -50,14 +53,22 @@ class TopCategoriesControllerTest {
                             new TopsalesProperties.Forecast.HoltWinters(0.3, 0.1, 0.3, 7),
                             new TopsalesProperties.Forecast.Interval(1.28, 0.15, 0.40),
                             new TopsalesProperties.Forecast.Eval(84, 7, 7, 12, 0.20, 0.40)),
-                    new TopsalesProperties.Cache(Duration.ofMinutes(15), 20),
+                    new TopsalesProperties.Cache(Duration.ofMinutes(15), 20, Duration.ofSeconds(2)),
                     new TopsalesProperties.Rawlog("./data/rawlog"));
 
     @BeforeEach
     void setUp() {
         actualsService = mock(ActualsService.class);
+        forecastReadService = mock(ForecastReadService.class);
+        // NoOpCacheShell is a pass-through: it runs the controller's supplier (forecastReadService)
+        // unchanged, so these tests exercise the controller's routing, not the cache.
         mvc =
-                standaloneSetup(new TopCategoriesController(actualsService, PROPS))
+                standaloneSetup(
+                                new TopCategoriesController(
+                                        actualsService,
+                                        forecastReadService,
+                                        new NoOpCacheShell(),
+                                        PROPS))
                         .setControllerAdvice(new ApiExceptionHandler())
                         .build();
     }
@@ -97,8 +108,11 @@ class TopCategoriesControllerTest {
     }
 
     @Test
-    void forecastMode_relabelsStatusToPending() throws Exception {
-        when(actualsService.topCategories(any())).thenReturn(response(Mode.FORECAST, Status.FRESH));
+    void forecastMode_delegatesToForecastReadService_andReturnsItsStatus() throws Exception {
+        // The controller no longer relabels: it hands the forecast path to ForecastReadService (via
+        // the cache shell), whose degradation ladder owns the status. Here the service reports degraded.
+        when(forecastReadService.handle(any()))
+                .thenReturn(response(Mode.FORECAST, Status.DEGRADED));
 
         mvc.perform(
                         get("/api/v1/tenants/{t}/top-categories", TENANT)
@@ -107,7 +121,7 @@ class TopCategoriesControllerTest {
                                 .header("X-Tenant-Id", TENANT))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mode").value("forecast"))
-                .andExpect(jsonPath("$.status").value("pending"));
+                .andExpect(jsonPath("$.status").value("degraded"));
     }
 
     @Test

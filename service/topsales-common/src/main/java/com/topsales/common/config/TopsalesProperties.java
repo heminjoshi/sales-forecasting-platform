@@ -94,8 +94,12 @@ public record TopsalesProperties(
                 double wapeSparseMin) {}
     }
 
-    /** Read-through cache knobs (placeholders until Phase 4 / Redis). */
-    public record Cache(Duration baseTtl, int jitterPct) {}
+    /**
+     * Read-through cache knobs (Phase 4 / Redis, docs/lld.md §7). {@code baseTtl} ± {@code jitterPct}%
+     * is the per-key expiry; {@code lockTtl} bounds the single-flight lease so a crashed leader cannot
+     * wedge a hot key.
+     */
+    public record Cache(Duration baseTtl, int jitterPct, Duration lockTtl) {}
 
     /** Local immutable raw-event-log directory (the S3 stand-in). */
     public record Rawlog(String dir) {}

@@ -183,6 +183,112 @@
           }
         }
       ]
+    },
+    {
+      "name": "5. Read — top categories (forecast, fresh)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Id", "value": "{{tenantId}}" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/top-categories?mode=forecast&window=month&k=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "tenants", "{{tenantId}}", "top-categories"],
+          "query": [
+            { "key": "mode", "value": "forecast" },
+            { "key": "window", "value": "month" },
+            { "key": "k", "value": "10" }
+          ]
+        },
+        "description": "Forecast read path. With serving rows present the status is fresh (or stale); fresh/stale items carry confidence + interval. If the serving table is empty the read still succeeds, degrading to pending/degraded (see folder 6)."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200 OK', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var body = pm.response.json();",
+              "pm.test('status flag is one of fresh/stale/pending/degraded', function () {",
+              "  pm.expect(body).to.have.property('status');",
+              "  pm.expect(body.status).to.be.oneOf(['fresh', 'stale', 'pending', 'degraded']);",
+              "});",
+              "pm.test('items is a non-empty array', function () {",
+              "  pm.expect(body.items).to.be.an('array');",
+              "  pm.expect(body.items.length).to.be.at.least(1);",
+              "});",
+              "pm.test('genuine forecast items carry confidence + interval', function () {",
+              "  if (body.status === 'fresh' || body.status === 'stale') {",
+              "    pm.expect(body.items[0]).to.have.property('confidence');",
+              "    pm.expect(body.items[0]).to.have.property('interval');",
+              "    pm.expect(body.items[0].interval).to.have.property('low');",
+              "    pm.expect(body.items[0].interval).to.have.property('high');",
+              "  } else {",
+              "    pm.expect(body.items[0]).to.have.property('value'); // pending/degraded asserted in folder 6",
+              "  }",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Degradation — wipe forecast table",
+      "description": "Manual degradation demo: prove the read path survives a total forecast/serving outage and never 5xx's. Postman can't run SQL/Redis, so do the wipe by hand against the LOCAL stack, then run the request below.\n\nOperator steps (local Postgres + Redis from docker-compose):\n1. Empty the serving tables:\n     psql \"$DATABASE_URL\" -c 'TRUNCATE serving_rows, serving_active_version;'\n   (or: docker compose exec -T postgres psql -U topsales -d topsales -c 'TRUNCATE serving_rows, serving_active_version;')\n2. Bump the per-tenant cache version so any cached forecast is invalidated:\n     redis-cli INCR tenantver:t_demo      # or: redis-cli DEL tenantver:t_demo\n   (or: docker compose exec -T redis redis-cli INCR tenantver:t_demo)\n3. Run the 'Top categories — forecast (after wipe -> degraded)' request below.\n\nExpected: 200 with status 'degraded' (on-the-fly seasonal-naive) or 'pending' (actuals stand-in) — never a 5xx — and items still present.",
+      "item": [
+        {
+          "name": "Top categories — forecast (after wipe -> degraded)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-Id", "value": "{{tenantId}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/top-categories?mode=forecast&window=month&k=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tenants", "{{tenantId}}", "top-categories"],
+              "query": [
+                { "key": "mode", "value": "forecast" },
+                { "key": "window", "value": "month" },
+                { "key": "k", "value": "10" }
+              ]
+            },
+            "description": "Run AFTER the wipe steps in the folder description. Asserts the read degrades honestly instead of erroring."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('read survives the outage with 200 (never 5xx)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var body = pm.response.json();",
+                  "pm.test('status degraded or pending', function () {",
+                  "  pm.expect(body.status).to.be.oneOf(['degraded', 'pending']);",
+                  "});",
+                  "pm.test('items still present (honest fallback)', function () {",
+                  "  pm.expect(body.items).to.be.an('array');",
+                  "  pm.expect(body.items.length).to.be.at.least(1);",
+                  "});",
+                  "pm.test('degraded items omit interval', function () {",
+                  "  if (body.status === 'degraded') {",
+                  "    pm.expect(body.items[0]).to.not.have.property('interval');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -62,6 +62,7 @@ public class ForecasterJob implements ApplicationRunner {
     private final AggregateRepository aggregates;
     private final TenantConfigRepository tenantConfig;
     private final ServingTableRepository servingTable;
+    private final CacheVersionBumper cacheVersionBumper;
     private final TopsalesProperties props;
 
     private final int historyDays;
@@ -74,11 +75,13 @@ public class ForecasterJob implements ApplicationRunner {
             AggregateRepository aggregates,
             TenantConfigRepository tenantConfig,
             ServingTableRepository servingTable,
+            CacheVersionBumper cacheVersionBumper,
             TopsalesProperties props) {
         this.forecaster = forecaster;
         this.aggregates = aggregates;
         this.tenantConfig = tenantConfig;
         this.servingTable = servingTable;
+        this.cacheVersionBumper = cacheVersionBumper;
         this.props = props;
         this.historyDays = props.forecast().historyDays();
         this.topN = props.forecast().servingTopN();
@@ -145,6 +148,9 @@ public class ForecasterJob implements ApplicationRunner {
                     ServingKey.of(tenant, window, Mode.FORECAST, ChannelFilter.ALL), rankedAll, asOf);
             writes++;
         }
+        // All 9 serving keys for this tenant are written — invalidate its cache so the new forecasts
+        // are served immediately (event-driven, O(1); fails open if Redis is down, docs/lld.md §7).
+        cacheVersionBumper.bump(tenant);
         log.info(
                 "Forecast batch: tenant={} series={} pkWrites={}", tenant, bySeries.size(), writes);
     }

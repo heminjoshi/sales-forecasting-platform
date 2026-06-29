@@ -29,6 +29,16 @@
             <artifactId>topsales-ingestion</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- Phase 4: the forecast degradation fallback reuses SeasonalNaiveForecaster (a plain POJO)
+             when serving rows are unavailable. We consume only the model/math classes — the batch's
+             Spring beans (ForecasterJob/BatchConfig/ForecastWiring under com.topsales.forecast) are
+             excluded from this app's component scan in TopSalesApplication so the read API never boots
+             the batch. datagen is optional in the forecast pom, so it does not reach this classpath. -->
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-forecast</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -44,6 +54,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
+        <!-- Phase 4: Redis-backed read cache (CacheShell) — jittered TTL, per-tenant version
+             invalidation, single-flight (docs/lld.md §7). Lettuce connects lazily, so the app boots
+             with Redis down and the cache fails open to the serving table / DB. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
