@@ -1,6 +1,6 @@
 ---
-name: export
-description: Copy this project's Claude Code session transcript(s) into claude-sessions/export/ (gitignored). User-triggered via /export. Shadows the built-in /export.
+name: save-session
+description: Copy this project's Claude Code session transcript(s) into claude-sessions/export/ (gitignored). User-triggered via /save-session. Named to avoid colliding with the built-in /export.
 disable-model-invocation: true
 ---
 
@@ -29,4 +29,4 @@ Copy the raw `.jsonl` session transcript(s) for **this** project from Claude Cod
 
 ## Notes
 - Transcripts can contain employer/interview material. `claude-sessions/` is gitignored and must **never** be committed — `/public-repo-check` verifies this.
-- This skill shadows the built-in `/export` (which exports a human-readable rendering of the conversation). This one copies the raw `.jsonl` session data instead.
+- This is named `/save-session` (not `/export`) so it doesn't collide with the built-in `/export`, which exports a human-readable rendering of the conversation. This one copies the raw `.jsonl` session data instead.
