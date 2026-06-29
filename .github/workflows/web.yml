@@ -1,0 +1,32 @@
+name: web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Lightweight guard for the production SPA (web/, Vite + Recharts). Just builds
+# it to catch breaks early; Vercel does the authoritative deploy build on push.
+jobs:
+  build:
+    name: build SPA
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build

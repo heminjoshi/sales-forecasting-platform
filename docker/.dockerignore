@@ -1,0 +1,15 @@
+# Build context is the repo root; keep it lean so the daemon only sees source.
+# Maven/Java build output (rebuilt inside the image build stage).
+**/target/
+
+# Node toolchains (CDK + the prod SPA) are never part of a service image.
+node_modules
+web/node_modules
+infra/node_modules
+infra/cdk.out
+cdk.out
+
+# VCS + local cruft.
+.git
+.gitignore
+**/.DS_Store
