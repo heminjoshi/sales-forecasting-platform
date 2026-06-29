@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.topsales.api.error.UnknownTenantException;
+import com.topsales.api.metrics.MetricNames;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKQuery;
 import com.topsales.common.api.TopKResponse;
@@ -19,6 +20,8 @@ import com.topsales.common.domain.Window;
 import com.topsales.common.forecast.ForecastProvider;
 import com.topsales.common.forecast.ServingResult;
 import com.topsales.common.forecast.ServingRow;
+
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -56,6 +59,7 @@ class ForecastReadServiceTest {
     private ForecastProvider provider;
     private SeasonalNaiveFallback fallback;
     private ActualsService actualsService;
+    private SimpleMeterRegistry meterRegistry;
     private ForecastReadService service;
 
     @BeforeEach
@@ -63,7 +67,8 @@ class ForecastReadServiceTest {
         provider = mock(ForecastProvider.class);
         fallback = mock(SeasonalNaiveFallback.class);
         actualsService = mock(ActualsService.class);
-        service = new ForecastReadService(provider, fallback, actualsService, PROPS);
+        meterRegistry = new SimpleMeterRegistry();
+        service = new ForecastReadService(provider, fallback, actualsService, PROPS, meterRegistry);
     }
 
     private TopKQuery query(int k) {
@@ -245,6 +250,87 @@ class ForecastReadServiceTest {
 
         assertThatThrownBy(() -> service.handle(query(10)))
                 .isInstanceOf(UnknownTenantException.class);
+    }
+
+    // ---- Phase-6 metrics: READ_TOTAL status/mode tags + PROVIDER_FAULT --------------------------
+
+    @Test
+    void readCounter_incrementsWithFreshStatusTag() {
+        when(provider.getTopK(any()))
+                .thenReturn(
+                        Optional.of(
+                                new ServingResult(
+                                        List.of(servingRow(1, "cat_office", "100.00")),
+                                        7,
+                                        Instant.now())));
+
+        service.handle(query(10));
+
+        assertThat(
+                        meterRegistry
+                                .counter(
+                                        MetricNames.READ_TOTAL,
+                                        "status", "fresh",
+                                        "mode", "forecast")
+                                .count())
+                .isEqualTo(1.0);
+    }
+
+    @Test
+    void readCounter_incrementsWithDegradedStatusTag() {
+        when(provider.getTopK(any())).thenReturn(Optional.empty());
+        when(fallback.tryDegraded(any())).thenReturn(Optional.of(degradedResponse()));
+
+        service.handle(query(10));
+
+        assertThat(
+                        meterRegistry
+                                .counter(
+                                        MetricNames.READ_TOTAL,
+                                        "status", "degraded",
+                                        "mode", "forecast")
+                                .count())
+                .isEqualTo(1.0);
+    }
+
+    @Test
+    void readCounter_incrementsWithPendingStatusTag() {
+        when(provider.getTopK(any())).thenReturn(Optional.empty());
+        when(fallback.tryDegraded(any())).thenReturn(Optional.empty());
+        when(actualsService.topCategories(any())).thenReturn(actualsResponse());
+
+        service.handle(query(10));
+
+        assertThat(
+                        meterRegistry
+                                .counter(
+                                        MetricNames.READ_TOTAL,
+                                        "status", "pending",
+                                        "mode", "forecast")
+                                .count())
+                .isEqualTo(1.0);
+    }
+
+    @Test
+    void providerFaultCounter_incrementsWhenServingReadThrows() {
+        when(provider.getTopK(any())).thenThrow(new RuntimeException("serving table unreadable"));
+        when(fallback.tryDegraded(any())).thenReturn(Optional.of(degradedResponse()));
+
+        service.handle(query(10));
+
+        assertThat(meterRegistry.counter(MetricNames.PROVIDER_FAULT).count()).isEqualTo(1.0);
+    }
+
+    @Test
+    void unknownTenant_404_isNotCountedAsARead() {
+        when(provider.getTopK(any())).thenReturn(Optional.empty());
+        when(fallback.tryDegraded(any())).thenReturn(Optional.empty());
+        when(actualsService.topCategories(any())).thenThrow(new UnknownTenantException(TENANT));
+
+        assertThatThrownBy(() -> service.handle(query(10)))
+                .isInstanceOf(UnknownTenantException.class);
+
+        assertThat(meterRegistry.find(MetricNames.READ_TOTAL).counter()).isNull();
     }
 
     private TopKResponse degradedResponse() {

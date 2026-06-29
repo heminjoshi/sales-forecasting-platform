@@ -258,6 +258,11 @@ class ForecasterJobTest {
         }
 
         @Override
+        public Optional<Instant> newestAsOf() {
+            return Optional.empty();
+        }
+
+        @Override
         public int writeVersionAndSwap(String pk, List<ServingRow> rows, Instant asOf) {
             calls++;
             writes.put(pk, rows);
