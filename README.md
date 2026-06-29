@@ -7,19 +7,34 @@
 > natural-language insight, and presents it in a dashboard. Java / Spring Boot, runnable locally
 > with one `docker compose up`; AWS path designed in CDK behind the same interfaces.
 
-<!-- CI badge added after the first green run -->
+ > **Status:** 🟢 Walking skeleton runnable (Phase 2). End-to-end **actuals** path works:
+> ingest events → idempotent per-tenant category aggregates → ranked top-k over the REST API →
+> served dashboard. Forecasting (Phase 3), forecast serving + degradation + cache (Phase 4), and
+> the GenAI insight layer (Phase 5) land next.
 
-> **Status:** 🚧 Early scaffolding (Phase 0). The walking skeleton, forecasting, GenAI insight,
-> and dashboard land in later phases.
-
-## Quick start (target: run in 2 commands)
+## Quick start
 
 ```bash
 make up      # start Postgres + Redis locally
-make run     # start the API on http://localhost:8080
+make run     # build + start the API on http://localhost:8080 (Flyway migrates on boot)
 ```
 
+Then open <http://localhost:8080> for the dashboard and POST a few sample events (the
+`postman/` collection has a ready sequence), e.g. for the seeded `t_demo` tenant:
+
+```bash
+curl -H "Content-Type: application/json" -H "X-Tenant-Id: t_demo" \
+  -X POST http://localhost:8080/api/v1/events \
+  -d '{"orderId":"o1","categoryId":"Office Supplies","amount":120.00,"currency":"USD","eventType":"SALE","eventTime":"2026-06-20T14:03:00Z"}'
+
+curl -H "X-Tenant-Id: t_demo" \
+  "http://localhost:8080/api/v1/tenants/t_demo/top-categories?mode=actuals&window=month&k=10"
+```
+
+A one-command seeded demo (`make seed`/`make demo`) is wired in Phase 8.
+
 Prerequisites: Docker Desktop, JDK 21+, Maven, a browser. No Node, no AWS account required.
+Tests: `make test` (fast unit tests, no Docker) · `make verify` (adds Testcontainers integration tests).
 
 ## Architecture
 
@@ -37,11 +52,21 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
 
 ## Documentation
 
-_Design docs (HLD, LLD, ADRs, OpenAPI, diagrams) — to be added under `docs/`._
+- [`docs/hld.md`](docs/hld.md) — high-level design (consolidated design doc) · [`docs/component-deep-dive.md`](docs/component-deep-dive.md)
+- [`docs/lld.md`](docs/lld.md) — low-level design (the implementation contract: DDL, interfaces, pipelines)
+- [`docs/adr/`](docs/adr/) — 9 comparative architecture decision records · [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — REST contract
+- [`docs/diagrams/`](docs/diagrams/) — architecture, data-flow, ERD, sequence, UI-flow · [`docs/runbook.md`](docs/runbook.md) — alarms, degradation, recovery
 
 ## Built vs. designed
 
-_What's runnable vs. what's designed-behind-interfaces — to be summarized._
+- **Built & runnable now (Phase 2):** event ingestion with idempotent additive aggregation,
+  tenant-local bucketing, dedupe + raw log + quarantine; the two-mode read API (actuals served;
+  `forecast` returns the `pending` floor until Phase 3); `TenantScopeFilter` multi-tenant isolation;
+  RFC 7807 errors; the served dashboard; Postgres + Flyway via Docker Compose.
+- **Designed behind the same interfaces (later phases / `aws` profile):** the forecasting engine and
+  versioned serving table (`Forecaster`/`ForecastProvider`), the full degradation chain + Redis cache,
+  the grounded GenAI insight layer (`InsightGenerator` → Bedrock), Kinesis/DynamoDB/S3/SageMaker
+  impls, the React SPA on Vercel, and the 5-stack AWS CDK.
 
 ## License
 
