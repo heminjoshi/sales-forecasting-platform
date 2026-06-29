@@ -30,6 +30,14 @@ export class IntelligenceStack extends cdk.Stack {
   /** SSM parameter holding the active model id / insight config (read at runtime). */
   public readonly modelConfigParam: ssm.StringParameter;
 
+  /**
+   * The one foundation model the serving service is permitted to invoke. The
+   * InvokeModel grant is scoped to exactly this id (not `foundation-model/*`),
+   * and the same id is written into the runtime SSM config so policy and config
+   * can't drift.
+   */
+  private static readonly INSIGHT_MODEL_ID = 'anthropic.claude-3-haiku-20240307-v1:0';
+
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -102,12 +110,19 @@ export class IntelligenceStack extends cdk.Stack {
     // Least-privilege Bedrock InvokeModel policy.
     //
     // Foundation-model ARNs carry NO account id (they're AWS-owned), so the
-    // resource is `arn:<partition>:bedrock:<region>::foundation-model/*`. Both
-    // region & partition are tokens under account-agnostic synth. ApplyGuardrail
-    // is scoped to the guardrail we just created.
+    // resource is `arn:<partition>:bedrock:<region>::foundation-model/<id>`. Both
+    // region & partition are tokens under account-agnostic synth. We scope to the
+    // single insight model (least privilege — NOT `foundation-model/*`).
+    // ApplyGuardrail is scoped to the guardrail we just created.
     // ---------------------------------------------------------------------
     const foundationModelArn = cdk.Arn.format(
-      { service: 'bedrock', account: '', resource: 'foundation-model', resourceName: '*' },
+      {
+        service: 'bedrock',
+        account: '',
+        resource: 'foundation-model',
+        resourceName: IntelligenceStack.INSIGHT_MODEL_ID,
+        arnFormat: cdk.ArnFormat.SLASH_RESOURCE_NAME,
+      },
       this,
     );
 
@@ -136,7 +151,7 @@ export class IntelligenceStack extends cdk.Stack {
       parameterName: '/topsales/intelligence/model-config',
       description: 'Active Bedrock model id + insight generation config for the serving service.',
       stringValue: JSON.stringify({
-        modelId: 'anthropic.claude-3-haiku-20240307-v1:0',
+        modelId: IntelligenceStack.INSIGHT_MODEL_ID,
         region: this.region,
         maxTokens: 512,
         temperature: 0.2,

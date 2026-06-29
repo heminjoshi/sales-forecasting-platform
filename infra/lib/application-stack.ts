@@ -3,6 +3,8 @@ import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -94,12 +96,35 @@ export class ApplicationStack extends cdk.Stack {
     // serving: ALB-fronted Fargate service.
     // The git-sha imageTag becomes part of the image URI token at synth — no
     // image needs to exist in the repo for the template to render.
+    //
+    // The API must be internet-reachable (the prod React SPA on Vercel calls it
+    // cross-origin), so the ALB is public — but TLS-terminated, never plaintext:
+    // an HTTPS:443 listener with a recommended TLS policy, and HTTP:80 redirects
+    // to it. The ACM certificate is injected per-env via `-c apiCertArn=...`; a
+    // synth-time placeholder ARN keeps account-agnostic synth green (CloudFormation
+    // does not resolve the ARN at synth — only at deploy).
     // -----------------------------------------------------------------
+    const apiCertArn =
+      (this.node.tryGetContext('apiCertArn') as string | undefined) ??
+      cdk.Arn.format(
+        {
+          service: 'acm',
+          resource: 'certificate',
+          resourceName: 'REPLACE-WITH-REAL-API-CERT',
+          arnFormat: cdk.ArnFormat.SLASH_RESOURCE_NAME,
+        },
+        this,
+      );
+
     this.servingService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'Serving', {
       cluster,
       cpu: 512,
       memoryLimitMiB: 1024,
       desiredCount: 2,
+      protocol: elbv2.ApplicationProtocol.HTTPS,
+      sslPolicy: elbv2.SslPolicy.RECOMMENDED_TLS,
+      certificate: acm.Certificate.fromCertificateArn(this, 'ApiCert', apiCertArn),
+      redirectHTTP: true, // HTTP:80 -> HTTPS:443
       taskImageOptions: {
         image: ecs.ContainerImage.fromEcrRepository(servingRepo, props.imageTag),
         containerPort: 8080,

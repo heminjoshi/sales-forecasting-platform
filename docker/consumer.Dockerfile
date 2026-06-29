@@ -33,10 +33,15 @@ RUN --mount=type=cache,target=/root/.m2 \
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-COPY --from=build /workspace/service/topsales-api/target/topsales-api-*.jar app.jar
+# Run as an unprivileged system user — never root (least privilege in-container).
+RUN groupadd --system --gid 10001 app \
+ && useradd --system --uid 10001 --gid app --home-dir /app --shell /usr/sbin/nologin app
+
+COPY --chown=app:app --from=build /workspace/service/topsales-api/target/topsales-api-*.jar app.jar
 
 # aws tier + the (designed) consumer launcher profile.
 ENV SPRING_PROFILES_ACTIVE=aws,consumer
 
 # No EXPOSE: a Kinesis consumer pulls; it does not serve HTTP.
+USER app
 ENTRYPOINT ["java", "-jar", "app.jar"]

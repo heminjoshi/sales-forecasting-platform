@@ -19,12 +19,17 @@ RUN --mount=type=cache,target=/root/.m2 \
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+# Run as an unprivileged system user — never root (least privilege in-container).
+RUN groupadd --system --gid 10001 app \
+ && useradd --system --uid 10001 --gid app --home-dir /app --shell /usr/sbin/nologin app
+
 # The version-suffixed *executable* boot jar (the `.jar.original` plain jar is
-# excluded by the glob).
-COPY --from=build /workspace/service/topsales-api/target/topsales-api-*.jar app.jar
+# excluded by the glob). Owned by the unprivileged user.
+COPY --chown=app:app --from=build /workspace/service/topsales-api/target/topsales-api-*.jar app.jar
 
 # The serving profile selects the aws-tier impls (DynamoDB / Bedrock / CloudWatch).
 ENV SPRING_PROFILES_ACTIVE=aws
 EXPOSE 8080
 
+USER app
 ENTRYPOINT ["java", "-jar", "app.jar"]

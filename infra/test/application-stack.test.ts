@@ -69,6 +69,24 @@ describe('ApplicationStack', () => {
     );
   });
 
+  test('the public ALB is TLS-terminated: HTTPS:443 + HTTP:80 redirect (never plaintext)', () => {
+    // The serving API must be internet-reachable for the cross-origin Vercel SPA,
+    // so it is TLS-terminated, not plaintext. Assert an HTTPS:443 listener...
+    template.hasResourceProperties('AWS::ElasticLoadBalancingV2::Listener', {
+      Protocol: 'HTTPS',
+      Port: 443,
+      Certificates: Match.anyValue(),
+    });
+    // ...and that the HTTP:80 listener only redirects (no plaintext forwarding).
+    template.hasResourceProperties('AWS::ElasticLoadBalancingV2::Listener', {
+      Protocol: 'HTTP',
+      Port: 80,
+      DefaultActions: Match.arrayWith([
+        Match.objectLike({ Type: 'redirect', RedirectConfig: Match.objectLike({ Protocol: 'HTTPS' }) }),
+      ]),
+    });
+  });
+
   test('an EventBridge rule schedules the forecaster batch', () => {
     template.hasResourceProperties(
       'AWS::Events::Rule',

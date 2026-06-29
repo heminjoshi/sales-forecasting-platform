@@ -19,11 +19,16 @@ RUN --mount=type=cache,target=/root/.m2 \
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+# Run as an unprivileged system user — never root (least privilege in-container).
+RUN groupadd --system --gid 10001 app \
+ && useradd --system --uid 10001 --gid app --home-dir /app --shell /usr/sbin/nologin app
+
 # The boot-repackaged BatchApplication jar (executable; `.jar.original` excluded).
-COPY --from=build /workspace/service/topsales-forecast/target/topsales-forecast-*.jar app.jar
+COPY --chown=app:app --from=build /workspace/service/topsales-forecast/target/topsales-forecast-*.jar app.jar
 
 ENV SPRING_PROFILES_ACTIVE=aws
 
 # No EXPOSE: a batch job listens on nothing. The container exits when the run
 # completes (ECS scheduled task / RunTask), so there is no health port.
+USER app
 ENTRYPOINT ["java", "-jar", "app.jar"]

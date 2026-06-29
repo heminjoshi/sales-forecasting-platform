@@ -71,6 +71,15 @@ describe('IntelligenceStack', () => {
     );
   });
 
+  test('InvokeModel is scoped to the single insight model, not foundation-model/*', () => {
+    // Least privilege: the resource ARN ends in the concrete model id; a bare
+    // `foundation-model/*` (any model) must NOT appear.
+    const policies = template.findResources('AWS::IAM::ManagedPolicy');
+    const rendered = JSON.stringify(policies);
+    expect(rendered).toContain('foundation-model/anthropic.claude-3-haiku-20240307-v1:0');
+    expect(rendered).not.toContain('foundation-model/*');
+  });
+
   test('SageMaker model registry + execution role (sagemaker trust)', () => {
     template.resourceCountIs('AWS::SageMaker::ModelPackageGroup', 1);
     template.hasResourceProperties('AWS::SageMaker::ModelPackageGroup', {
