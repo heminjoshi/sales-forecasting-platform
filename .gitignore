@@ -17,6 +17,10 @@ build/
 *.class
 HELP.md
 
+# Local raw event log (S3 stand-in) — runtime data, regenerated on each run, never committed
+**/data/rawlog/
+*.ndjson
+
 # Node / CDK
 node_modules/
 cdk.out/

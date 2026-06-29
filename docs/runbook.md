@@ -79,3 +79,15 @@ No code change is needed — recovery is a pure data operation.
 
 Blue/green for the stateless service; canary + champion/challenger for models; **versioned serving
 table** so a bad forecast batch is a pointer-flip rollback, not a data migration.
+
+## 7. Local build & tests
+
+- `make test` — fast unit tests across the reactor (no Docker); runs everywhere.
+- `make verify` — full build incl. Testcontainers `*IT` integration tests (real Postgres). This is
+  what CI runs (`mvn verify`). The ITs need a reachable Docker daemon whose API version is
+  compatible with the bundled docker-java client.
+- **Known caveat (very new Docker Desktop):** docker-java (Testcontainers 1.21.x) defaults to Docker
+  API `1.32`. Docker Engine ≥29 (Docker Desktop ≥4.77) raises the minimum API to `1.40` and returns
+  HTTP 400, so the `*IT`s fail to start locally on such hosts while passing in CI (older Engine,
+  min API `1.24`). Unit tests are unaffected. The end-to-end path is otherwise verifiable live:
+  `make up` → `make run` → POST `/api/v1/events` → GET `/api/v1/tenants/{id}/top-categories`.

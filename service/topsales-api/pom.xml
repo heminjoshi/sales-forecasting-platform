@@ -38,6 +38,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
+        <!-- Boot 4 modularized autoconfiguration: Flyway integration (FlywayAutoConfiguration)
+             ships in its own module, separate from the flyway-core library on the classpath.
+             Without it, migrations never run at startup. common provides flyway-core + the SQL. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>

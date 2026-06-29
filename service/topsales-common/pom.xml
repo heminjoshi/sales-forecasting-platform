@@ -16,14 +16,24 @@
     <description>Domain model, DTOs, config, and interface seams (Forecaster, ForecastProvider, InsightGenerator, repository ports). Also ships the Flyway migrations on the classpath (db/migration) so every module shares one schema.</description>
 
     <dependencies>
-        <!-- DTO (de)serialization. Records + java.time on the wire. Versions managed by the Boot parent. -->
+        <!-- Wire contract on the DTOs (@JsonValue/@JsonCreator/@JsonInclude). The annotations
+             package is shared across Jackson 2 and Boot 4.1's Jackson 3, so the records serialize
+             correctly through Spring's Jackson 3 mapper without pulling a second databind onto the
+             runtime classpath. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+        <!-- Jackson 2 databind is used only by this module's own serialization tests. -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <!-- Flyway migrations live here (src/main/resources/db/migration) so both the bootable
