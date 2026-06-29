@@ -52,14 +52,14 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 | MQ-30 | Ingest distinct data for `t_demo` and a second seeded tenant | Each dashboard/read shows only its own categories/totals |
 | MQ-31 | Switch `X-Tenant-Id` between the two and read each path | No cross-tenant values ever appear; 403 if path≠header |
 
-## 5. Degradation demo [P4]
+## 5. Degradation demo [P4] — ✅ built, runnable now
 | ID | Step | Expected |
 |---|---|---|
 | MQ-40 | With forecasts present, view forecast mode | badge `fresh`; intervals/confidence shown |
 | MQ-41 | Wipe the serving table (Postman "wipe forecast" / SQL) and refresh | Dashboard **still renders** (degraded): falls back to seasonal-naive/actuals; badge `degraded`/`pending`; honest `asOf` — **no crash, no blank** |
 | MQ-42 | Restore/rerun the batch | badge returns to `fresh` after refresh |
 
-## 6. GenAI insight [P5]
+## 6. GenAI insight [P5] — ✅ built, runnable now
 | ID | Step | Expected |
 |---|---|---|
 | MQ-50 | View a populated forecast (local/template) | A grounded one-line insight appears, citing only figures shown in the table |
@@ -90,6 +90,7 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 
 ## Reporting
 For each failed case record: ID, build/commit, steps, **actual** vs **expected**, screenshot (UI cases),
-and the response body/status for API cases. File against the owning phase. A case whose feature is not
-yet built (P3+) is **N/A**, not a fail — note the phase.
+and the response body/status for API cases. File against the owning phase. Phases 0–6 are built, so
+their cases (incl. §5 [P4], §6 [P5], §6.5 [P6]) are runnable now. A case whose feature is not yet built
+(P7+ — e.g. MQ-00d [P8], §8 [P10]) is **N/A**, not a fail — note the phase.
 </content>
