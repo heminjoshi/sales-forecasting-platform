@@ -99,6 +99,12 @@ Success = **200** + `TopKResponse`. Enums on the wire are **lowercase** (`mode/w
 | IT-RD-33 | **Cross-tenant leakage:** tenant A ingests, tenant B reads B's path | B sees only B's data (empty if none); A's totals never appear under B |
 | IT-RD-34 | Tenant A tries to read A's path with B's data present | Only A's aggregates returned (scoping in the SQL `WHERE tenant_id`) |
 
+> **[P8] promotion.** `IT-RD-30/31/32` are realized end-to-end by the Testcontainers HTTP IT
+> `TenantIsolationIT` (`tenant-mismatch` 403 / missing-header 403 / unknown-tenant 404, asserting the
+> RFC-7807 `type`/`title`/`instance`), complementing the unit `TenantScopeFilterTest`. Cross-tenant
+> data leakage (`IT-RD-33/34`) is asserted by the Postman multi-tenant isolation folder (`t_demo` vs
+> `t_acme`) run by Newman — see §11.
+
 ---
 
 ## 3. Error-model conformance [P2]
@@ -133,34 +139,37 @@ Success = **200** + `TopKResponse`. Enums on the wire are **lowercase** (`mode/w
 
 ---
 
-> **Coverage status (P3–P5).** These cases were specified as HTTP/Testcontainers integration tests,
-> but the behavior actually shipped covered by **unit** suites (run in `make test`) plus one real
-> serving-row IT — there is **no** `*IT` class carrying the `IT-FC`/`IT-CA`/`IT-AI` names, and nothing
-> is `@Disabled`. The **Status** column records what is really implemented as of P5. Legend:
-> **✅ unit** = covered by a unit test in `make test`; **✅ IT** = real Testcontainers `*IT` (CI-only);
-> **⚠️** = partial / proxied (see note); **❌ gap** = no automated test yet. Promoting the ⚠️/❌ rows to
-> the named ITs above is deferred to the Phase-8 test-hardening pass.
+> **Coverage status (P3–P5).** These cases were specified as HTTP/Testcontainers integration tests;
+> through P5 the behavior shipped covered by **unit** suites (run in `make test`) plus one real
+> serving-row IT. The **[P8] test-hardening pass** then promoted the highest-value `⚠️/❌` rows to real
+> Testcontainers `*IT` classes — `RedisCacheShellIT` (`IT-CA-01/03/05`, `IT-AI-05`),
+> `ForecastDegradationIT` (`IT-FC-02/07`), `TenantIsolationIT` (`IT-RD-30/31/32`). The **Status** column
+> records what is really implemented. Legend: **✅ unit** = covered by a unit test in `make test`;
+> **✅ IT** = real Testcontainers `*IT` (CI-only on this host; run in CI via `mvn verify`);
+> **⚠️** = partial / proxied (see note); **❌ gap** = no automated test yet. Two rows stay
+> carried-forward (documented, not built): `IT-FC-06` (WAPE on the committed seed *in CI*) and
+> `IT-FC-03` (concurrent mid-batch version-swap assertion).
 
 ## 6. Forecasting + serving [P3 / P4]
 | ID | Scenario | Expected | Status |
 |---|---|---|---|
 | IT-FC-01 | Batch writes versioned serving rows | `serving_rows` populated; `serving_active_version` points at newest version | ✅ IT `JdbcServingTableRepositoryIT` + ✅ unit `ForecasterJobTest` |
-| IT-FC-02 | `mode=forecast` reads from serving table | status `fresh`; items carry interval + confidence | ⚠️ unit `ForecastReadServiceTest.servingFresh_whenAsOfWithinSlo_returnsFreshWithMappedItems` (service-level; no HTTP IT) |
+| IT-FC-02 | `mode=forecast` reads from serving table | status `fresh`; items carry interval + confidence | ✅ IT `[P8] ForecastDegradationIT.forecast_afterBatch_isFreshWithIntervals` + ✅ unit `ForecastReadServiceTest.servingFresh_whenAsOfWithinSlo_returnsFreshWithMappedItems` |
 | IT-FC-03 | Atomic version swap | Mid-batch, reads see old version until the pointer flips; no partial top-k | ⚠️ `JdbcServingTableRepositoryIT` (flip + rollback retention; **no** concurrent mid-batch assertion) |
 | IT-FC-04 | Cold-start: <1 season of history | trend-only / low-confidence; flagged, not an error | ✅ unit `ColdStartForecasterTest` |
 | IT-FC-05 | Sparse/intermittent category | simple method; no divide-by-zero; finite interval | ✅ unit `SeasonalNaiveForecasterTest` / `WapeCalculatorTest` / `BacktestRegressionTest` |
 | IT-FC-06 | WAPE backtest on seed data | report emitted; WAPE within expected band; bias reported | ⚠️ unit `WapeCalculatorTest` + `BacktestRegressionTest` on a **synthetic in-test series**, not the committed seed in CI |
-| IT-FC-07 | **Degradation:** serving table wiped | read falls back last-good → seasonal-naive (from actuals) → actuals `pending`; **still 200** with `degraded`/`pending` status | ✅ unit `ForecastReadServiceTest` (full 4-tier ladder + provider-throws); no HTTP/Testcontainers IT |
+| IT-FC-07 | **Degradation:** serving table wiped | read falls back last-good → seasonal-naive (from actuals) → actuals `pending`; **still 200** with `degraded`/`pending` status | ✅ IT `[P8] ForecastDegradationIT.noServingRows_stillReturns200Degraded` + ✅ unit `ForecastReadServiceTest` (full 4-tier ladder + provider-throws) |
 | IT-FC-08 | Last-good staleness past SLO | status `stale` with the older `asOf` | ✅ unit `ForecastReadServiceTest.servingStale_whenAsOfBeyondSlo_returnsStale` |
 
 ### 6.1 Redis cache [P4]
 | ID | Scenario | Expected | Status |
 |---|---|---|---|
-| IT-CA-01 | Cache miss then hit | 2nd identical read served from Redis (assert backing store not re-queried) | ❌ gap — only the always-faulting fail-open path is unit-tested; no real-Redis hit-path test |
+| IT-CA-01 | Cache miss then hit | 2nd identical read served from Redis (assert backing store not re-queried) | ✅ IT `[P8] RedisCacheShellIT.missThenHit_secondCallServedFromRedis` (counting supplier runs exactly once) |
 | IT-CA-02 | Key composition | key includes `(tenant, window, mode, channel, k)` — different params miss independently | ✅ unit `CacheKeysTest` |
-| IT-CA-03 | Event-driven invalidation | new events bump the per-tenant version → next read misses and recomputes | ⚠️ key **format** only (`CacheKeysTest.tenantVersionKey`); the bump→miss→recompute **behavior** is ❌ gap |
+| IT-CA-03 | Event-driven invalidation | new events bump the per-tenant version → next read misses and recomputes | ✅ IT `[P8] RedisCacheShellIT.versionBump_invalidatesAndRecomputes` (INCR `tenantver:{t}` → next read misses) + ✅ unit `CacheKeysTest.tenantVersionKey` (key format) |
 | IT-CA-04 | TTL jitter | entries expire within TTL±jitter (no synchronized stampede) | ✅ unit `RedisCacheShellTest` |
-| IT-CA-05 | Single-flight | concurrent misses for the same key cause one recompute, not N | ❌ gap — lock key format pinned, concurrency behavior untested |
+| IT-CA-05 | Single-flight | concurrent misses for the same key cause one recompute, not N | ✅ IT `[P8] RedisCacheShellIT.concurrentMisses_singleRecompute` (N latch-gated callers → supplier runs once) |
 | IT-CA-06 | Redis **down** | read degrades to direct store query (still 200), error logged/metered | ✅ unit `RedisCacheShellTest.failsOpenAndRunsSupplierExactlyOnceWhenRedisFaults` (fail-open at unit; not under real Redis) |
 
 ---
@@ -172,7 +181,7 @@ Success = **200** + `TopKResponse`. Enums on the wire are **lowercase** (`mode/w
 | IT-AI-02 | Grounding validation | a number not in the computed set ⇒ output rejected ⇒ template fallback | ✅ unit `GroundingValidatorTest` + `BedrockInsightGeneratorTest.fabricatedNumber_fallsBackToTemplate` |
 | IT-AI-03 | Bedrock timeout/error | falls back to deterministic template; read still 200 | ✅ unit `BedrockInsightGeneratorTest` (clientException / timeout / emptyModelText → template) + `InsightAttacherTest.attach_generatorThrows_returnsResponseUnchanged_neverThrows` |
 | IT-AI-04 | **Prompt injection** via category name (e.g. `"Ignore prior instructions…"`) | category treated as untrusted data; no instruction-following; figures unchanged | ✅ unit `BedrockInsightGeneratorTest.injectedCategoryName_isFencedAsData_andCannotProduceUngroundedOutput` |
-| IT-AI-05 | Lazy + cached | first view generates; second view served from cache | ❌ gap — `InsightAttacherTest.attach_emptyItems_doesNotCallGenerator…` covers the lazy *floor*, but the cache/second-view path has no automated test |
+| IT-AI-05 | Lazy + cached | first view generates; second view served from cache | ✅ IT `[P8] RedisCacheShellIT.missThenHit_secondCallServedFromRedis` (the cached `TopKResponse` carries the insight → second view returns it without regenerating) + ✅ unit `InsightAttacherTest.attach_emptyItems_doesNotCallGenerator…` (lazy floor) |
 
 ---
 
@@ -263,3 +272,25 @@ Unit-level with a mocked `BedrockRuntimeClient` (no Testcontainers); the read mu
 | IT-IF-10 | **Non-root containers** | every Dockerfile under `docker/` declares a non-root `USER` (build runs as an unprivileged uid) | ⚠️ manual/CI (`docker.yml` build); grep-asserted |
 | IT-IF-11 | CLI/lib lockstep | `aws-cdk-lib` is pinned exact (`2.177.0`) and the `aws-cdk` CLI matches — guards the classic cloud-assembly version-drift synth break | ✅ manual (`package.json` pin + `package-lock.json`) |
 </content>
+
+---
+
+## 11. Postman coverage gate (Newman, end-to-end) [P8]
+
+> The Phase-8 acceptance bar: **"Postman runs end-to-end against the local stack."** The full
+> `postman/TopSales.postman_collection.json` is executed by **Newman** against a live local stack
+> (`make demo`, assuming `make up && make run && make seed`) and as a **CI coverage gate** in
+> `.github/workflows/postman.yml` (Postgres + Redis services → build → `make seed` → boot the app →
+> poll `/actuator/health` until UP → `newman run`; a non-zero Newman exit fails the build). `✅ PM` in
+> the Status column = an assertion realized by a Postman request. These are **black-box** checks over
+> the running service, complementary to the JUnit ITs above.
+
+| ID | Scenario | Expected | Status |
+|---|---|---|---|
+| IT-PM-01 | Happy path — ingest then read | POST events for `t_demo` → `GET top-categories` ranks them; `200`; `status=fresh` | ✅ PM (collection items 1–5) |
+| IT-PM-02 | Degradation — serving table wiped | the "wipe forecast" request then `mode=forecast` → still `200` with `degraded`/`pending` badge | ✅ PM (item 6) |
+| IT-PM-03 | Prompt-injection probe | a category name crafted as an instruction is ranked as data; the insight ignores it; figures unchanged | ✅ PM (item 7) |
+| IT-PM-04 | **Multi-tenant isolation** | POST as `t_demo`; `GET /tenants/t_demo/...` with `X-Tenant-Id: t_acme` → **403** `tenant-mismatch`; reading own tenant → `200`; `t_acme` never sees `t_demo` data | ✅ PM (new isolation folder, `t_demo` vs `t_acme`) |
+| IT-PM-05 | Observability + RED | `/actuator/prometheus` exposes the custom + RED meters; a forced `4xx` (k=0) shows up as a `CLIENT_ERROR` sample; `/actuator/health` `UP` with db+redis | ✅ PM (items 8–9) |
+| IT-PM-06 | CORS preflight (allowed origin) | `OPTIONS` with an allow-listed `Origin` → `200`; `Access-Control-Allow-Origin` echoed (browser-enforced behavior, realized here not in an HTTP-slice IT) | ✅ PM (item 10) |
+| IT-PM-07 | CI coverage gate | `postman.yml` runs the whole collection on push/PR; any failing assertion (non-zero Newman exit) **fails the build** | ✅ CI (`postman.yml`) |

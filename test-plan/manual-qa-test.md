@@ -13,7 +13,8 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 | MQ-00a | `make up` | Postgres + Redis containers start; no port conflicts |
 | MQ-00b | `make run` | App boots on `http://localhost:8080`; Flyway applies V1–V5 (logged); no errors |
 | MQ-00c | Open `http://localhost:8080` | Dashboard loads: controls, empty/seeded table, status badge, no console errors |
-| MQ-00d | (P8) `make seed` then `make demo` | One-command seeded data appears; dashboard shows ranked categories |
+| MQ-00d | (P8) `make seed` | One-command seeded, seasonal, channel-split data backfills; dashboard shows ranked categories |
+| MQ-00e | (P8) `make demo` (after `up`/`run`/`seed`) | **Newman** runs the whole `postman/` collection against the live stack; **every assertion passes** (happy path, degradation, injection, multi-tenant isolation, observability, CORS); a non-zero exit is a failure |
 
 ## 1. Dashboard — happy path
 | ID | Step | Expected |
