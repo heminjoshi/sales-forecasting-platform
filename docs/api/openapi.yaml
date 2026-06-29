@@ -327,7 +327,10 @@ components:
           description: Inclusive end of the window (today, for the trailing actuals window).
         insight:
           type: string
-          description: Grounded NL summary over the provided numbers (template floor; Bedrock when enabled).
+          description: >-
+            Grounded NL summary over the provided numbers. Always present — the deterministic template
+            floor guarantees a line; Bedrock generates it when enabled (provider=bedrock), degrading to
+            the template on timeout/ungrounded output.
           example: "Office Supplies leads this month (~+12%); Electronics follows."
         items:
           type: array
