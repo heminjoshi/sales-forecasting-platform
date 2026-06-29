@@ -49,9 +49,10 @@ eval:
 	mvn -f service/pom.xml -pl topsales-forecast -am -DskipTests install
 	mvn -f service/pom.xml -pl topsales-forecast exec:java
 
-# Run the demo (Postman/newman sequence) — wired in Phase 8.
+# Run the demo (Postman/newman sequence) against the live local stack. Assumes
+# `make up && make run && make seed` already ran (the API must be listening with seeded data).
 demo:
-	@echo "demo: not yet implemented — wired in Phase 8 (postman/)"
+	npx --yes newman run postman/TopSales.postman_collection.json -e postman/local.postman_environment.json
 
 # Validate the CDK — wired in Phase 7 (becomes: cd infra && npm ci && npx cdk synth).
 synth:

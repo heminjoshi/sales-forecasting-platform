@@ -7,7 +7,7 @@
 > natural-language insight, and presents it in a dashboard. Java / Spring Boot, runnable locally
 > with one `docker compose up`; AWS path designed in CDK behind the same interfaces.
 
- > **Status:** 🟢 Built through **Phase 7** (locally runnable end-to-end). Ingest events → idempotent per-tenant, per-channel
+ > **Status:** 🟢 Built through **Phase 8** — PROD-SHAPED (locally runnable end-to-end). Ingest events → idempotent per-tenant, per-channel
 > category aggregates → ranked top-k over the REST API → served dashboard. On top of that:
 > the **channel** first-class dimension + a deterministic seasonal synthetic-data generator
 > (Phase 2.5), a **central config** surface (`TopsalesProperties`), the **forecasting engine**
@@ -26,7 +26,12 @@
 > request id in every log line via MDC), and the **production path + infra** (Phase 7 — an API **CORS**
 > allow-list (`localhost` + Vercel) on `/api/**`, a **React SPA** (Vite + Recharts) in `web/` deploying to
 > Vercel as the cross-origin prod UI, and a **synth-only AWS CDK** 5-stack fronted by **API Gateway → a
-> private ALB** with `aws-cdk-lib` assertion tests). Next: data, tests, Postman (Phase 8).
+> private ALB** with `aws-cdk-lib` assertion tests), and the **test-hardening + Postman gate** (Phase 8 —
+> real full-stack ITs (booted against CI-provided Postgres+Redis) over a shared base for the Redis cache (miss→hit /
+> version-bump invalidation / single-flight), HTTP forecast **degradation** (still 200, never fails
+> closed), and **multi-tenant isolation** (cross-tenant 403 / unknown-tenant 404); plus a **Newman**
+> coverage gate — `make demo` runs the whole Postman collection, enforced in CI). Next: presentation
+> & rehearsal (Phase 9).
 
 ## Quick start
 
@@ -90,7 +95,7 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
 
 ## Built vs. designed
 
-- **Built & runnable now (Phases 0–7):**
+- **Built & runnable now (Phases 0–8):**
   - **Ingestion** — idempotent additive aggregation, tenant-local bucketing, dedupe + raw log +
     quarantine; the `channel` (`ONLINE`/`OFFLINE`) **first-class key dimension**
     ([ADR-0010](docs/adr/0010-channel-as-first-class-dimension.md), Phase 2.5).
@@ -139,6 +144,16 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
     least-privilege Bedrock invoke policy + an L1 `CfnGuardrail` + SSM model config; container images are
     non-root; the Monitoring stack alarms on the exact Phase-6 meter names. Nothing is deployed — `cdk
     synth` + assertions + `docker build` only.
+  - **Test-hardening & Postman gate** (Phase 8) — real full-stack integration tests over a shared
+    base (`AbstractPostgresRedisIT`, booted against CI-provided Postgres + Redis services; locally the
+    `make up` compose stack): the Redis cache (miss→hit, version-bump
+    invalidation, single-flight), HTTP forecast **degradation** (serving-table wiped → still `200`
+    `degraded`/`pending`, never fails closed), and **multi-tenant isolation** (cross-tenant `403`
+    tenant-mismatch / unknown-tenant `404`, RFC-7807 body). Plus a **Newman coverage gate** — `make
+    demo` runs the full `postman/` collection (incl. a `t_demo`-vs-`t_acme` no-leakage folder) against
+    the live stack, enforced in CI by `.github/workflows/postman.yml`. The synthetic-data generator +
+    committed seed (`make seed`/`trickle`/`eval`) were already in place from Phase 2.5. `make test`
+    stays the local unit gate; the `*IT`s run in CI.
   - Postgres + Flyway via Docker Compose.
 - **Designed behind the same interfaces (later phases / `aws` profile):** the cloud insight impl
   (**`BedrockInsightGenerator`** — built but creds-gated; activates only with
