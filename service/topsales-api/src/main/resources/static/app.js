@@ -20,6 +20,7 @@
     scope: $("scope"),
     asOf: $("asOf"),
     insight: $("insight"),
+    banner: $("banner"),
     loading: $("state-loading"),
     empty: $("state-empty"),
     error: $("state-error"),
@@ -54,10 +55,42 @@
   function setBadge(status) {
     const s = (status || "unknown").toLowerCase();
     els.badge.textContent = s;
-    els.badge.className = "badge " + s;
+    els.badge.className = "badge " + s; // .fresh / .stale / .pending / .degraded set the colour
   }
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  // Render the ISO instant asOf as "as of 28 Jun 2026, 06:00" (in UTC, so the figure never shifts by
+  // viewer timezone). Falls back to the raw string if it can't be parsed.
+  function formatAsOf(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "as of " + iso;
+    const hh = String(d.getUTCHours()).padStart(2, "0");
+    const mm = String(d.getUTCMinutes()).padStart(2, "0");
+    return (
+      "as of " + d.getUTCDate() + " " + MONTHS[d.getUTCMonth()] + " " + d.getUTCFullYear() +
+      ", " + hh + ":" + mm
+    );
+  }
+
+  // Honest notice above results when the API can't serve a genuine forecast.
+  // degraded => loud warning (on-the-fly estimate); pending => soft note (actuals stand-in).
+  function renderBanner(status) {
+    const s = (status || "").toLowerCase();
+    if (s === "degraded") {
+      els.banner.textContent =
+        "⚠ Forecasts unavailable — showing an on-the-fly seasonal-naive estimate (low confidence).";
+      els.banner.className = "banner banner-degraded";
+      els.banner.hidden = false;
+    } else if (s === "pending") {
+      els.banner.textContent = "Forecast not yet computed — showing recent actuals.";
+      els.banner.className = "banner banner-pending";
+      els.banner.hidden = false;
+    } else {
+      els.banner.hidden = true;
+    }
+  }
 
   function cap(s) {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
@@ -124,8 +157,11 @@
       conf.className = "col-conf";
       conf.hidden = !flags.conf;
       if (it.confidence) {
-        conf.textContent = it.confidence;
-        conf.classList.add("conf-" + it.confidence);
+        // Render confidence as a small colour-coded chip (HIGH=green, MEDIUM=amber, LOW=grey).
+        const chip = document.createElement("span");
+        chip.className = "chip conf-" + it.confidence;
+        chip.textContent = it.confidence;
+        conf.appendChild(chip);
       }
       tr.appendChild(conf);
 
@@ -142,24 +178,77 @@
     }
   }
 
+  // Chart.js v4 has no built-in error bars, so this tiny plugin draws the prediction interval as a
+  // vertical whisker (low→high, with end caps) centred on each bar. The bands live on the dataset as
+  // `intervals` (one {low,high} or null per bar); when none are present the plugin no-ops and we get
+  // plain bars. Drawn in afterDatasetsDraw so the whiskers sit on top of the bars.
+  const errorBarsPlugin = {
+    id: "intervalWhiskers",
+    afterDatasetsDraw(c) {
+      const ds = c.data.datasets[0];
+      const intervals = ds && ds.intervals;
+      if (!intervals) return;
+      const ctx = c.ctx;
+      const yScale = c.scales.y;
+      const bars = c.getDatasetMeta(0).data;
+      const cap = 5; // half-width of the end caps, in px
+      ctx.save();
+      ctx.strokeStyle = "#e7e9f3";
+      ctx.lineWidth = 1.5;
+      bars.forEach((bar, i) => {
+        const iv = intervals[i];
+        if (!iv) return;
+        const x = bar.x;
+        const yLow = yScale.getPixelForValue(iv.low);
+        const yHigh = yScale.getPixelForValue(iv.high);
+        ctx.beginPath();
+        ctx.moveTo(x, yLow);
+        ctx.lineTo(x, yHigh); // the whisker
+        ctx.moveTo(x - cap, yLow);
+        ctx.lineTo(x + cap, yLow); // bottom cap
+        ctx.moveTo(x - cap, yHigh);
+        ctx.lineTo(x + cap, yHigh); // top cap
+        ctx.stroke();
+      });
+      ctx.restore();
+    },
+  };
+
   function renderChart(items) {
     const ctx = $("chart").getContext("2d");
     const labels = items.map((it) => it.category);
     const data = items.map((it) => Number(it.value));
+
+    // Only build the interval band when genuine forecast items carry one (absent for actuals/pending/
+    // degraded). null entries leave that bar whisker-less.
+    const hasInterval = (it) =>
+      it.interval && it.interval.low !== undefined && it.interval.high !== undefined &&
+      it.interval.low !== null && it.interval.high !== null;
+    const intervals = items.some(hasInterval)
+      ? items.map((it) => (hasInterval(it) ? { low: Number(it.interval.low), high: Number(it.interval.high) } : null))
+      : null;
+
+    // Stretch the value axis so the highest whisker isn't clipped at the top of a bar.
+    const maxHigh = intervals
+      ? intervals.reduce((m, iv) => (iv ? Math.max(m, iv.high) : m), 0)
+      : 0;
 
     if (chart) chart.destroy();
     chart = new Chart(ctx, {
       type: "bar",
       data: {
         labels,
-        datasets: [{ label: "Value", data, backgroundColor: "#6c8cff", borderRadius: 4 }],
+        datasets: [{ label: "Value", data, intervals, backgroundColor: "#6c8cff", borderRadius: 4 }],
       },
+      plugins: [errorBarsPlugin],
       options: {
         responsive: true,
         plugins: { legend: { display: false } },
         scales: {
           x: { ticks: { color: "#9aa0b8" }, grid: { display: false } },
           y: {
+            beginAtZero: true,
+            suggestedMax: maxHigh ? maxHigh * 1.05 : undefined,
             ticks: { color: "#9aa0b8", callback: (v) => formatCurrency(v) },
             grid: { color: "#2a3050" },
           },
@@ -171,8 +260,10 @@
   function renderResponse(body) {
     setBadge(body.status);
     els.scope.textContent = scopeLabel(body);
-    els.asOf.textContent = body.asOf ? "as of " + body.asOf : "";
+    els.asOf.textContent = formatAsOf(body.asOf);
     els.meta.hidden = false;
+
+    renderBanner(body.status);
 
     if (body.insight) {
       els.insight.textContent = body.insight;
@@ -205,6 +296,7 @@
   function renderError(message) {
     els.meta.hidden = true;
     els.insight.hidden = true;
+    els.banner.hidden = true;
     els.error.textContent = message;
     showOnly("error");
   }
@@ -235,6 +327,7 @@
     els.loadBtn.disabled = true;
     els.meta.hidden = true;
     els.insight.hidden = true;
+    els.banner.hidden = true;
     showOnly("loading");
 
     try {
