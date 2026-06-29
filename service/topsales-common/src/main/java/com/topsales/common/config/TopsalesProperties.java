@@ -55,8 +55,44 @@ public record TopsalesProperties(
         }
     }
 
-    /** Forecast freshness/history knobs. Phase-3/4 forecast params extend this group. */
-    public record Forecast(Duration freshnessSlo, int historyDays) {}
+    /**
+     * Forecast knobs (Phase 3). {@code servingTopN} = ranked rows written per serving pk;
+     * {@code versionKeep} = serving versions retained for rollback. The nested groups tune the
+     * Holt-Winters smoothing, the prediction-interval width → confidence mapping, and the
+     * time-series-CV / WAPE evaluation. All defaults live in {@code application.yml}.
+     */
+    public record Forecast(
+            Duration freshnessSlo,
+            int historyDays,
+            int servingTopN,
+            int versionKeep,
+            HoltWinters holtWinters,
+            Interval interval,
+            Eval eval) {
+
+        /** Holt-Winters triple-exponential-smoothing params (additive); {@code seasonLength} in days. */
+        public record HoltWinters(double alpha, double beta, double gamma, int seasonLength) {}
+
+        /**
+         * Prediction interval + confidence mapping: {@code z} is the normal quantile (1.28 ≈ 80%);
+         * relative half-width below {@code confidenceHighMax} → HIGH, below {@code confidenceMediumMax}
+         * → MEDIUM, else LOW.
+         */
+        public record Interval(double z, double confidenceHighMax, double confidenceMediumMax) {}
+
+        /**
+         * Expanding-window time-series-CV backtest: initial train length, test horizon, step, and a
+         * fold cap; plus the WAPE regression-guard thresholds (dense series must beat
+         * {@code wapeDenseMax}; the sparse category is expected above {@code wapeSparseMin}).
+         */
+        public record Eval(
+                int initialTrainDays,
+                int testHorizonDays,
+                int stepDays,
+                int maxFolds,
+                double wapeDenseMax,
+                double wapeSparseMin) {}
+    }
 
     /** Read-through cache knobs (placeholders until Phase 4 / Redis). */
     public record Cache(Duration baseTtl, int jitterPct) {}

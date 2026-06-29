@@ -51,7 +51,14 @@ class ActualsServiceTest {
                     new TopsalesProperties.Read(
                             10, 1, 50, List.of(5, 7, 10), "month", "forecast", "all"),
                     new TopsalesProperties.WindowDays(7, 30, 365),
-                    new TopsalesProperties.Forecast(Duration.ofHours(36), 730),
+                    new TopsalesProperties.Forecast(
+                            Duration.ofHours(36),
+                            730,
+                            50,
+                            3,
+                            new TopsalesProperties.Forecast.HoltWinters(0.3, 0.1, 0.3, 7),
+                            new TopsalesProperties.Forecast.Interval(1.28, 0.15, 0.40),
+                            new TopsalesProperties.Forecast.Eval(84, 7, 7, 12, 0.20, 0.40)),
                     new TopsalesProperties.Cache(Duration.ofMinutes(15), 20),
                     new TopsalesProperties.Rawlog("./data/rawlog"));
 

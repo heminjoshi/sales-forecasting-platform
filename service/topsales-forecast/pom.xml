@@ -13,6 +13,85 @@
     <artifactId>topsales-forecast</artifactId>
     <packaging>jar</packaging>
     <name>topsales-forecast</name>
-    <description>Forecaster implementations (seasonal-naive, Holt-Winters), evaluation/backtest, and the batch runner</description>
+    <description>Forecaster implementations (seasonal-naive, Holt-Winters), the batch runner that writes versioned serving rows, and the WAPE evaluation/backtest. A web-less batch app (make forecast) + a pure-JVM eval main (make eval).</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- The batch reaches the local JDBC repo impls (aggregates read + serving write) that live
+             in the shared data-plane module; no api→forecast cycle (api never depends on forecast). -->
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-ingestion</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- The WAPE eval backtests on the committed seed by regenerating it in-memory via the
+             generator's deterministic SeasonalityModel (pure JVM, no DB). -->
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-datagen</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Core context + JdbcTemplate for the batch app (no web server). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!-- Boot 4 modular autoconfig: Flyway runs on startup so the batch works on a cold DB. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Testcontainers: serving-writer SQL correctness (atomic swap, prune) against real Postgres. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- `make forecast` → spring-boot:run boots BatchApplication (web-less) and exits. -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- `make eval` → exec:java runs the pure-JVM EvalMain (no Spring, no DB). -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <mainClass>com.topsales.forecast.eval.EvalMain</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
