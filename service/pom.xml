@@ -21,7 +21,21 @@
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
+
+    <!-- Testcontainers BOM so module POMs can omit versions on its artifacts. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <modules>
         <module>topsales-common</module>
@@ -30,5 +44,24 @@
         <module>topsales-insight</module>
         <module>topsales-api</module>
     </modules>
+
+    <build>
+        <plugins>
+            <!-- Run *IT (Testcontainers) integration tests in the verify phase. Surefire (test
+                 phase) runs *Test unit tests; Failsafe runs *IT. `mvn verify` runs both. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

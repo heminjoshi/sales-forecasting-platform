@@ -13,6 +13,52 @@
     <artifactId>topsales-ingestion</artifactId>
     <packaging>jar</packaging>
     <name>topsales-ingestion</name>
-    <description>Event ingestion: local REST POST /events + idempotent aggregation (KCL consumer in prod)</description>
+    <description>Event ingestion: local REST POST /events + idempotent aggregation (KCL consumer in prod). Owns the JDBC repository impls (the local data plane).</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.topsales</groupId>
+            <artifactId>topsales-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- REST controller for the local POST /events stand-in. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- JdbcTemplate-based repository impls (Postgres, local profile). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Testcontainers: SQL correctness (dedupe gate, additive upsert) against real Postgres. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
 </project>

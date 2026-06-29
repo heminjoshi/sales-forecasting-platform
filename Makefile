@@ -1,5 +1,5 @@
 # Thin wrappers over the real commands. See README for prerequisites.
-.PHONY: up down run test seed demo synth
+.PHONY: up down run test verify seed demo synth
 
 # Bring up the local stack (Postgres + Redis).
 up:
@@ -16,9 +16,14 @@ run:
 	mvn -f service/pom.xml -pl topsales-api -am -DskipTests install
 	mvn -f service/pom.xml -pl topsales-api spring-boot:run
 
-# Build + test the Maven reactor.
+# Fast unit tests across the reactor (no Docker). Runs everywhere.
 test:
 	mvn -f service/pom.xml test
+
+# Full build incl. Testcontainers *IT integration tests (needs a Docker daemon with
+# API >= the docker-java client default; this is what CI runs). See docs/runbook.md.
+verify:
+	mvn -f service/pom.xml verify
 
 # Load sample data — wired in Phase 8 (data/seed).
 seed:

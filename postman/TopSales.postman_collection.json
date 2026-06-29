@@ -1,0 +1,187 @@
+{
+  "info": {
+    "name": "TopSales — Phase 2 Walking Skeleton",
+    "_postman_id": "b1f5c0a2-9d3e-4a6b-8c21-7e0f2a1d4c10",
+    "description": "End-to-end smoke flow for the multi-tenant top-sales-by-category API. Run in order: ingest a single event, a batch, a duplicate (dedupe), then read the top categories. Collection variables: baseUrl, tenantId.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "tenantId", "value": "t_demo", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Ingest — single SALE event",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Id", "value": "{{tenantId}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenantId\": \"t_demo\",\n  \"orderId\": \"o_1001\",\n  \"categoryId\": \"cat_office\",\n  \"amount\": 42.50,\n  \"currency\": \"USD\",\n  \"eventType\": \"SALE\",\n  \"eventTime\": \"2026-06-20T14:03:00Z\",\n  \"idempotencyKey\": \"o_1001:SALE\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 202 Accepted', function () {",
+              "  pm.response.to.have.status(202);",
+              "});",
+              "var body = pm.response.json();",
+              "pm.test('applied >= 1', function () {",
+              "  pm.expect(body.applied).to.be.a('number');",
+              "  pm.expect(body.applied).to.be.at.least(1);",
+              "});",
+              "pm.test('received echoes 1', function () {",
+              "  pm.expect(body.received).to.eql(1);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Ingest — batch across categories",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Id", "value": "{{tenantId}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1002\", \"categoryId\": \"cat_office\",      \"amount\": 120.00, \"currency\": \"USD\", \"eventType\": \"SALE\", \"eventTime\": \"2026-06-21T09:15:00Z\", \"idempotencyKey\": \"o_1002:SALE\" },\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1003\", \"categoryId\": \"cat_electronics\", \"amount\": 899.99, \"currency\": \"USD\", \"eventType\": \"SALE\", \"eventTime\": \"2026-06-21T11:42:00Z\", \"idempotencyKey\": \"o_1003:SALE\" },\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1004\", \"categoryId\": \"cat_furniture\",   \"amount\": 349.00, \"currency\": \"USD\", \"eventType\": \"SALE\", \"eventTime\": \"2026-06-22T16:08:00Z\", \"idempotencyKey\": \"o_1004:SALE\" },\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1003\", \"categoryId\": \"cat_electronics\", \"amount\": -899.99, \"currency\": \"USD\", \"eventType\": \"RETURN\", \"eventTime\": \"2026-06-23T10:00:00Z\", \"idempotencyKey\": \"o_1003:RETURN\" }\n]"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 202 Accepted', function () {",
+              "  pm.response.to.have.status(202);",
+              "});",
+              "var body = pm.response.json();",
+              "pm.test('received echoes 4', function () {",
+              "  pm.expect(body.received).to.eql(4);",
+              "});",
+              "pm.test('applied >= 1', function () {",
+              "  pm.expect(body.applied).to.be.at.least(1);",
+              "});",
+              "pm.test('counts are consistent (received = applied + deduped + quarantined)', function () {",
+              "  var deduped = body.deduped || 0;",
+              "  var quarantined = body.quarantined || 0;",
+              "  pm.expect(body.applied + deduped + quarantined).to.eql(body.received);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Ingest — duplicate (dedupe)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-Id", "value": "{{tenantId}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenantId\": \"t_demo\",\n  \"orderId\": \"o_1001\",\n  \"categoryId\": \"cat_office\",\n  \"amount\": 42.50,\n  \"currency\": \"USD\",\n  \"eventType\": \"SALE\",\n  \"eventTime\": \"2026-06-20T14:03:00Z\",\n  \"idempotencyKey\": \"o_1001:SALE\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 202 Accepted', function () {",
+              "  pm.response.to.have.status(202);",
+              "});",
+              "var body = pm.response.json();",
+              "pm.test('deduped >= 1 (same idempotencyKey replayed)', function () {",
+              "  pm.expect(body.deduped).to.be.a('number');",
+              "  pm.expect(body.deduped).to.be.at.least(1);",
+              "});",
+              "pm.test('applied is 0 (nothing new applied)', function () {",
+              "  pm.expect(body.applied).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Read — top categories (actuals, month)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-Id", "value": "{{tenantId}}" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/top-categories?mode=actuals&window=month&k=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "tenants", "{{tenantId}}", "top-categories"],
+          "query": [
+            { "key": "mode", "value": "actuals" },
+            { "key": "window", "value": "month" },
+            { "key": "k", "value": "10" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200 OK', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var body = pm.response.json();",
+              "pm.test('status flag is present', function () {",
+              "  pm.expect(body).to.have.property('status');",
+              "  pm.expect(body.status).to.be.oneOf(['fresh', 'stale', 'pending', 'degraded']);",
+              "});",
+              "pm.test('items is a non-empty array', function () {",
+              "  pm.expect(body.items).to.be.an('array');",
+              "  pm.expect(body.items.length).to.be.at.least(1);",
+              "});",
+              "pm.test('first item is rank 1', function () {",
+              "  pm.expect(body.items[0].rank).to.eql(1);",
+              "});",
+              "pm.test('actuals omit forecast-only fields on item[0]', function () {",
+              "  pm.expect(body.items[0]).to.not.have.property('confidence');",
+              "  pm.expect(body.items[0]).to.not.have.property('interval');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
