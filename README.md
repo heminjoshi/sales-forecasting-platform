@@ -7,7 +7,7 @@
 > natural-language insight, and presents it in a dashboard. Java / Spring Boot, runnable locally
 > with one `docker compose up`; AWS path designed in CDK behind the same interfaces.
 
- > **Status:** 🟢 Runnable through **Phase 6**. Ingest events → idempotent per-tenant, per-channel
+ > **Status:** 🟢 Built through **Phase 7** (locally runnable end-to-end). Ingest events → idempotent per-tenant, per-channel
 > category aggregates → ranked top-k over the REST API → served dashboard. On top of that:
 > the **channel** first-class dimension + a deterministic seasonal synthetic-data generator
 > (Phase 2.5), a **central config** surface (`TopsalesProperties`), the **forecasting engine**
@@ -23,7 +23,10 @@
 > circuit-breaker + retry around the Bedrock call (still failing soft to the template), **Actuator +
 > Micrometer** metrics scraped at `/actuator/prometheus` (RED + custom ML-quality meters: read-status,
 > forecast freshness, provider faults, insight fallbacks), and **structured logging** with a tenant +
-> request id in every log line via MDC). Next: the UI production path + AWS CDK infra validation (Phase 7).
+> request id in every log line via MDC), and the **production path + infra** (Phase 7 — an API **CORS**
+> allow-list (`localhost` + Vercel) on `/api/**`, a **React SPA** (Vite + Recharts) in `web/` deploying to
+> Vercel as the cross-origin prod UI, and a **synth-only AWS CDK** 5-stack fronted by **API Gateway → a
+> private ALB** with `aws-cdk-lib` assertion tests). Next: data, tests, Postman (Phase 8).
 
 ## Quick start
 
@@ -74,8 +77,8 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
 
 - **Service:** Java 21, Spring Boot 4.1, Maven multi-module (`service/`).
 - **Local stack:** Postgres + Redis via Docker Compose (`local/`).
-- **Infra (designed):** AWS CDK, TypeScript (`infra/`).
-- **UI:** static dashboard served by the API (demo); React SPA on Vercel (designed, `web/`).
+- **Infra:** AWS CDK, TypeScript (`infra/`) — synth-only (validated by `cdk synth` + assertion tests; not deployed).
+- **UI:** static dashboard served by the API (live demo); **React SPA** (Vite + Recharts) in `web/` deploying to Vercel (production, cross-origin).
 
 ## Documentation
 
@@ -87,7 +90,7 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
 
 ## Built vs. designed
 
-- **Built & runnable now (Phases 0–5):**
+- **Built & runnable now (Phases 0–7):**
   - **Ingestion** — idempotent additive aggregation, tenant-local bucketing, dedupe + raw log +
     quarantine; the `channel` (`ONLINE`/`OFFLINE`) **first-class key dimension**
     ([ADR-0010](docs/adr/0010-channel-as-first-class-dimension.md), Phase 2.5).
@@ -125,13 +128,25 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
     logging** with `tenantId`+`requestId` in every line via SLF4J MDC (set/cleared in `TenantScopeFilter`,
     `X-Request-Id` echoed). Idempotency/dedupe/quarantine (built in Phase 2/2.5) are now observable.
     CloudWatch is the designed `aws`-profile registry swap. See [`docs/runbook.md`](docs/runbook.md).
+  - **Production path & infra** (Phase 7) — an API **CORS** allow-list on `/api/**` (config-bound
+    `localhost` + the Vercel origin) so the cross-origin SPA can call the API; a **React SPA** (Vite +
+    React + Recharts) in `web/` — a thin, read-only `TopKResponse` view at parity with the static
+    dashboard (status badge, degradation banner, grounded insight, prediction-interval whiskers) —
+    deploying to **Vercel** while the Spring-served dashboard stays the live demo; and a **synth-only
+    AWS CDK** 5-stack (Network/Storage/Intelligence/Application/Monitoring) validated by `cdk synth` +
+    `aws-cdk-lib` `Template.fromStack` assertions. Ingress is an **API Gateway HTTP API → VPC Link →
+    private internal ALB** (compute never internet-facing); the Intelligence stack carries a
+    least-privilege Bedrock invoke policy + an L1 `CfnGuardrail` + SSM model config; container images are
+    non-root; the Monitoring stack alarms on the exact Phase-6 meter names. Nothing is deployed — `cdk
+    synth` + assertions + `docker build` only.
   - Postgres + Flyway via Docker Compose.
 - **Designed behind the same interfaces (later phases / `aws` profile):** the cloud insight impl
   (**`BedrockInsightGenerator`** — built but creds-gated; activates only with
   `topsales.insight.provider=bedrock` + AWS credentials, decorating the template floor and degrading back
   to it on timeout/ungrounded), the Python/SageMaker global model + Croston behind the `Forecaster` seam,
-  Kinesis/DynamoDB/S3 impls, the React SPA on Vercel, the forecast-vs-actual per-category **time-series
-  overlay**, and the 5-stack AWS CDK.
+  Kinesis/DynamoDB/S3 impls, the forecast-vs-actual per-category **time-series overlay**, and the **live
+  AWS deployment** (the 5-stack CDK is built & synth-validated but never `cdk deploy`-ed; S3+CloudFront is
+  the documented in-account alternative to the Vercel SPA host).
 
 ## License
 
