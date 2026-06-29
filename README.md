@@ -7,15 +7,17 @@
 > natural-language insight, and presents it in a dashboard. Java / Spring Boot, runnable locally
 > with one `docker compose up`; AWS path designed in CDK behind the same interfaces.
 
- > **Status:** 🟢 Runnable through **Phase 3**. Ingest events → idempotent per-tenant, per-channel
-> category aggregates → ranked top-k over the REST API → served dashboard (actuals). On top of that:
+ > **Status:** 🟢 Runnable through **Phase 4**. Ingest events → idempotent per-tenant, per-channel
+> category aggregates → ranked top-k over the REST API → served dashboard. On top of that:
 > the **channel** first-class dimension + a deterministic seasonal synthetic-data generator
-> (Phase 2.5), a **central config** surface (`TopsalesProperties`), and the **forecasting engine**
+> (Phase 2.5), a **central config** surface (`TopsalesProperties`), the **forecasting engine**
 > (Phase 3 — seasonal-naive / Holt-Winters behind a `Forecaster` seam, a batch that writes
 > **versioned, ranked serving rows** per tenant×window×channel with the channels rolled up to `all`,
-> and a **WAPE backtest** report). Next: the forecast **read path** + degradation chain + cache
-> (Phase 4) — the batch writes serving rows today, but reads still return the honest `pending` floor
-> until Phase 4 wires `ForecastProvider` — then the GenAI insight layer (Phase 5).
+> and a **WAPE backtest** report), and the forecast **read path** (Phase 4 — `mode=forecast` serves
+> the precomputed serving rows through a `ForecastProvider` behind a **Redis cache**, down a **4-tier
+> degradation chain that never fails closed** — `fresh`→`stale`→seasonal-naive `degraded`→actuals
+> `pending` — with the dashboard surfacing a **status badge**, `asOf`, confidence, and prediction
+> intervals). Next: the GenAI insight layer (Phase 5).
 
 ## Quick start
 
@@ -79,7 +81,7 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
 
 ## Built vs. designed
 
-- **Built & runnable now (Phases 0–3):**
+- **Built & runnable now (Phases 0–4):**
   - **Ingestion** — idempotent additive aggregation, tenant-local bucketing, dedupe + raw log +
     quarantine; the `channel` (`ONLINE`/`OFFLINE`) **first-class key dimension**
     ([ADR-0010](docs/adr/0010-channel-as-first-class-dimension.md), Phase 2.5).
@@ -93,11 +95,19 @@ Four tiers: **presentation** (dashboard) → **serving** (REST API) → **foreca
     cold-start dispatch, prediction intervals + confidence); a batch that writes **versioned, ranked**
     serving rows per tenant×window×channel (atomic swap + rollback, channels summed up to `all`); a
     **time-series-CV WAPE/bias** backtest (`make eval`, [report](docs/forecast-eval-report.md)).
+  - **Forecast read path** (Phase 4) — `mode=forecast` serves the precomputed serving rows via a
+    `ForecastProvider` (`PrecomputedForecastProvider`) behind a **Redis cache-aside** layer (jittered
+    TTL, single-flight lease, **full fail-open**), down a **4-tier degradation chain that never fails
+    closed** — fresh serving rows → aged last-good past the 36h freshness SLO (`stale`) → in-JVM
+    seasonal-naive from actuals (`degraded`) → actuals top-k floor (`pending`); the batch bumps a
+    **per-tenant cache version** (`INCR`) on each serving swap to invalidate stale top-k in O(1). The
+    dashboard surfaces the **status badge** (fresh/stale/degraded/pending), `asOf`, confidence chips,
+    and prediction-interval error bars.
   - Postgres + Flyway via Docker Compose.
-- **Designed behind the same interfaces (later phases / `aws` profile):** the forecast **read path**
-  + degradation chain + Redis cache (`ForecastProvider`, Phase 4), the grounded GenAI insight layer
-  (`InsightGenerator` → Bedrock, Phase 5), the Python/SageMaker global model + Croston behind the
-  `Forecaster` seam, Kinesis/DynamoDB/S3 impls, the React SPA on Vercel, and the 5-stack AWS CDK.
+- **Designed behind the same interfaces (later phases / `aws` profile):** the grounded GenAI insight
+  layer (`InsightGenerator` → Bedrock, Phase 5), the Python/SageMaker global model + Croston behind the
+  `Forecaster` seam, Kinesis/DynamoDB/S3 impls, the React SPA on Vercel, the forecast-vs-actual
+  per-category **time-series overlay**, and the 5-stack AWS CDK.
 
 ## License
 
