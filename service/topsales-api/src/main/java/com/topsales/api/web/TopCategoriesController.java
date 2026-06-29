@@ -4,6 +4,7 @@ import com.topsales.api.cache.CacheShell;
 import com.topsales.api.error.TenantMismatchException;
 import com.topsales.api.service.ActualsService;
 import com.topsales.api.service.ForecastReadService;
+import com.topsales.api.service.InsightAttacher;
 import com.topsales.common.api.TopKQuery;
 import com.topsales.common.api.TopKResponse;
 import com.topsales.common.config.TopsalesProperties;
@@ -32,16 +33,19 @@ public class TopCategoriesController {
 
     private final ActualsService actualsService;
     private final ForecastReadService forecastReadService;
+    private final InsightAttacher insightAttacher;
     private final CacheShell cacheShell;
     private final TopsalesProperties props;
 
     public TopCategoriesController(
             ActualsService actualsService,
             ForecastReadService forecastReadService,
+            InsightAttacher insightAttacher,
             CacheShell cacheShell,
             TopsalesProperties props) {
         this.actualsService = actualsService;
         this.forecastReadService = forecastReadService;
+        this.insightAttacher = insightAttacher;
         this.cacheShell = cacheShell;
         this.props = props;
     }
@@ -83,9 +87,15 @@ public class TopCategoriesController {
         // Actuals bypass the forecast cache + degradation chain — always fresh from aggregates (§5).
         // Forecast reads run the cache-aside shell over the degradation ladder; the supplier is the
         // cache-miss compute. Both still raise UnknownTenantException → 404 for an unknown tenant.
+        //
+        // The grounded insight (Phase 5, §9) is attached at the read edge. For forecast it runs INSIDE
+        // the cache supplier so the generated line is cached alongside the top-k under the same Redis
+        // key (one generation per cache miss, not per request); actuals are cache-bypassed so it runs
+        // inline. The attacher never throws — a faulty generator can't break a read.
         if (parsedMode == Mode.FORECAST) {
-            return cacheShell.getOrCompute(query, () -> forecastReadService.handle(query));
+            return cacheShell.getOrCompute(
+                    query, () -> insightAttacher.attach(query, forecastReadService.handle(query)));
         }
-        return actualsService.topCategories(query); // 404 if unknown tenant
+        return insightAttacher.attach(query, actualsService.topCategories(query)); // 404 if unknown tenant
     }
 }

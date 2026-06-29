@@ -41,7 +41,7 @@ class EnumWireFormatThroughSpringTest {
     }
 
     @Test
-    void responseUsesLowercaseEnums_andOmitsNullForecastFields() {
+    void responseUsesLowercaseEnums_carriesInsight_andOmitsNullForecastFields() {
         TopKResponse response =
                 new TopKResponse(
                         "t_demo",
@@ -53,7 +53,9 @@ class EnumWireFormatThroughSpringTest {
                         Instant.parse("2026-06-28T00:00:00Z"),
                         LocalDate.parse("2026-05-30"),
                         LocalDate.parse("2026-06-28"),
-                        null,
+                        // Phase 5: the grounded insight line is now populated (InsightAttacher); it is
+                        // present on the wire rather than omitted.
+                        "Top category leads the month at 100.",
                         List.of(new TopKItem(1, "cat_office", new BigDecimal("100.00"), null, null, null)));
 
         String json = mapper.writeValueAsString(response);
@@ -67,6 +69,7 @@ class EnumWireFormatThroughSpringTest {
         assertThat(json).doesNotContain("interval");
         assertThat(json).doesNotContain("deltaVsPrior");
         assertThat(json).doesNotContain("confidence");
-        assertThat(json).doesNotContain("insight");
+        // the grounded insight is non-null now → present on the wire
+        assertThat(json).contains("\"insight\":\"Top category leads the month at 100.\"");
     }
 }

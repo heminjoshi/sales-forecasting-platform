@@ -60,6 +60,7 @@ class ActualsServiceTest {
                             new TopsalesProperties.Forecast.Interval(1.28, 0.15, 0.40),
                             new TopsalesProperties.Forecast.Eval(84, 7, 7, 12, 0.20, 0.40)),
                     new TopsalesProperties.Cache(Duration.ofMinutes(15), 20, Duration.ofSeconds(2)),
+                    null,
                     new TopsalesProperties.Rawlog("./data/rawlog"));
 
     @BeforeEach
@@ -105,7 +106,9 @@ class ActualsServiceTest {
         assertThat(response.items().get(0).confidence()).isNull();
         assertThat(response.items().get(0).interval()).isNull();
         assertThat(response.status()).isEqualTo(Status.FRESH);
-        assertThat(response.insight()).isNull();
+        // The grounded insight (Phase 5) is attached at the read edge by InsightAttacher (wired into
+        // the controller), not by this service — the raw service response leaves it unset. The
+        // populated, non-null insight is covered by InsightAttacherTest + EnumWireFormatThroughSpringTest.
         assertThat(response.asOf()).isNotNull();
     }
 
