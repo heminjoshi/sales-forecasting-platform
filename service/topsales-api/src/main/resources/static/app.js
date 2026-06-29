@@ -17,6 +17,7 @@
     loadBtn: $("loadBtn"),
     meta: $("meta"),
     badge: $("badge"),
+    scope: $("scope"),
     asOf: $("asOf"),
     insight: $("insight"),
     loading: $("state-loading"),
@@ -54,6 +55,29 @@
     const s = (status || "unknown").toLowerCase();
     els.badge.textContent = s;
     els.badge.className = "badge " + s;
+  }
+
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  function cap(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
+  // Format a "YYYY-MM-DD" date string without going through Date() (avoids browser-timezone shifts).
+  function fmtDate(s, withYear) {
+    if (!s) return "";
+    const [y, m, d] = s.split("-").map(Number);
+    return MONTHS[m - 1] + " " + d + (withYear ? ", " + y : "");
+  }
+
+  // "Actuals · Month · All — May 30 – Jun 28, 2026" from the response's own fields.
+  function scopeLabel(body) {
+    const parts = [cap(body.mode), cap(body.window), cap(body.channel)].filter(Boolean).join(" · ");
+    const range =
+      body.windowFrom && body.windowTo
+        ? fmtDate(body.windowFrom, false) + " – " + fmtDate(body.windowTo, true)
+        : "";
+    return range ? parts + " — " + range : parts;
   }
 
   // Whether any item carries the forecast-only fields. Drives column visibility.
@@ -146,6 +170,7 @@
 
   function renderResponse(body) {
     setBadge(body.status);
+    els.scope.textContent = scopeLabel(body);
     els.asOf.textContent = body.asOf ? "as of " + body.asOf : "";
     els.meta.hidden = false;
 

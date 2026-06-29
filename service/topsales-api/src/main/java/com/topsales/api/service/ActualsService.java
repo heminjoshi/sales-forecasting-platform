@@ -103,6 +103,8 @@ public class ActualsService {
                 query.k(),
                 Status.FRESH,
                 Instant.now(),
+                from,
+                to,
                 null, // insight is Phase 5; deterministic template is the floor there
                 items);
     }

@@ -6,11 +6,14 @@ import com.topsales.common.domain.Status;
 import com.topsales.common.domain.Window;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
  * The read response the dashboard renders (§13). Always carries a {@link Status} and an
  * {@code asOf} — reads never fail closed. {@code channel} echoes the requested view (ADR-0010).
+ * {@code windowFrom}/{@code windowTo} are the inclusive calendar range the data covers, in the
+ * tenant's timezone (for actuals, the trailing window; for forecasts, the horizon window).
  * {@code insight} is the grounded NL line (Phase 5); a deterministic template is the floor, so it is
  * never null at runtime.
  */
@@ -22,6 +25,8 @@ public record TopKResponse(
         int k,
         Status status,
         Instant asOf,
+        LocalDate windowFrom,
+        LocalDate windowTo,
         String insight,
         List<TopKItem> items) {
 }

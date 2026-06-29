@@ -120,6 +120,10 @@ paths:
         - name: k
           in: query
           required: false
+          description: |
+            Number of top categories to return (1–50). Values above the tenant's category count
+            simply return all categories (no error). (Enhancement: surface the category count so the
+            UI can cap `k` to it.)
           schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
       responses:
         '200':
@@ -258,7 +262,7 @@ components:
 
     TopKResponse:
       type: object
-      required: [tenantId, mode, window, channel, k, status, asOf, items]
+      required: [tenantId, mode, window, channel, k, status, asOf, windowFrom, windowTo, items]
       properties:
         tenantId: { type: string }
         mode: { $ref: '#/components/schemas/Mode' }
@@ -267,6 +271,14 @@ components:
         k: { type: integer }
         status: { $ref: '#/components/schemas/Status' }
         asOf: { type: string, format: date-time }
+        windowFrom:
+          type: string
+          format: date
+          description: Inclusive start of the calendar range the data covers, in the tenant's timezone.
+        windowTo:
+          type: string
+          format: date
+          description: Inclusive end of the window (today, for the trailing actuals window).
         insight:
           type: string
           description: Grounded NL summary over the provided numbers (template floor; Bedrock when enabled).
@@ -282,6 +294,8 @@ components:
         k: 10
         status: fresh
         asOf: "2026-06-28T06:00:00Z"
+        windowFrom: "2026-05-30"
+        windowTo: "2026-06-28"
         insight: "Office Supplies leads this month (~+12%); Electronics follows."
         items:
           - rank: 1

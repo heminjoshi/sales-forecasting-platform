@@ -77,6 +77,8 @@ public class TopCategoriesController {
                             response.k(),
                             Status.PENDING,
                             response.asOf(),
+                            response.windowFrom(),
+                            response.windowTo(),
                             response.insight(),
                             response.items());
         }

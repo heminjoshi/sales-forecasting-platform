@@ -19,6 +19,7 @@ import com.topsales.common.domain.Window;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,8 @@ class TopCategoriesControllerTest {
                 10,
                 status,
                 Instant.parse("2026-06-28T00:00:00Z"),
+                LocalDate.parse("2026-05-30"),
+                LocalDate.parse("2026-06-28"),
                 null,
                 List.of(new TopKItem(1, "cat_office", new BigDecimal("100.00"), null, null, null)));
     }

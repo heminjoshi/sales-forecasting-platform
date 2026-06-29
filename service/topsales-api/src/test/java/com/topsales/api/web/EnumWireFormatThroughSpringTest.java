@@ -12,6 +12,7 @@ import com.topsales.common.domain.Window;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,8 @@ class EnumWireFormatThroughSpringTest {
                         10,
                         Status.FRESH,
                         Instant.parse("2026-06-28T00:00:00Z"),
+                        LocalDate.parse("2026-05-30"),
+                        LocalDate.parse("2026-06-28"),
                         null,
                         List.of(new TopKItem(1, "cat_office", new BigDecimal("100.00"), null, null, null)));
 
@@ -58,6 +61,7 @@ class EnumWireFormatThroughSpringTest {
         assertThat(json).contains("\"mode\":\"actuals\"");
         assertThat(json).contains("\"window\":\"month\"");
         assertThat(json).contains("\"channel\":\"all\"");
+        assertThat(json).contains("\"windowFrom\":\"2026-05-30\"", "\"windowTo\":\"2026-06-28\"");
         assertThat(json).contains("\"status\":\"fresh\"");
         // forecast-only fields are null → omitted under non_null inclusion
         assertThat(json).doesNotContain("interval");
