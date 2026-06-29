@@ -4,10 +4,10 @@ import com.topsales.api.error.UnknownTenantException;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKQuery;
 import com.topsales.common.api.TopKResponse;
+import com.topsales.common.config.TopsalesProperties;
 import com.topsales.common.domain.AggregateRow;
 import com.topsales.common.domain.Status;
 import com.topsales.common.domain.TenantConfig;
-import com.topsales.common.domain.Window;
 import com.topsales.common.repository.AggregateRepository;
 import com.topsales.common.repository.TenantConfigRepository;
 
@@ -38,15 +38,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class ActualsService {
 
-    private static final Map<Window, Integer> WINDOW_DAYS =
-            Map.of(Window.WEEK, 7, Window.MONTH, 30, Window.YEAR, 365);
-
     private final AggregateRepository aggregates;
     private final TenantConfigRepository tenants;
+    private final TopsalesProperties props;
 
-    public ActualsService(AggregateRepository aggregates, TenantConfigRepository tenants) {
+    public ActualsService(
+            AggregateRepository aggregates,
+            TenantConfigRepository tenants,
+            TopsalesProperties props) {
         this.aggregates = aggregates;
         this.tenants = tenants;
+        this.props = props;
     }
 
     /**
@@ -61,13 +63,15 @@ public class ActualsService {
 
         ZoneId zone = config.timezone();
         LocalDate to = LocalDate.now(zone);
-        int days = WINDOW_DAYS.get(query.window());
+        int days = props.windowDays().forWindow(query.window());
         LocalDate from = to.minusDays(days - 1L);
 
-        List<AggregateRow> rows = aggregates.rangeByCategory(query.tenantId(), from, to);
+        List<AggregateRow> rows =
+                aggregates.rangeByCategory(query.tenantId(), from, to, query.channel());
 
-        // Sum each category's per-day rollups into a single window total. LinkedHashMap is only for
-        // determinism of iteration before the explicit sort below.
+        // Sum each category's per-day rollups into a single window total. For channel=ALL this also
+        // sums across both channels (the read-time `all` rollup); a single channel filters in SQL.
+        // LinkedHashMap is only for determinism of iteration before the explicit sort below.
         Map<String, BigDecimal> totals = new LinkedHashMap<>();
         for (AggregateRow row : rows) {
             totals.merge(row.categoryId(), row.sumAmount(), BigDecimal::add);
@@ -97,9 +101,12 @@ public class ActualsService {
                 query.tenantId(),
                 query.mode(),
                 query.window(),
+                query.channel(),
                 query.k(),
                 Status.FRESH,
                 Instant.now(),
+                from,
+                to,
                 null, // insight is Phase 5; deterministic template is the floor there
                 items);
     }

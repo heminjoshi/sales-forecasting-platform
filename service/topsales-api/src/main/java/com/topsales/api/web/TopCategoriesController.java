@@ -4,6 +4,8 @@ import com.topsales.api.error.TenantMismatchException;
 import com.topsales.api.service.ActualsService;
 import com.topsales.common.api.TopKQuery;
 import com.topsales.common.api.TopKResponse;
+import com.topsales.common.config.TopsalesProperties;
+import com.topsales.common.domain.ChannelFilter;
 import com.topsales.common.domain.Mode;
 import com.topsales.common.domain.Status;
 import com.topsales.common.domain.Window;
@@ -27,31 +29,39 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TopCategoriesController {
 
-    private static final int MIN_K = 1;
-    private static final int MAX_K = 50;
-
     private final ActualsService actualsService;
+    private final TopsalesProperties props;
 
-    public TopCategoriesController(ActualsService actualsService) {
+    public TopCategoriesController(ActualsService actualsService, TopsalesProperties props) {
         this.actualsService = actualsService;
+        this.props = props;
     }
 
     @GetMapping("/api/v1/tenants/{tenantId}/top-categories")
     public TopKResponse topCategories(
             @PathVariable String tenantId,
-            @RequestParam(defaultValue = "forecast") String mode,
-            @RequestParam(defaultValue = "month") String window,
-            @RequestParam(defaultValue = "10") int k,
+            @RequestParam(required = false) String mode,
+            @RequestParam(required = false) String window,
+            @RequestParam(required = false) Integer k,
+            @RequestParam(required = false) String channel,
             HttpServletRequest request) {
 
-        // 400s first: validate shape before authorization. Window/Mode parse case-insensitively via
-        // the enums' @JsonCreator factory (Spring's default enum converter is case-sensitive and
-        // would reject the lowercase wire values), throwing IllegalArgumentException → 400.
-        if (k < MIN_K || k > MAX_K) {
-            throw new IllegalArgumentException("k must be between " + MIN_K + " and " + MAX_K + ", got " + k);
+        // Omitted params fall back to the central read defaults (topsales.read.*) — kept as wire
+        // strings/ints here so the enum parse and bounds-check below behave exactly as before.
+        TopsalesProperties.Read read = props.read();
+        int kValue = k != null ? k : read.kDefault();
+
+        // 400s first: validate shape before authorization. Window/Mode/ChannelFilter parse
+        // case-insensitively via the enums' @JsonCreator factory (Spring's default enum converter is
+        // case-sensitive and would reject the lowercase wire values), throwing
+        // IllegalArgumentException → 400.
+        if (kValue < read.kMin() || kValue > read.kMax()) {
+            throw new IllegalArgumentException(
+                    "k must be between " + read.kMin() + " and " + read.kMax() + ", got " + kValue);
         }
-        Mode parsedMode = Mode.from(mode);
-        Window parsedWindow = Window.from(window);
+        Mode parsedMode = Mode.from(mode != null ? mode : read.modeDefault());
+        Window parsedWindow = Window.from(window != null ? window : read.windowDefault());
+        ChannelFilter parsedChannel = ChannelFilter.from(channel != null ? channel : read.channelDefault());
 
         // 403: the path tenant must equal the authenticated tenant published by TenantScopeFilter.
         String authed = (String) request.getAttribute(TenantScopeFilter.AUTHED_TENANT_ATTR);
@@ -59,7 +69,7 @@ public class TopCategoriesController {
             throw new TenantMismatchException(tenantId);
         }
 
-        TopKQuery query = new TopKQuery(tenantId, parsedWindow, parsedMode, k);
+        TopKQuery query = new TopKQuery(tenantId, parsedWindow, parsedMode, kValue, parsedChannel);
         TopKResponse response = actualsService.topCategories(query); // 404 if unknown tenant
 
         if (parsedMode == Mode.FORECAST) {
@@ -69,9 +79,12 @@ public class TopCategoriesController {
                             response.tenantId(),
                             response.mode(),
                             response.window(),
+                            response.channel(),
                             response.k(),
                             Status.PENDING,
                             response.asOf(),
+                            response.windowFrom(),
+                            response.windowTo(),
                             response.insight(),
                             response.items());
         }

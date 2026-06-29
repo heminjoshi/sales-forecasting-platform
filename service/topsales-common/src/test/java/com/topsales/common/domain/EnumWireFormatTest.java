@@ -18,6 +18,7 @@ class EnumWireFormatTest {
         assertThat(mapper.writeValueAsString(Window.MONTH)).isEqualTo("\"month\"");
         assertThat(mapper.writeValueAsString(Mode.FORECAST)).isEqualTo("\"forecast\"");
         assertThat(mapper.writeValueAsString(Status.DEGRADED)).isEqualTo("\"degraded\"");
+        assertThat(mapper.writeValueAsString(ChannelFilter.ALL)).isEqualTo("\"all\"");
     }
 
     @Test
@@ -25,6 +26,7 @@ class EnumWireFormatTest {
         assertThat(mapper.readValue("\"week\"", Window.class)).isEqualTo(Window.WEEK);
         assertThat(mapper.readValue("\"ACTUALS\"", Mode.class)).isEqualTo(Mode.ACTUALS);
         assertThat(mapper.readValue("\"Pending\"", Status.class)).isEqualTo(Status.PENDING);
+        assertThat(mapper.readValue("\"Online\"", ChannelFilter.class)).isEqualTo(ChannelFilter.ONLINE);
     }
 
     @Test
@@ -32,5 +34,8 @@ class EnumWireFormatTest {
         assertThat(mapper.writeValueAsString(EventType.SALE)).isEqualTo("\"SALE\"");
         assertThat(mapper.writeValueAsString(Confidence.HIGH)).isEqualTo("\"HIGH\"");
         assertThat(mapper.readValue("\"ADJUSTMENT\"", EventType.class)).isEqualTo(EventType.ADJUSTMENT);
+        // Channel is a domain enum: uppercase on the wire (like EventType), unlike ChannelFilter.
+        assertThat(mapper.writeValueAsString(Channel.OFFLINE)).isEqualTo("\"OFFLINE\"");
+        assertThat(mapper.readValue("\"ONLINE\"", Channel.class)).isEqualTo(Channel.ONLINE);
     }
 }

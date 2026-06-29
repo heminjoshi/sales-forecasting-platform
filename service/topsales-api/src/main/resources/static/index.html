@@ -16,7 +16,7 @@
     <form id="controls" class="controls" autocomplete="off">
       <label class="field">
         <span>Tenant</span>
-        <input id="tenantId" type="text" value="t_demo" spellcheck="false" />
+        <select id="tenantId"></select>
       </label>
 
       <label class="field">
@@ -27,18 +27,20 @@
         </select>
       </label>
 
+      <!-- window / channel / k options are built from GET /api/v1/config on load (config-driven). -->
       <label class="field">
         <span>Window</span>
-        <select id="window">
-          <option value="week">week</option>
-          <option value="month" selected>month</option>
-          <option value="year">year</option>
-        </select>
+        <select id="window"></select>
+      </label>
+
+      <label class="field">
+        <span>Channel</span>
+        <select id="channel"></select>
       </label>
 
       <label class="field">
         <span>k</span>
-        <input id="k" type="number" min="1" max="50" value="10" />
+        <select id="k"></select>
       </label>
 
       <button id="loadBtn" type="submit" class="btn">Load</button>
@@ -46,6 +48,7 @@
 
     <section class="meta" id="meta" hidden>
       <span id="badge" class="badge">—</span>
+      <span id="scope" class="scope"></span>
       <span id="asOf" class="asof"></span>
     </section>
 

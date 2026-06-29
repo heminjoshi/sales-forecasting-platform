@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A **multi-tenant "top sales by category" platform** built as a public portfolio/interview project — designed to *read* like production, not to be one. It is currently at the **planning stage**: only design/plan docs exist; there is no source code or build tooling yet.
+A **multi-tenant "top sales by category" platform** built as a public portfolio/interview project — designed to *read* like production, not to be one. **Built through Phase 3** (of Phases 0–10): the Maven multi-module service runs locally end-to-end — ingestion → per-tenant/per-channel aggregates → read API + dashboard (actuals), plus the channel dimension + synthetic-data generator (Phase 2.5), a central config surface (`TopsalesProperties`), and the forecasting engine (Phase 3: `Forecaster` impls, the batch writing versioned serving rows, the WAPE backtest). Next is the forecast **read path** + degradation + cache (Phase 4), then GenAI insight (Phase 5).
 
 Two docs under `private/` (gitignored, never committed) are the **source of truth** — read them before scaffolding or implementing, and keep new work consistent with the structure and phase they define:
 - the **delivery plan** (`private/Build-Delivery-Plan-v3.md`) — scope, phase sequencing (Phases 0–10, organized into workstreams WS-A…WS-G), target directory layout, built-vs-designed-only. This v3 supersedes `Build-Delivery-Plan-v2.md` (and the older `Build-Delivery-Plan-and-Repo-Structure.md`) in the same folder; v3 syncs ADRs to the 9 explicit decision records and elevates comparative trade-offs as a first-class, scored deliverable.

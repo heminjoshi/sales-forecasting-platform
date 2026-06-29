@@ -25,7 +25,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"tenantId\": \"t_demo\",\n  \"orderId\": \"o_1001\",\n  \"categoryId\": \"cat_office\",\n  \"amount\": 42.50,\n  \"currency\": \"USD\",\n  \"eventType\": \"SALE\",\n  \"eventTime\": \"2026-06-20T14:03:00Z\",\n  \"idempotencyKey\": \"o_1001:SALE\"\n}"
+          "raw": "{\n  \"tenantId\": \"t_demo\",\n  \"orderId\": \"o_1001\",\n  \"categoryId\": \"cat_office\",\n  \"channel\": \"ONLINE\",\n  \"amount\": 42.50,\n  \"currency\": \"USD\",\n  \"eventType\": \"SALE\",\n  \"eventTime\": \"2026-06-20T14:03:00Z\",\n  \"idempotencyKey\": \"o_1001:SALE\"\n}"
         }
       },
       "event": [
@@ -65,7 +65,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "[\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1002\", \"categoryId\": \"cat_office\",      \"amount\": 120.00, \"currency\": \"USD\", \"eventType\": \"SALE\", \"eventTime\": \"2026-06-21T09:15:00Z\", \"idempotencyKey\": \"o_1002:SALE\" },\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1003\", \"categoryId\": \"cat_electronics\", \"amount\": 899.99, \"currency\": \"USD\", \"eventType\": \"SALE\", \"eventTime\": \"2026-06-21T11:42:00Z\", \"idempotencyKey\": \"o_1003:SALE\" },\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1004\", \"categoryId\": \"cat_furniture\",   \"amount\": 349.00, \"currency\": \"USD\", \"eventType\": \"SALE\", \"eventTime\": \"2026-06-22T16:08:00Z\", \"idempotencyKey\": \"o_1004:SALE\" },\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1003\", \"categoryId\": \"cat_electronics\", \"amount\": -899.99, \"currency\": \"USD\", \"eventType\": \"RETURN\", \"eventTime\": \"2026-06-23T10:00:00Z\", \"idempotencyKey\": \"o_1003:RETURN\" }\n]"
+          "raw": "[\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1002\", \"categoryId\": \"cat_office\",      \"channel\": \"OFFLINE\", \"amount\": 120.00, \"currency\": \"USD\", \"eventType\": \"SALE\", \"eventTime\": \"2026-06-21T09:15:00Z\", \"idempotencyKey\": \"o_1002:SALE\" },\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1003\", \"categoryId\": \"cat_electronics\", \"channel\": \"ONLINE\", \"amount\": 899.99, \"currency\": \"USD\", \"eventType\": \"SALE\", \"eventTime\": \"2026-06-21T11:42:00Z\", \"idempotencyKey\": \"o_1003:SALE\" },\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1004\", \"categoryId\": \"cat_furniture\",   \"channel\": \"OFFLINE\", \"amount\": 349.00, \"currency\": \"USD\", \"eventType\": \"SALE\", \"eventTime\": \"2026-06-22T16:08:00Z\", \"idempotencyKey\": \"o_1004:SALE\" },\n  { \"tenantId\": \"t_demo\", \"orderId\": \"o_1003\", \"categoryId\": \"cat_electronics\", \"channel\": \"ONLINE\", \"amount\": -899.99, \"currency\": \"USD\", \"eventType\": \"RETURN\", \"eventTime\": \"2026-06-23T10:00:00Z\", \"idempotencyKey\": \"o_1003:RETURN\" }\n]"
         }
       },
       "event": [
@@ -109,7 +109,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"tenantId\": \"t_demo\",\n  \"orderId\": \"o_1001\",\n  \"categoryId\": \"cat_office\",\n  \"amount\": 42.50,\n  \"currency\": \"USD\",\n  \"eventType\": \"SALE\",\n  \"eventTime\": \"2026-06-20T14:03:00Z\",\n  \"idempotencyKey\": \"o_1001:SALE\"\n}"
+          "raw": "{\n  \"tenantId\": \"t_demo\",\n  \"orderId\": \"o_1001\",\n  \"categoryId\": \"cat_office\",\n  \"channel\": \"ONLINE\",\n  \"amount\": 42.50,\n  \"currency\": \"USD\",\n  \"eventType\": \"SALE\",\n  \"eventTime\": \"2026-06-20T14:03:00Z\",\n  \"idempotencyKey\": \"o_1001:SALE\"\n}"
         }
       },
       "event": [
@@ -143,12 +143,13 @@
           { "key": "Accept", "value": "application/json" }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/top-categories?mode=actuals&window=month&k=10",
+          "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/top-categories?mode=actuals&window=month&channel=all&k=10",
           "host": ["{{baseUrl}}"],
           "path": ["api", "v1", "tenants", "{{tenantId}}", "top-categories"],
           "query": [
             { "key": "mode", "value": "actuals" },
             { "key": "window", "value": "month" },
+            { "key": "channel", "value": "all" },
             { "key": "k", "value": "10" }
           ]
         }

@@ -11,6 +11,7 @@ import java.time.LocalDate;
 public record AggregateDelta(
         String tenantId,
         String categoryId,
+        Channel channel,
         LocalDate bucketDate,
         BigDecimal amount,
         String currency) {

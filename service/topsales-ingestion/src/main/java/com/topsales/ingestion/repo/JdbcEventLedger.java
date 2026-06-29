@@ -1,5 +1,6 @@
 package com.topsales.ingestion.repo;
 
+import com.topsales.common.config.TopsalesProperties;
 import com.topsales.common.domain.SaleEvent;
 
 import tools.jackson.databind.ObjectMapper;
@@ -15,7 +16,6 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -45,13 +45,10 @@ public class JdbcEventLedger implements BucketingEventLedger {
     private final ObjectMapper objectMapper;
     private final Path rawLogFile;
 
-    public JdbcEventLedger(
-            JdbcTemplate jdbc,
-            ObjectMapper objectMapper,
-            @Value("${topsales.rawlog.dir}") String rawLogDir) {
+    public JdbcEventLedger(JdbcTemplate jdbc, ObjectMapper objectMapper, TopsalesProperties props) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
-        this.rawLogFile = Path.of(rawLogDir, "events.ndjson");
+        this.rawLogFile = Path.of(props.rawlog().dir(), "events.ndjson");
     }
 
     /**

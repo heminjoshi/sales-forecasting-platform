@@ -2,6 +2,7 @@ package com.topsales.common.repository;
 
 import com.topsales.common.domain.TenantConfig;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -10,4 +11,7 @@ import java.util.Optional;
  */
 public interface TenantConfigRepository {
     Optional<TenantConfig> find(String tenantId);
+
+    /** All configured tenant ids, ascending. Used by the demo dashboard's tenant picker. */
+    List<String> allTenantIds();
 }

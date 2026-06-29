@@ -92,7 +92,8 @@ body {
 .badge.pending  { background: var(--grey); }
 .badge.degraded { background: var(--red); color: #fff; }
 
-.asof { color: var(--muted); font-size: 13px; }
+.scope { font-size: 14px; font-weight: 600; }
+.asof { color: var(--muted); font-size: 13px; margin-left: auto; }
 
 .insight {
   margin: 0 0 18px;

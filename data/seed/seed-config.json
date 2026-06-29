@@ -1,0 +1,34 @@
+{
+  "globalSeed": 42,
+  "tenants": ["t_demo", "t_acme"],
+  "historyDays": 540,
+  "trendAnnual": 0.15,
+  "returnRate": 0.07,
+  "categories": [
+    { "id": "cat_electronics",  "base": 1200, "aov": 180, "onlineShare": 0.70, "sparse": false },
+    { "id": "cat_grocery",      "base": 950,  "aov": 45,  "onlineShare": 0.30, "sparse": false },
+    { "id": "cat_apparel",      "base": 620,  "aov": 75,  "onlineShare": 0.60, "sparse": false },
+    { "id": "cat_home",         "base": 780,  "aov": 120, "onlineShare": 0.50, "sparse": false },
+    { "id": "cat_toys",         "base": 410,  "aov": 35,  "onlineShare": 0.55, "sparse": false },
+    { "id": "cat_collectibles", "base": 60,   "aov": 240, "onlineShare": 0.80, "sparse": true  }
+  ],
+  "outlier": { "category": "cat_home", "channel": "ONLINE", "daysAgo": 70, "multiplier": 10 },
+  "seasonality": {
+    "weeklyOnline":  [1.00, 1.05, 1.08, 1.10, 1.18, 1.12, 0.95],
+    "weeklyOffline": [0.85, 0.88, 0.92, 1.00, 1.20, 1.45, 1.20],
+    "monthly":       [0.88, 0.86, 0.96, 1.00, 1.04, 0.98, 1.10, 1.00, 0.98, 1.06, 1.20, 1.25],
+    "noiseBand": 0.2,
+    "sparseHitRate": 0.18
+  },
+  "hve": {
+    "blackFridayOffline": 5.0,
+    "blackFridayOnline":  3.0,
+    "cyberMondayOffline": 1.5,
+    "cyberMondayOnline":  6.0,
+    "primeDayOnline":     4.0,
+    "primeDayOffline":    1.5,
+    "decemberRampStart":  1.3,
+    "decemberRampEnd":     2.0,
+    "decemberPostDip":     0.7
+  }
+}

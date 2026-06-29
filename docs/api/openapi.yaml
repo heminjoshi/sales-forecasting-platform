@@ -55,6 +55,7 @@ paths:
                   tenantId: t_123
                   orderId: o_998
                   categoryId: cat_office
+                  channel: ONLINE
                   amount: 42.50
                   currency: USD
                   eventType: SALE
@@ -68,6 +69,39 @@ paths:
               schema: { $ref: '#/components/schemas/IngestAck' }
         '400':
           $ref: '#/components/responses/Problem'
+
+  /api/v1/tenants:
+    get:
+      tags: [read]
+      operationId: listTenants
+      summary: List configured tenant ids (demo dashboard tenant picker)
+      description: |
+        Returns the configured tenant ids so the demo dashboard can offer a tenant dropdown.
+        A demo/dev affordance — in production, tenant discovery belongs to the admin/auth plane,
+        not a public unscoped listing (multi-tenant isolation). (Added in Phase 2.5.)
+      responses:
+        '200':
+          description: The tenant catalog.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TenantsResponse' }
+
+  /api/v1/config:
+    get:
+      tags: [read]
+      operationId: getUiConfig
+      summary: UI control config (demo dashboard k/window/channel choices)
+      description: |
+        Returns the UI-relevant tweakables (from the central `topsales.read.*` config) so the demo
+        dashboard builds its `k`, window, and channel controls from config rather than hardcoding them.
+        A demo/dev affordance, like `/api/v1/tenants`. Option lists are lowercase wire values; `k`
+        choices and the defaults come from server config.
+      responses:
+        '200':
+          description: The dashboard control config.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UiConfig' }
 
   /api/v1/tenants/{tenantId}/top-categories:
     get:
@@ -92,9 +126,21 @@ paths:
           in: query
           required: false
           schema: { $ref: '#/components/schemas/Window' }
+        - name: channel
+          in: query
+          required: false
+          description: |
+            Sales channel to view. `all` (default) is the summed rollup across channels;
+            `online`/`offline` select a single channel. First-class key dimension — see ADR-0010.
+            (Added in Phase 2.5.)
+          schema: { $ref: '#/components/schemas/Channel' }
         - name: k
           in: query
           required: false
+          description: |
+            Number of top categories to return (1–50). Values above the tenant's category count
+            simply return all categories (no error). (Enhancement: surface the category count so the
+            UI can cap `k` to it.)
           schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
       responses:
         '200':
@@ -138,6 +184,19 @@ components:
       default: month
       description: Selectable reporting window. `quarter` is reserved.
 
+    Channel:
+      type: string
+      enum: [all, online, offline]
+      default: all
+      description: |
+        Read-side channel view. `all` is the summed rollup; `online`/`offline` select one channel.
+        First-class key dimension (ADR-0010), added in Phase 2.5.
+
+    EventChannel:
+      type: string
+      enum: [ONLINE, OFFLINE]
+      description: Channel a `SaleEvent` was placed through. Aggregated at channel grain.
+
     Status:
       type: string
       enum: [fresh, stale, pending, degraded]
@@ -156,11 +215,15 @@ components:
 
     SaleEvent:
       type: object
-      required: [tenantId, orderId, categoryId, amount, currency, eventType, eventTime]
+      required: [tenantId, orderId, categoryId, channel, amount, currency, eventType, eventTime]
       properties:
         tenantId: { type: string, example: t_123 }
         orderId: { type: string, example: o_998 }
         categoryId: { type: string, example: cat_office }
+        channel:
+          allOf: [{ $ref: '#/components/schemas/EventChannel' }]
+          description: Sales channel — a first-class key dimension (Phase 2.5, ADR-0010); required.
+          example: ONLINE
         amount:
           type: number
           description: Signed value; minor-unit-safe decimal.
@@ -203,16 +266,65 @@ components:
           allOf: [{ $ref: '#/components/schemas/Interval' }]
           description: Present only for forecasts; absent in actuals/pending.
 
+    TenantsResponse:
+      type: object
+      required: [tenants]
+      properties:
+        tenants:
+          type: array
+          items: { type: string }
+          description: Configured tenant ids (ascending).
+      example:
+        tenants: [t_acme, t_demo]
+
+    UiConfig:
+      type: object
+      description: |
+        Dashboard control config from `topsales.read.*`. Option lists are lowercase wire values;
+        `windowOptions`/`channelOptions` come from the domain enums, `kOptions` + the defaults from
+        server config.
+      required: [kOptions, kDefault, windowOptions, windowDefault, channelOptions, channelDefault]
+      properties:
+        kOptions:
+          type: array
+          items: { type: integer }
+          description: The selectable `k` values offered in the dashboard.
+        kDefault: { type: integer, description: Pre-selected `k`. }
+        windowOptions:
+          type: array
+          items: { $ref: '#/components/schemas/Window' }
+        windowDefault: { $ref: '#/components/schemas/Window' }
+        channelOptions:
+          type: array
+          items: { $ref: '#/components/schemas/Channel' }
+        channelDefault: { $ref: '#/components/schemas/Channel' }
+      example:
+        kOptions: [5, 7, 10]
+        kDefault: 10
+        windowOptions: [week, month, year]
+        windowDefault: month
+        channelOptions: [all, online, offline]
+        channelDefault: all
+
     TopKResponse:
       type: object
-      required: [tenantId, mode, window, k, status, asOf, items]
+      required: [tenantId, mode, window, channel, k, status, asOf, windowFrom, windowTo, items]
       properties:
         tenantId: { type: string }
         mode: { $ref: '#/components/schemas/Mode' }
         window: { $ref: '#/components/schemas/Window' }
+        channel: { $ref: '#/components/schemas/Channel' }
         k: { type: integer }
         status: { $ref: '#/components/schemas/Status' }
         asOf: { type: string, format: date-time }
+        windowFrom:
+          type: string
+          format: date
+          description: Inclusive start of the calendar range the data covers, in the tenant's timezone.
+        windowTo:
+          type: string
+          format: date
+          description: Inclusive end of the window (today, for the trailing actuals window).
         insight:
           type: string
           description: Grounded NL summary over the provided numbers (template floor; Bedrock when enabled).
@@ -224,9 +336,12 @@ components:
         tenantId: t_123
         mode: forecast
         window: month
+        channel: all
         k: 10
         status: fresh
         asOf: "2026-06-28T06:00:00Z"
+        windowFrom: "2026-05-30"
+        windowTo: "2026-06-28"
         insight: "Office Supplies leads this month (~+12%); Electronics follows."
         items:
           - rank: 1

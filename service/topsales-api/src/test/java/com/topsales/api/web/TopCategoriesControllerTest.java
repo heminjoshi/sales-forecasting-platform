@@ -12,12 +12,16 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 import com.topsales.api.service.ActualsService;
 import com.topsales.common.api.TopKItem;
 import com.topsales.common.api.TopKResponse;
+import com.topsales.common.config.TopsalesProperties;
+import com.topsales.common.domain.ChannelFilter;
 import com.topsales.common.domain.Mode;
 import com.topsales.common.domain.Status;
 import com.topsales.common.domain.Window;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -32,11 +36,28 @@ class TopCategoriesControllerTest {
     private MockMvc mvc;
     private ActualsService actualsService;
 
+    // Mirrors application.yml's topsales.read.* / topsales.window-days.* (the defaults + bounds).
+    private static final TopsalesProperties PROPS =
+            new TopsalesProperties(
+                    new TopsalesProperties.Read(
+                            10, 1, 50, List.of(5, 7, 10), "month", "forecast", "all"),
+                    new TopsalesProperties.WindowDays(7, 30, 365),
+                    new TopsalesProperties.Forecast(
+                            Duration.ofHours(36),
+                            730,
+                            50,
+                            3,
+                            new TopsalesProperties.Forecast.HoltWinters(0.3, 0.1, 0.3, 7),
+                            new TopsalesProperties.Forecast.Interval(1.28, 0.15, 0.40),
+                            new TopsalesProperties.Forecast.Eval(84, 7, 7, 12, 0.20, 0.40)),
+                    new TopsalesProperties.Cache(Duration.ofMinutes(15), 20),
+                    new TopsalesProperties.Rawlog("./data/rawlog"));
+
     @BeforeEach
     void setUp() {
         actualsService = mock(ActualsService.class);
         mvc =
-                standaloneSetup(new TopCategoriesController(actualsService))
+                standaloneSetup(new TopCategoriesController(actualsService, PROPS))
                         .setControllerAdvice(new ApiExceptionHandler())
                         .build();
     }
@@ -46,9 +67,12 @@ class TopCategoriesControllerTest {
                 TENANT,
                 mode,
                 Window.MONTH,
+                ChannelFilter.ALL,
                 10,
                 status,
                 Instant.parse("2026-06-28T00:00:00Z"),
+                LocalDate.parse("2026-05-30"),
+                LocalDate.parse("2026-06-28"),
                 null,
                 List.of(new TopKItem(1, "cat_office", new BigDecimal("100.00"), null, null, null)));
     }
@@ -135,5 +159,27 @@ class TopCategoriesControllerTest {
                                 .requestAttr(TenantScopeFilter.AUTHED_TENANT_ATTR, TENANT)
                                 .header("X-Tenant-Id", TENANT))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void badChannelEnum_returns400() throws Exception {
+        mvc.perform(
+                        get("/api/v1/tenants/{t}/top-categories", TENANT)
+                                .param("channel", "instore")
+                                .requestAttr(TenantScopeFilter.AUTHED_TENANT_ATTR, TENANT)
+                                .header("X-Tenant-Id", TENANT))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void defaultChannelAll_returns200() throws Exception {
+        when(actualsService.topCategories(any())).thenReturn(response(Mode.ACTUALS, Status.FRESH));
+
+        mvc.perform(
+                        get("/api/v1/tenants/{t}/top-categories", TENANT)
+                                .param("mode", "actuals")
+                                .requestAttr(TenantScopeFilter.AUTHED_TENANT_ATTR, TENANT)
+                                .header("X-Tenant-Id", TENANT))
+                .andExpect(status().isOk());
     }
 }

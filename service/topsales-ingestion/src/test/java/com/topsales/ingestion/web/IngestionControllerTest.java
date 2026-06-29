@@ -30,8 +30,8 @@ class IngestionControllerTest {
 
     private static final String EVENT_JSON =
             """
-            {"tenantId":"t_body","orderId":"o_1","categoryId":"cat_office","amount":42.50,
-             "currency":"USD","eventType":"SALE","eventTime":"2026-06-20T14:03:00Z"}
+            {"tenantId":"t_body","orderId":"o_1","categoryId":"cat_office","channel":"ONLINE",
+             "amount":42.50,"currency":"USD","eventType":"SALE","eventTime":"2026-06-20T14:03:00Z"}
             """;
 
     private MockMvc mvc;

@@ -1,5 +1,5 @@
 # Thin wrappers over the real commands. See README for prerequisites.
-.PHONY: up down run test verify seed demo synth
+.PHONY: up down run test verify seed trickle forecast eval demo synth
 
 # Bring up the local stack (Postgres + Redis).
 up:
@@ -25,9 +25,29 @@ test:
 verify:
 	mvn -f service/pom.xml verify
 
-# Load sample data — wired in Phase 8 (data/seed).
+# Bulk-backfill months of seasonal, channel-split history (trusted backfill straight into the
+# rollup). Needs `make up`; reads data/seed/seed-config.json. Re-runnable to an identical state.
 seed:
-	@echo "seed: not yet implemented — wired in Phase 8 (data/seed)"
+	mvn -f service/pom.xml -pl topsales-datagen -am -DskipTests install
+	mvn -f service/pom.xml -pl topsales-datagen spring-boot:run -Dspring-boot.run.arguments=seed
+
+# Post live SaleEvents for "today" that continue the seeded history → the dashboard moves. Needs
+# `make up` + `make run` (the API must be listening). Re-run to add more.
+trickle:
+	mvn -f service/pom.xml -pl topsales-datagen -am -DskipTests install
+	mvn -f service/pom.xml -pl topsales-datagen spring-boot:run -Dspring-boot.run.arguments=trickle
+
+# Forecast batch: read aggregates → fit forecasters → write versioned, ranked serving rows (per
+# tenant × window × channel, channel rolled up to `all`). Needs `make up` + seeded data (`make seed`).
+forecast:
+	mvn -f service/pom.xml -pl topsales-forecast -am -DskipTests install
+	mvn -f service/pom.xml -pl topsales-forecast spring-boot:run
+
+# Backtest the forecasters on the committed seed (time-series CV) and (re)write the WAPE report.
+# Pure JVM, no Docker/DB.
+eval:
+	mvn -f service/pom.xml -pl topsales-forecast -am -DskipTests install
+	mvn -f service/pom.xml -pl topsales-forecast exec:java
 
 # Run the demo (Postman/newman sequence) — wired in Phase 8.
 demo:

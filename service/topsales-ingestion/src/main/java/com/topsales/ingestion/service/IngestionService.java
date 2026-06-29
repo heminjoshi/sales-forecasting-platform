@@ -110,11 +110,13 @@ public class IngestionService {
             return new IngestResult(1, 0, 1, 0); // duplicate — skip the upsert
         }
 
-        // Signed amount flows straight through: RETURN/ADJUSTMENT net correctly (§6).
+        // Signed amount flows straight through: RETURN/ADJUSTMENT net correctly (§6). The channel
+        // joins the aggregate key (ADR-0010).
         aggregates.upsertAdditive(
                 new AggregateDelta(
                         authedTenantId,
                         event.categoryId(),
+                        event.channel(),
                         bucketDate,
                         event.amount(),
                         event.currency()));
@@ -126,6 +128,7 @@ public class IngestionService {
                 tenantId,
                 e.orderId(),
                 e.categoryId(),
+                e.channel(),
                 e.amount(),
                 e.currency(),
                 e.eventType(),
@@ -140,6 +143,9 @@ public class IngestionService {
         }
         if (isBlank(e.categoryId())) {
             return "missing categoryId";
+        }
+        if (e.channel() == null) {
+            return "missing channel";
         }
         if (e.eventType() == null) {
             return "missing eventType";

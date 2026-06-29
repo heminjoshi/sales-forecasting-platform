@@ -115,7 +115,7 @@ flowchart TB
     subgraph Ingestion Plane
       EV["Upstream sale/return events"] --> ST["Kinesis / MSK"]
       ST --> CO["Ingestion Consumer"]
-      CO -->|idempotent upsert| AGG["Aurora Postgres<br/>(tenant, category, day) rollups"]
+      CO -->|idempotent upsert| AGG["Aurora Postgres<br/>(tenant, category, channel, day) rollups"]
       CO -->|append| RAW["S3 Raw Event Log (SoT)"]
       CO -. malformed .-> DLQ["DLQ"]
     end
@@ -173,7 +173,7 @@ Per box: responsibility · in/out · key internals · cloud/local tech · failur
 
 **Ingestion Consumer** — dedupe on `idempotencyKey` → bucket by tenant-local day → **additive upsert** Aurora → **append** S3 → malformed → DLQ; KCL checkpointing. At-least-once + idempotency = **exactly-once effect**.
 
-**Aurora Postgres (rollups)** — authoritative aggregate store; serves actuals + feeds the forecaster. Row `(tenant_id, category_id, bucket_date) → sum_amount, order_count, currency`; partition by tenant + replicas at scale; isolated subnets.
+**Aurora Postgres (rollups)** — authoritative aggregate store; serves actuals + feeds the forecaster. Row `(tenant_id, category_id, channel, bucket_date) → sum_amount, order_count, currency` (channel is a first-class key dimension — DR-9; added in Phase 2.5); partition by tenant + replicas at scale; isolated subnets.
 
 **S3 Raw Event Log (SoT)** — durable immutable source of truth; the only precious data; replay rebuilds everything downstream.
 
@@ -181,9 +181,9 @@ Per box: responsibility · in/out · key internals · cloud/local tech · failur
 
 **EventBridge cron** — triggers the batch forecaster on the daily cadence (A4).
 
-**Forecaster Job** — read aggregates → forecast per `(tenant, category)` × horizon → rank → write **versioned** serving rows + intervals → emit eval metrics. Cold-start handling; partition by tenant (parallel); incremental refit + tiered cadence at scale. *Tech:* Java baseline on scheduled Fargate (built); SageMaker batch transform (designed) behind the same interface.
+**Forecaster Job** — read aggregates → forecast per `(tenant, category, channel)` × horizon (summed up to `all`) → rank → write **versioned** serving rows + intervals → emit eval metrics. Cold-start handling; partition by tenant (parallel); incremental refit + tiered cadence at scale. *Tech:* Java baseline on scheduled Fargate (built); SageMaker batch transform (designed) behind the same interface.
 
-**Serving Table** — read-optimized store the API serves forecasts from; point-lookup `pk=tenant#window#mode, sk=rank`; **versioned** for atomic swap + rollback. *Tech:* DynamoDB (cloud) / Postgres table (local) behind `ForecastProvider`.
+**Serving Table** — read-optimized store the API serves forecasts from; point-lookup `pk=tenant#window#mode#channel, sk=rank` (channel in the key — DR-9; default view `all` is the summed rollup); **versioned** for atomic swap + rollback. *Tech:* DynamoDB (cloud) / Postgres table (local) behind `ForecastProvider`.
 
 **Eval / Drift** — backtest WAPE + bias; rolling error → threshold → refit/alert; champion/challenger gating. Emits to CloudWatch.
 
@@ -230,27 +230,29 @@ Per box: responsibility · in/out · key internals · cloud/local tech · failur
 ## 11. Data Shapes
 ```jsonc
 // SaleEvent  (Upstream → Kinesis → Consumer → S3)
-{ "tenantId":"t_123","orderId":"o_998","categoryId":"cat_office","amount":42.50,
-  "currency":"USD","eventType":"SALE|RETURN|ADJUSTMENT",
+{ "tenantId":"t_123","orderId":"o_998","categoryId":"cat_office","channel":"ONLINE",
+  "amount":42.50,"currency":"USD","eventType":"SALE|RETURN|ADJUSTMENT",
   "eventTime":"2026-06-20T14:03:00Z","idempotencyKey":"o_998:SALE" }
 
-// AggregateRow  (Aurora)  PK (tenant_id, category_id, bucket_date)
-{ "tenant_id":"t_123","category_id":"cat_office","bucket_date":"2026-06-20",
+// AggregateRow  (Aurora)  PK (tenant_id, category_id, channel, bucket_date)
+{ "tenant_id":"t_123","category_id":"cat_office","channel":"ONLINE","bucket_date":"2026-06-20",
   "sum_amount":1820.75,"order_count":37,"currency":"USD" }
 
-// ForecastRow / ServingRow  (Serving Table)  pk=tenant#window#mode, sk=rank
-{ "pk":"t_123#month#forecast","sk":"001","category_id":"cat_office","value":5400.00,
+// ForecastRow / ServingRow  (Serving Table)  pk=tenant#window#mode#channel, sk=rank
+{ "pk":"t_123#month#forecast#all","sk":"001","category_id":"cat_office","value":5400.00,
   "interval_low":4900,"interval_high":5900,"confidence":"HIGH",
   "delta_vs_prior":0.12,"version":42,"as_of":"2026-06-28T06:00:00Z" }
 
 // TopKResponse  (Service → UI)
-{ "tenantId":"t_123","mode":"forecast","window":"month","k":10,
+{ "tenantId":"t_123","mode":"forecast","window":"month","channel":"all","k":10,
   "status":"fresh|stale|pending|degraded","asOf":"2026-06-28T06:00:00Z",
   "insight":"Office Supplies is projected to lead next month (~+12%) — consider restocking.",
   "items":[{"rank":1,"category":"Office Supplies","value":5400.00,"deltaVsPrior":0.12,
             "confidence":"HIGH","interval":{"low":4900,"high":5900}}] }
 ```
 > Read top-to-bottom, these four shapes *are* the system: event → aggregate row → versioned forecast row → response.
+>
+> **`channel` (`ONLINE | OFFLINE`) is a first-class dimension** of the aggregate and serving keys (see **§12 DR-9**, ADR-0010). The API exposes `channel=all|online|offline` (default `all`); `all` is the summed rollup — forecasts are fit at channel grain and summed up to `all`. *(Built in **Phase 2.5**; the Phase 2 walking skeleton ships the 3-tuple key `(tenant, category, day)` and gains `channel` via a follow-up migration.)*
 
 ---
 
@@ -268,7 +270,7 @@ Each decision follows the same shape: **options with pros/cons → recommendatio
 - **Recommendation:** Aurora for **aggregates** + a **DynamoDB-shaped serving table** for the point-lookup read path (best of both). **Why:** aggregation is relational; serving is a point lookup (DR-3 below). **If** aggregate access becomes pure KV at extreme write rates → move aggregates to DynamoDB; **if** heavy analytical scans dominate → a columnar/warehouse engine.
 
 **DR-3 · Serving store shape — relational rows vs key-value point-lookup**
-- *Option A — KV point-lookup (chosen):* `pk = tenant#window#mode`, `sk = rank`; the whole top-k set is one partition read. **Pros:** O(top-k) reads, trivially cacheable, scales flat. **Cons:** denormalized, write-on-refresh.
+- *Option A — KV point-lookup (chosen):* `pk = tenant#window#mode` (gains `#channel` in Phase 2.5 — DR-9), `sk = rank`; the whole top-k set is one partition read. **Pros:** O(top-k) reads, trivially cacheable, scales flat. **Cons:** denormalized, write-on-refresh.
 - *Option B — Query the aggregate/relational store at read time:* **Pros:** no extra store. **Cons:** ranking/aggregation on the hot path → slower, scales with data.
 - **Recommendation:** A (precomputed KV serving table). **Why:** read-heavy (A4) + p99 target (NFR3). **If** k or category cardinality explodes → secondary indexing / pagination.
 
@@ -297,6 +299,11 @@ Each decision follows the same shape: **options with pros/cons → recommendatio
 - *Option B — React SPA on Vercel (production deploy):* **Pros:** git-push deploys, preview URLs, TLS+CDN, zero infra. **Cons:** cross-origin (needs CORS); third-party origin (not single-cloud).
 - *Option C — React SPA on S3 + CloudFront (AWS-native alt):* **Pros:** single-cloud, can be same-origin, in-account. **Cons:** more infra to write (bucket, distribution, OAC, cache policies).
 - **Recommendation:** serve static from Spring Boot for the **live demo**; **Vercel** for the production deploy; **S3+CloudFront** documented as the AWS-native alternative. **Why:** demo reliability + portfolio speed; it's a config decision, not an architecture change (same static build, same API). **If** single-cloud is a hard requirement → S3+CloudFront.
+
+**DR-9 · Channel — first-class dimension vs data-only enrichment**
+- *Option A — Channel as a first-class dimension (chosen):* `channel` (`ONLINE | OFFLINE`) joins the aggregate key `(tenant, category, channel, day)` and the serving key `tenant#window#mode#channel`; forecasts are fit at channel grain and summed up to `all`. **Pros:** online vs offline can be ranked/forecast independently (genuinely different seasonality — offline Black-Friday vs online Cyber-Monday peaks); `all` stays exact as the sum. **Cons:** widens the key → more aggregate/serving rows and more forecast fits (cardinality × channels).
+- *Option B — Data-only enrichment (post-filter):* keep the `(tenant, category, day)` key; carry channel only as a non-key attribute and filter at read time. **Pros:** no key change, fewer rows/fits. **Cons:** can't rank or forecast per channel — the differentiated seasonality collapses to a flat split.
+- **Recommendation:** A — channel in the key, default API view `channel=all`. **Why:** the differentiated per-channel seasonality only exists if channel is modeled, not filtered. **If** channel cardinality/fan-out becomes a problem → collapse low-volume channels into `all` and treat channel as a post-filter (degrades gracefully to Option B behind the same API). *(Built in Phase 2.5 — see ADR-0010.)*
 
 ---
 

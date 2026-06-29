@@ -12,10 +12,12 @@
     tenantId: $("tenantId"),
     mode: $("mode"),
     window: $("window"),
+    channel: $("channel"),
     k: $("k"),
     loadBtn: $("loadBtn"),
     meta: $("meta"),
     badge: $("badge"),
+    scope: $("scope"),
     asOf: $("asOf"),
     insight: $("insight"),
     loading: $("state-loading"),
@@ -53,6 +55,29 @@
     const s = (status || "unknown").toLowerCase();
     els.badge.textContent = s;
     els.badge.className = "badge " + s;
+  }
+
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  function cap(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
+  // Format a "YYYY-MM-DD" date string without going through Date() (avoids browser-timezone shifts).
+  function fmtDate(s, withYear) {
+    if (!s) return "";
+    const [y, m, d] = s.split("-").map(Number);
+    return MONTHS[m - 1] + " " + d + (withYear ? ", " + y : "");
+  }
+
+  // "Actuals · Month · All — May 30 – Jun 28, 2026" from the response's own fields.
+  function scopeLabel(body) {
+    const parts = [cap(body.mode), cap(body.window), cap(body.channel)].filter(Boolean).join(" · ");
+    const range =
+      body.windowFrom && body.windowTo
+        ? fmtDate(body.windowFrom, false) + " – " + fmtDate(body.windowTo, true)
+        : "";
+    return range ? parts + " — " + range : parts;
   }
 
   // Whether any item carries the forecast-only fields. Drives column visibility.
@@ -145,6 +170,7 @@
 
   function renderResponse(body) {
     setBadge(body.status);
+    els.scope.textContent = scopeLabel(body);
     els.asOf.textContent = body.asOf ? "as of " + body.asOf : "";
     els.meta.hidden = false;
 
@@ -191,6 +217,7 @@
     }
     const mode = els.mode.value;
     const window = els.window.value;
+    const channel = els.channel.value;
     const k = els.k.value;
 
     const url =
@@ -200,6 +227,8 @@
       encodeURIComponent(mode) +
       "&window=" +
       encodeURIComponent(window) +
+      "&channel=" +
+      encodeURIComponent(channel) +
       "&k=" +
       encodeURIComponent(k);
 
@@ -253,11 +282,79 @@
     }
   }
 
+  function setTenantOptions(ids) {
+    els.tenantId.replaceChildren();
+    for (const id of ids) {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id;
+      els.tenantId.appendChild(opt);
+    }
+  }
+
+  // Used when GET /api/v1/config can't be reached, so the demo still renders honest controls.
+  const FALLBACK_CONFIG = {
+    kOptions: [5, 7, 10],
+    kDefault: 10,
+    windowOptions: ["week", "month", "year"],
+    windowDefault: "month",
+    channelOptions: ["all", "online", "offline"],
+    channelDefault: "all",
+  };
+
+  // Build a <select>'s <option>s via createElement + textContent (never innerHTML) — option labels
+  // are config-controlled, but we keep the untrusted-input rule uniform across the dashboard.
+  function setSelectOptions(selectEl, values, selected) {
+    selectEl.replaceChildren();
+    for (const v of values) {
+      const opt = document.createElement("option");
+      opt.value = String(v);
+      opt.textContent = String(v);
+      if (String(v) === String(selected)) opt.selected = true;
+      selectEl.appendChild(opt);
+    }
+  }
+
+  function applyConfig(cfg) {
+    setSelectOptions(els.k, cfg.kOptions, cfg.kDefault);
+    setSelectOptions(els.window, cfg.windowOptions, cfg.windowDefault);
+    setSelectOptions(els.channel, cfg.channelOptions, cfg.channelDefault);
+  }
+
+  // Build the k / window / channel controls from GET /api/v1/config (central TopsalesProperties),
+  // falling back to sane defaults so the demo always renders.
+  async function populateConfig() {
+    try {
+      const res = await fetch("/api/v1/config", { headers: { Accept: "application/json" } });
+      const body = res.ok ? await res.json() : null;
+      applyConfig(body && Array.isArray(body.kOptions) ? body : FALLBACK_CONFIG);
+    } catch (_) {
+      applyConfig(FALLBACK_CONFIG);
+    }
+  }
+
+  // Populate the tenant picker from GET /api/v1/tenants, then load. Falls back to a single
+  // t_demo option if the catalog can't be reached, so the demo still renders.
+  async function populateTenants() {
+    try {
+      const res = await fetch("/api/v1/tenants", { headers: { Accept: "application/json" } });
+      const body = res.ok ? await res.json() : null;
+      const ids = body && Array.isArray(body.tenants) && body.tenants.length ? body.tenants : ["t_demo"];
+      setTenantOptions(ids);
+    } catch (_) {
+      setTenantOptions(["t_demo"]);
+    }
+  }
+
   els.form.addEventListener("submit", (e) => {
     e.preventDefault();
     load();
   });
 
-  // Auto-load once on first paint so the demo shows data immediately.
-  load();
+  // Reload immediately when the tenant changes — convenient for flipping between demo tenants.
+  els.tenantId.addEventListener("change", load);
+
+  // Build the config-driven controls and the tenant dropdown, then auto-load once so the demo shows
+  // data immediately.
+  Promise.all([populateTenants(), populateConfig()]).then(load);
 })();
