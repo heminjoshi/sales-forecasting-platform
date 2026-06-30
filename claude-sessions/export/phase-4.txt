@@ -1,0 +1,1465 @@
+ ▐▛███▜▌   Claude Code v2.1.195
+▝▜█████▛▘  Opus 4.8 · Claude Max
+  ▘▘ ▝▝    ~/code/sales-forecasting-platform
+
+
+❯ Come up with a plan of action for the next phase after you take a look at the 
+  documents on what's done already. You can spawn multiple sub-agents to work   
+  in parallel on stuff during the planning and implementation phase. You can    
+  also spawn orchestrators for those sub-agents while you manage those          
+  orchestrators if needed.                                                      
+
+⏺ I'll start by understanding what's done and what the next phase entails. Let
+  me read the source-of-truth docs and explore the current state in parallel.
+
+⏺ 3 background agents launched (↓ to manage)
+   ├ Explore delivery plan for Phase 4
+   ├ Explore current code state
+   └ Explore tests, build, handoffs
+
+⏺ The three Explore agents are running in parallel. Let me wait for their
+  results.
+
+⏺ I have the plan tools loaded. Now waiting for the three Explore agents to
+  finish.
+
+✻ Cooked for 35s
+
+⏺ Agent "Explore delivery plan for Phase 4" finished · 1m 17s
+
+⏺ Phase 4 scope is clear. Waiting on the other two agents (current code state,
+  and conventions/handoffs).
+
+✻ Baked for 2s
+
+⏺ Agent "Explore tests, build, handoffs" finished · 2m 17s
+
+⏺ Excellent context. Now waiting on the last agent (current code state —
+  Forecaster, serving table, ForecastProvider stub, controllers).
+
+✻ Cooked for 2s
+
+⏺ Agent "Explore current code state" finished · 3m 25s
+
+⏺ I now have a comprehensive picture. Let me read the critical files directly to
+  verify key details before designing the plan — especially the LLD's
+  degradation/cache sections, the current controller, the ForecastProvider seam,
+  and the serving repository.
+
+  Read 4 files (ctrl+o to expand)
+
+⏺ Let me read the LLD degradation/cache sections, the ServingKey/ServingResult
+  shapes, and the Phase 3 handoff's next-step guidance.
+
+  Searched for 1 pattern, read 3 files (ctrl+o to expand)
+
+⏺ Let me confirm how the API currently wires its repositories (ActualsService
+  needs AggregateRepository/TenantConfigRepository, whose JDBC impls live in
+  topsales-ingestion) — this is where the new
+  ForecastProvider/ServingTableRepository/cache beans will go.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      echo "=== api java files ==="; find topsales-api/src/main/java -name
+      '*.java' | sort…)
+  ⎿  === api java files ===
+     topsales-api/src/main/java/com/topsales/api/error/TenantMismatchExcept
+     ion.java
+     … +30 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      echo "=== ingestion repo annotations ==="; grep -rn
+      '@Repository\|@Component\|class Jdbc' topsales-…)
+  ⎿  === ingestion repo annotations ===
+     topsales-ingestion/src/main/java/com/topsales/ingestion/repo/JdbcQuara
+     ntineRepository.java:11:@Repository
+     … +28 lines (ctrl+o to expand)
+
+⏺ I now have a complete, verified picture. The LLD §5 (degradation chain) and §7
+  (cache) are prescriptive specs, and I've confirmed the current code seams.
+  Before finalizing the plan, a few decisions genuinely shape the work — let me
+  confirm them with you.
+
+⏺ User answered Claude's questions:
+  ⎿  · Cache invalidation: the design (§7) says the forecast batch bumps a 
+     per-tenant cache version (tenantver INCR) so new forecasts appear 
+     immediately. That couples the batch app to Redis. How far do you want to go
+     in Phase 4? → Full design-faithful (Recommended)
+     · The dashboard's 'forecast-vs-actual chart' (§13): there's currently a 
+     ranked horizontal bar chart and no time-series endpoint. How ambitious 
+     should the Phase 4 UI be? → Do Enhance ranked chart. But layout a plan for 
+     a True time-series overlay as an enhancement which can be taken up later 
+     and how and what would change materially.Ensure it is documented correctly.
+      
+     · How should I run the implementation? You mentioned I can spawn 
+     sub-agents/orchestrators. → Parallel sub-agents in waves (Recommended)
+⏺ All decisions captured. Writing the plan.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ The plan is written. It covers the foundation wave, three parallel
+  implementation agents, the design-faithful cache, the degradation ladder, the
+  enhanced UI, and a documented (deferred) time-series overlay enhancement.
+
+⏺ User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/come-up-with-a-jazzy-eagle.md · /plan to 
+     edit
+     Phase 4 — Forecast serving + resilience (read path, degradation, cache)
+
+     Context
+
+     The platform is built through Phase 3: the batch (ForecasterJob) fits
+     forecasters per
+     (tenant, category, channel) and writes versioned serving rows with an
+     atomic active-version
+     swap; the read API (TopCategoriesController → ActualsService) serves only
+     actuals, and
+     mode=forecast currently returns the same actuals aggregation relabeled
+     status=pending. The
+     forecast read plane does not exist yet: ForecastProvider is an
+     unimplemented interface, there is
+     no Redis caching, and only FRESH/PENDING of the 4-state Status enum are
+     ever returned.
+
+     Phase 4 closes that gap. It wires the precomputed serving rows into the
+     read path behind a cache,
+     adds the full degradation chain so reads never fail closed, and surfaces
+     honest freshness status
+     to the dashboard. The headline acceptance: wipe the serving table → the 
+     dashboard still renders
+     (degraded, flagged). Source of truth: docs/lld.md §5 (read pipeline &
+     degradation), §7 (cache),
+     Build-Delivery-Plan-v3 Phase 4. Out of scope: GenAI insight (Phase 5 —
+     insight stays null);
+     the AWS profile / DynamoDB / CDK (Phase 7); the production React SPA.
+
+     Confirmed decisions: (1) full design-faithful cache — tenantver bump from
+     the batch + jittered
+     TTL + single-flight + fail-open; (2) enhance the existing ranked chart now,
+     and document a
+     future true time-series overlay as a later enhancement; (3) implement via
+     parallel sub-agents in
+     waves.
+
+     ---
+     Architecture of the change
+
+     GET /top-categories ─ TopCategoriesController (validate 400 / scope 403)
+                             │
+                             ▼
+                      ForecastReadService.handle(query)         ← NEW
+     orchestrator (§5 steps 2–7)
+                             │
+                   ┌─────────┴─────────┐
+             mode=actuals          mode=forecast
+                   │                    │
+             ActualsService     CacheShell.get(key)  ──hit──▶ return cached
+     TopKResponse
+             (always FRESH)            │ miss → single-flight lease
+                                       ▼
+                              DEGRADATION CHAIN (never throws):
+                              1 PrecomputedForecastProvider.getTopK → present &
+     asOf≤SLO → FRESH (intervals)
+                              2 …present & asOf>SLO                 → STALE
+     (intervals)
+                              3 SeasonalNaiveFallback (JVM, from aggregates) →
+     DEGRADED (no intervals)
+                              4 ActualsService top-k                → PENDING
+     (no intervals)
+                                       │
+                                       ▼  cache.put(key, resp, baseTtl±jitter)
+                                   TopKResponse
+
+     Batch side: ForecasterJob calls CacheVersion.bump(tenant) (Redis INCR 
+     tenantver:{tenant}) after
+     a successful writeVersionAndSwap, so fresh forecasts invalidate old cache
+     keys (O(1), no scan).
+
+     ---
+     Work breakdown (waves)
+
+     Wave 0 — Foundation (I do this myself first; everything else depends on it)
+
+     1. Maven wiring
+       - topsales-forecast/pom.xml: add <classifier>app</classifier> to the
+     spring-boot-maven-plugin
+     (exactly as topsales-datagen/pom.xml:71-73 does) so its main jar stays a 
+     plain library and
+     topsales-api can depend on it to reuse SeasonalNaiveForecaster. (Gotcha 
+     from phase-3
+     handoff — without this the API can't consume the repackaged fat jar.)
+       - topsales-api/pom.xml: add dependency on topsales-forecast and on
+     spring-boot-starter-data-redis.
+       - Tradeoff noted: depending on the whole forecast module pulls in
+     batch/eval transitively. The
+     cleaner long-term alternative is to extract forecast/model + forecast/math
+     into a
+     topsales-forecast-core library; deferred — the classifier path matches the
+     documented plan and
+     is a one-line change.
+     2. Read-side bean wiring — new topsales-api/.../config/ReadWiring.java
+     (@Configuration,
+     @Profile("local") to mirror LLD §10):
+       - ServingTableRepository bean: new 
+     JdbcServingTableRepository(jdbcTemplate, props.forecast().versionKeep())
+     — must be constructed explicitly, it is deliberately not @Repository
+     (phase-3 gotcha: a plain int ctor arg breaks component-scan). Read side
+     only calls readActive.
+       - ForecastProvider bean → new PrecomputedForecastProvider(servingRepo).
+       - SeasonalNaiveForecaster bean (from
+     topsales.forecast.holt-winters.season-length etc.).
+       - CacheVersion + CacheShell beans (Redis), StringRedisTemplate.
+     3. PrecomputedForecastProvider (topsales-api/.../provider/) implementing
+     ForecastProvider.getTopK(TopKQuery):
+     builds pk = ServingKey.of(tenantId, window, Mode.FORECAST, channel), calls
+     servingRepo.readActive(pk), returns the Optional<ServingResult>. Pure
+     adapter, no status logic.
+     4. Redis config in application.yml (api):
+     spring.data.redis.host/port/timeout (localhost:6379,
+     already provisioned in local/docker-compose.yml). Reuse the existing
+     topsales.cache
+     (base-ttl: 15m, jitter-pct: 20) already bound in TopsalesProperties.Cache.
+
+     Wave 1 — fan out 3 parallel sub-agents (after Wave 0 compiles)
+
+     Agent A — Degradation chain + status (the core).
+     - New ForecastReadService (api service/) implementing LLD §5 steps 3–7 for
+     the forecast path:
+     the 4-tier ladder above. actuals mode delegates straight to ActualsService
+     (always FRESH).
+     - Status rule (§5): fresh iff now - servingResult.asOf() <= 
+     props.forecast().freshnessSlo()
+     (36h), else stale. Map ServingResult.rows() (already ranked, top-50) →
+     top-k TopKItems
+     (ServingRow fields map 1:1: rank, category, value,
+     intervalLow/High→Interval, confidence,
+     deltaVsPrior). Build TopKResponse with version's asOf and the computed
+     status.
+     - SeasonalNaiveFallback (tier 3): reuse SeasonalNaiveForecaster. Load a
+     longer history via
+     aggregates.rangeByCategory(tenant, from=today-historyDays, to=today, 
+     channel), group by category,
+     run the forecaster per category for the window horizon, rank top-k, mark
+     DEGRADED, omit
+     intervals (null). If history is too thin to seasonal-naive → fall to
+     tier 4.
+     - Tier 4 = ActualsService top-k relabeled PENDING (the existing
+     always-available floor).
+     - Rewrite TopCategoriesController to delegate to ForecastReadService
+     instead of the inline
+     pending-relabel block (TopCategoriesController.java:75-90).
+     - Unit tests (*Test, no DB — mock
+     ForecastProvider/SeasonalNaiveForecaster/ActualsService)
+     asserting each rung of the ladder and the fresh/stale SLO boundary. Follow
+     TopKResponseTest style.
+
+     Agent B — Cache (CacheShell) + invalidation.
+     - CacheShell (api cache/): key
+     topk:{tenant}:{ver}:{window}:{mode}:{channel}:{k}
+     where ver = GET tenantver:{tenant} (default 0). Note: the literal §7 key
+     omits channel; we
+     add channel to avoid cross-channel collisions — document this as a
+     deliberate, correct
+     refinement of §7.
+       - value = serialized TopKResponse JSON; TTL = baseTtl ± jitterPct%
+     (random within ±20%).
+       - single-flight: on miss SET key:lock {id} NX PX 2s; leader
+     computes+populates, followers
+     short-poll the key then fall through if the lease lapses.
+       - fail-open: every Redis op wrapped — on RedisConnectionFailure/timeout,
+     log once and proceed
+     to compute directly. Cache is an accelerator, never a correctness
+     dependency (§7).
+     - CacheVersion port: int current(tenant) / void bump(tenant) (Redis INCR).
+     Wire the bump
+     into the batch: ForecasterJob calls it after writeVersionAndSwap succeeds —
+     requires a small
+     @Profile("local") Redis wiring bean in topsales-forecast
+     (spring-boot-starter-data-redis added
+     to its pom too) with a no-op fallback when Redis is absent (batch must
+     still run without Redis).
+     - Tests: TTL-jitter bounds, key composition, version-bump invalidation, and
+     a fail-open test
+     (Redis down → still returns). Pure unit where possible (*Test); a
+     Testcontainers-Redis *IT is
+     optional and CI-only per the host Docker caveat.
+
+     Agent C — UI (enhance ranked chart) + Postman.
+     - topsales-api/.../static/ (index.html, app.js, styles.css):
+       - Status badge colored by fresh|stale|pending|degraded + the asOf
+     timestamp (states already
+     stubbed in CSS — wire all four).
+       - Forecast mode: show Δ vs prior, confidence (color chip), and prediction
+     interval on
+     the ranked bar chart as error bars (Chart.js); hide those columns for
+     actuals/pending
+     (driven by field presence, already the pattern in app.js).
+       - Explicit degraded banner ("computed on-the-fly — forecasts
+     unavailable") so the demo reads
+     honestly when the table is wiped.
+     - Postman/Newman: add a mode=forecast happy-path request + a "wipe forecast
+     table" scenario
+     (truncate serving_rows/serving_active_version + bump tenantver) asserting
+     the response
+     flips to degraded/pending with 200. (Newman runner itself is Phase 8 make 
+     demo; ship the
+     collection now.)
+
+     Wave 2 — integrate, verify, hand off (I do this)
+
+     - Reconcile the three branches, mvn -q -pl topsales-api -am test green,
+     boot the app.
+     - End-to-end smoke (see Verification). Optional ForecastReadIT
+     (Testcontainers, CI-only).
+     - Run /handoff for Phase 4; update the plan/README phase status.
+
+     ---
+     Future enhancement (documented, NOT built in Phase 4): true 
+     forecast-vs-actual time-series overlay
+
+     Captured per request so it can be picked up later. What it adds: a
+     per-category line chart showing
+     historical actuals and the forecast continuation with an interval band —
+     the classic
+     "forecast vs actual" view, versus Phase 4's ranked bar chart of window
+     totals.
+
+     What materially changes:
+     1. Batch / storage — serving rows today store only the window-sum point
+     (ForecastValue.pointValue
+     is cumulative). A time-series view needs per-day forecast points + bands.
+     Either persist a
+     per-day forecast series (new table e.g. V8__forecast_series.sql: pk, 
+     version, category, day, point, low, high) written by ForecasterJob, or
+     recompute on read. (Forecaster already emits
+     per-horizon values, so the batch has the data — it's a write-and-store 
+     change, squarely Phase 3
+     territory, hence deferred.)
+     2. New read endpoint — GET 
+     /api/v1/tenants/{id}/categories/{cat}/series?window=&channel=
+     returning { actuals:[{day,value}], forecast:[{day,point,low,high}], status,
+     asOf }. New DTOs
+     (SeriesPoint, SeriesResponse), a new ForecastProvider/repo read method, and
+     the cache key
+     extended with category.
+     3. Degradation — same 4-tier ladder, but tier 3 (seasonal-naive) must emit
+     a per-day series;
+     tier 4 returns actuals-only with an empty forecast array + pending.
+     4. UI — swap/augment the bar chart for a Chart.js line chart (two datasets
+     + a shaded interval
+     band via a fill dataset); add a category drill-down selector.
+
+     Effort: ~M, spanning Phase 3 (batch persistence) + Phase 4 read seam. Keep
+     the ForecastProvider
+     seam stable so this slots in without touching the ranked path. This section
+     also goes into the Phase 4
+     handoff doc and a short note in docs/lld.md §13 ("designed extension").
+
+     ---
+     Critical files
+
+     - New: topsales-api/.../provider/PrecomputedForecastProvider.java,
+     .../service/ForecastReadService.java,
+     .../service/SeasonalNaiveFallback.java,
+     .../cache/CacheShell.java, .../cache/CacheVersion.java,
+     .../config/ReadWiring.java;
+     forecast-side .../config/CacheVersionWiring.java (+ no-op).
+     - Edit: topsales-api/src/main/java/com/topsales/api/web/TopCategoriesContro
+     ller.java (delegate),
+     topsales-api/pom.xml + topsales-forecast/pom.xml (deps/classifier),
+     topsales-api/src/main/resources/application.yml (redis), forecast
+     ForecasterJob.java (bump),
+     static/{index.html,app.js,styles.css}, Postman collection.
+     - Reuse (do not rewrite): ServingTableRepository/JdbcServingTableRepository
+     (readActive),
+     ServingKey.of, ServingRow/ServingResult, SeasonalNaiveForecaster,
+     ActualsService,
+     TopsalesProperties.{forecast,cache}, Status/Mode/Window/ChannelFilter,
+     TopKResponse/TopKItem/Interval.
+
+     Conventions to honor (phase-3 handoff)
+
+     - JdbcServingTableRepository stays non-@Repository; construct it explicitly
+     with versionKeep.
+     - topsales-forecast needs the app classifier before any module depends on
+     it.
+     - Spring Boot 4.1: spring-boot-flyway, Jackson 3 runtime + Jackson-2
+     annotations, standalone MockMvc
+     (no @WebMvcTest/TestRestTemplate); *Test = unit (run anywhere), *IT =
+     Testcontainers (CI-only
+     on this host — smoke-test locally instead).
+
+     Verification (end-to-end)
+
+     1. make up && make seed && make forecast — serving rows written, tenantver
+     bumped.
+     2. make run; open the dashboard.
+     3. Fresh: GET …/top-categories?mode=forecast&window=month&k=10 (header
+     X-Tenant-Id: t_demo)
+     → status:"fresh", items carry confidence + interval + deltaVsPrior. Second
+     call is a cache hit.
+     4. Stale: age as_of past 36h (or lower freshness-slo) → status:"stale".
+     5. Degraded (headline): truncate serving_rows/serving_active_version + bump
+     tenantver
+     (Postman "wipe" request) → dashboard still renders, status:"degraded", no
+     intervals, banner shown.
+     6. Pending: a tenant/category with no forecast history → status:"pending",
+     actuals only.
+     7. Fail-open: docker stop topsales-redis → reads still succeed (uncached).
+     mvn -pl topsales-api -am test green.
+
+⏺ Plan approved. Let me create a Phase 4 branch and read the exact files I'll
+  touch in Wave 0 (foundation). Starting in parallel.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform && git checkout -b
+      feat/phase4-forecast-serving-cache 2>&1 | tail -2 && git branch
+      --show-current)
+  ⎿  Switched to a new branch 'feat/phase4-forecast-serving-cache'
+     feat/phase4-forecast-serving-cache
+
+  Read 3 files (ctrl+o to expand)
+
+⏺ Let me read the remaining Wave 0 / Wave 1 source files: the forecaster,
+  serving repo constructor, batch wiring, and DTOs.
+
+  Read 4 files (ctrl+o to expand)
+
+⏺ Let me read the forecast-module wiring (for Agent B's batch-side cache-version
+  bump) and confirm the enum/config shapes.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      echo "=== ForecasterJob.java ==="; cat
+      topsales-forecast/src/main/java/com/topsales/forecast/batch/…)
+  ⎿  === ForecasterJob.java ===
+     package com.topsales.forecast.batch;
+     … +371 lines (ctrl+o to expand)
+
+⏺ The batch is clear. One critical wiring issue to handle in Wave 0: once
+  topsales-api depends on topsales-forecast, the API's com.topsales
+  component-scan would pick up the batch's @Component ForecasterJob (runs the
+  batch on API boot!) and BatchConfig/ForecastWiring (conflicting bean
+  definitions). I need to exclude the forecast app's Spring packages. Let me
+  check the API's main class.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      echo "=== forecast pom full ==="; cat topsales-forecast/pom.xml…)
+  ⎿  === forecast pom full ===
+     <?xml version="1.0" encoding="UTF-8"?>
+     <project xmlns="http://maven.apache.org/POM/4.0.0"
+     … +148 lines (ctrl+o to expand)
+
+⏺ I now have the complete picture. Key wiring insight: once topsales-api depends
+  on topsales-forecast, I must (a) exclude com.topsales.forecast from the API's
+  component scan so the batch's ForecasterJob/BatchConfig/ForecastWiring beans
+  don't boot in the read app, and (b) mark forecast's datagen dep optional so it
+  doesn't leak onto the API classpath. Let me set up task tracking and execute
+  Wave 0.
+⏺ Now Wave 0. Starting with the POMs.
+
+⏺ Update(service/topsales-forecast/pom.xml)
+  ⎿  Added 6 lines, removed 1 line
+      29              <version>${project.version}</version>
+      30          </dependency>
+      31          <!-- The WAPE eval backtests on the committed seed by r
+          egenerating it in-memory via the
+      32 -             generator's deterministic SeasonalityModel (pure J
+         -VM, no DB). -->                                                
+      32 +             generator's deterministic SeasonalityModel (pure J
+         +VM, no DB). Marked optional so it does                         
+      33 +             NOT propagate transitively: topsales-api depends o
+         +n this module (to reuse                                        
+      34 +             SeasonalNaiveForecaster for the Phase-4 degradatio
+         +n fallback) but must not drag the                              
+      35 +             generator (and its Spring beans) onto the read app
+         +'s classpath. eval still compiles/runs                         
+      36 +             here because optional deps remain on this module's
+         + own classpath. -->                                            
+      37          <dependency>
+      38              <groupId>com.topsales</groupId>
+      39              <artifactId>topsales-datagen</artifactId>
+      40              <version>${project.version}</version>
+      41 +            <optional>true</optional>                          
+      42          </dependency>
+      43  
+      44          <!-- Core context + JdbcTemplate for the batch app (no 
+          web server). -->
+
+⏺ Update(service/topsales-forecast/pom.xml)
+  ⎿  Added 7 lines
+      51              <groupId>org.springframework.boot</groupId>
+      52              <artifactId>spring-boot-flyway</artifactId>
+      53          </dependency>
+      54 +        <!-- Phase 4: after a successful serving-row swap the b
+         +atch bumps the per-tenant cache version                        
+      55 +             (Redis INCR) so the read path's cache invalidates 
+         +at once (docs/lld.md §7). Wired only in                        
+      56 +             the local profile; the batch still runs with Redis
+         + absent (no-op CacheVersion fallback). -->                     
+      57          <dependency>
+      58 +            <groupId>org.springframework.boot</groupId>        
+      59 +            <artifactId>spring-boot-starter-data-redis</artifac
+         +tId>                                                           
+      60 +        </dependency>                                          
+      61 +        <dependency>                                           
+      62              <groupId>org.postgresql</groupId>
+      63              <artifactId>postgresql</artifactId>
+      64              <scope>runtime</scope>
+
+⏺ Update(service/topsales-forecast/pom.xml)
+  ⎿  Added 10 lines, removed 1 line
+       89  
+       90      <build>
+       91          <plugins>
+       92 -            <!-- `make forecast` → spring-boot:run boots Batch
+          -Application (web-less) and exits. -->                         
+       92 +            <!-- `make forecast` → spring-boot:run boots Batch
+          +Application (web-less) and exits.                             
+       93 +                 The repackaged executable jar is attached und
+          +er the `app` classifier so the *main*                         
+       94 +                 artifact stays a plain library jar — topsales
+          +-api depends on this module to reuse                          
+       95 +                 SeasonalNaiveForecaster (Phase-4 degradation 
+          +fallback), and a Boot fat jar (classes                        
+       96 +                 under BOOT-INF/classes) is not usable as a co
+          +mpile/runtime dependency. Mirrors                             
+       97 +                 topsales-datagen. spring-boot:run runs from t
+          +arget/classes, so `make forecast` is                          
+       98 +                 unaffected. -->                              
+       99              <plugin>
+      100                  <groupId>org.springframework.boot</groupId>
+      101                  <artifactId>spring-boot-maven-plugin</artifact
+           Id>
+      102 +                <configuration>                               
+      103 +                    <classifier>app</classifier>              
+      104 +                </configuration>                              
+      105              </plugin>
+      106              <!-- `make eval` → exec:java runs the pure-JVM Eva
+           lMain (no Spring, no DB). -->
+      107              <plugin>
+
+⏺ Now the API pom — add the forecast dependency and Redis starter:
+
+⏺ Update(service/topsales-api/pom.xml)
+  ⎿  Added 10 lines
+      29              <artifactId>topsales-ingestion</artifactId>
+      30              <version>${project.version}</version>
+      31          </dependency>
+      32 +        <!-- Phase 4: the forecast degradation fallback reuses 
+         +SeasonalNaiveForecaster (a plain POJO)                         
+      33 +             when serving rows are unavailable. We consume only
+         + the model/math classes — the batch's                          
+      34 +             Spring beans (ForecasterJob/BatchConfig/ForecastWi
+         +ring under com.topsales.forecast) are                          
+      35 +             excluded from this app's component scan in TopSale
+         +sApplication so the read API never boots                       
+      36 +             the batch. datagen is optional in the forecast pom
+         +, so it does not reach this classpath. -->                     
+      37 +        <dependency>                                           
+      38 +            <groupId>com.topsales</groupId>                    
+      39 +            <artifactId>topsales-forecast</artifactId>         
+      40 +            <version>${project.version}</version>              
+      41 +        </dependency>                                          
+      42  
+      43          <dependency>
+      44              <groupId>org.springframework.boot</groupId>
+
+⏺ Update(service/topsales-api/pom.xml)
+  ⎿  Added 7 lines
+      55              <groupId>org.springframework.boot</groupId>
+      56              <artifactId>spring-boot-flyway</artifactId>
+      57          </dependency>
+      58 +        <!-- Phase 4: Redis-backed read cache (CacheShell) — ji
+         +ttered TTL, per-tenant version                                 
+      59 +             invalidation, single-flight (docs/lld.md §7). Lett
+         +uce connects lazily, so the app boots                          
+      60 +             with Redis down and the cache fails open to the se
+         +rving table / DB. -->                                          
+      61          <dependency>
+      62 +            <groupId>org.springframework.boot</groupId>        
+      63 +            <artifactId>spring-boot-starter-data-redis</artifac
+         +tId>                                                           
+      64 +        </dependency>                                          
+      65 +        <dependency>                                           
+      66              <groupId>org.postgresql</groupId>
+      67              <artifactId>postgresql</artifactId>
+      68              <scope>runtime</scope>
+
+⏺ Now the component-scan exclusion in TopSalesApplication:
+
+⏺ Update(service/topsales-api/src/main/java/com/topsales/api/TopSalesApplication
+        .java)
+  ⎿  Added 24 lines, removed 3 lines
+       1  package com.topsales.api;
+       2  
+       3  import org.springframework.boot.SpringApplication;
+       4 +import org.springframework.boot.autoconfigure.AutoConfiguration
+         +ExcludeFilter;                                                 
+       5  import org.springframework.boot.autoconfigure.SpringBootApplica
+          tion;
+       6 +import org.springframework.boot.context.TypeExcludeFilter;     
+       7  import org.springframework.boot.context.properties.Configuratio
+          nPropertiesScan;
+       8 +import org.springframework.context.annotation.ComponentScan;   
+       9 +import org.springframework.context.annotation.ComponentScan.Fil
+         +ter;                                                           
+      10 +import org.springframework.context.annotation.FilterType;      
+      11  
+      12  /**
+      13   * Entry point for the TopSales serving API.
+      14   *
+      10 - * <p>Phase 0: boots an empty web server (no endpoints yet). Co
+         -ntrollers, top-k assembly,                                     
+      11 - * caching, degradation, the tenant filter, and the served dash
+         -board arrive in Phase 2+.                                      
+      15 + * <p>Controllers, top-k assembly, caching, degradation, the te
+         +nant filter, and the served dashboard                          
+      16 + * live under {@code com.topsales.*} and are picked up by the c
+         +omponent scan below.                                           
+      17   *
+      18   * <p>{@code @ConfigurationPropertiesScan} over {@code com.tops
+          ales} registers the central
+      19   * {@link com.topsales.common.config.TopsalesProperties} (which
+           lives in {@code topsales-common},
+      20   * outside this app's package) so the whole {@code topsales.*} 
+          tree binds at startup.
+      21 + *                                                             
+      22 + * <p><b>Why the explicit {@code @ComponentScan} (Phase 4):</b>
+         + the read API depends on                                       
+      23 + * {@code topsales-forecast} only to reuse the plain {@code Sea
+         +sonalNaiveForecaster}/math classes for                         
+      24 + * the degradation fallback. That module also carries Spring be
+         +ans for the batch app                                          
+      25 + * ({@code ForecasterJob} is an {@code ApplicationRunner}; {@co
+         +de BatchConfig}/{@code ForecastWiring}                         
+      26 + * define data-plane + {@code Forecaster} beans). Scanning them
+         + here would run the batch on API                               
+      27 + * startup and clash with the read-side bean graph. So we keep 
+         +the Boot default filters and add a                             
+      28 + * regex exclude for {@code com.topsales.forecast.*}; the read 
+         +path constructs the one forecaster it                          
+      29 + * needs explicitly in {@code ReadWiring}.                     
+      30   */
+      17 -@SpringBootApplication(scanBasePackages = "com.topsales")      
+      31 +@SpringBootApplication                                         
+      32 +@ComponentScan(                                                
+      33 +        basePackages = "com.topsales",                         
+      34 +        excludeFilters = {                                     
+      35 +            @Filter(type = FilterType.CUSTOM, classes = TypeExc
+         +ludeFilter.class),                                             
+      36 +            @Filter(type = FilterType.CUSTOM, classes = AutoCon
+         +figurationExcludeFilter.class),                                
+      37 +            @Filter(type = FilterType.REGEX, pattern = "com\\.t
+         +opsales\\.forecast\\..*")                                      
+      38 +        })                                                     
+      39  @ConfigurationPropertiesScan("com.topsales")
+      40  public class TopSalesApplication {
+      41  
+
+⏺ Now PrecomputedForecastProvider:
+
+⏺ Write(service/topsales-api/src/main/java/com/topsales/api/provider/Precomputed
+       ForecastProvider.java)
+  ⎿  Wrote 36 lines to service/topsales-api/src/main/java/com/topsales/api/
+     provider/PrecomputedForecastProvider.java
+      1 package com.topsales.api.provider;
+      2 
+      3 import com.topsales.common.api.TopKQuery;
+      4 import com.topsales.common.forecast.ForecastProvider;
+      5 import com.topsales.common.forecast.ServingKey;
+      6 import com.topsales.common.forecast.ServingResult;
+      7 import com.topsales.common.forecast.ServingTableRepository;
+      8 
+      9 import java.util.Optional;
+     … +37 lines (ctrl+o to expand)
+
+⏺ Now ReadWiring — the read-side bean graph:
+
+⏺ Write(service/topsales-api/src/main/java/com/topsales/api/config/ReadWiring.ja
+       va)
+  ⎿  Wrote 61 lines to service/topsales-api/src/main/java/com/topsales/api/
+     config/ReadWiring.java
+      1 package com.topsales.api.config;
+      2 
+      3 import com.topsales.api.provider.PrecomputedForecastProvider;
+      4 import com.topsales.common.config.TopsalesProperties;
+      5 import com.topsales.common.config.TopsalesProperties.Forecast;
+      6 import com.topsales.common.forecast.ForecastProvider;
+      7 import com.topsales.common.forecast.ServingTableRepository;
+      8 import com.topsales.forecast.model.SeasonalNaiveForecaster;
+      9 import com.topsales.ingestion.repo.JdbcServingTableRepository;
+     … +70 lines (ctrl+o to expand)
+
+⏺ Now the CacheShell seam stub (Agent B will flesh out the Redis body; Agent A
+  only calls it):
+
+⏺ Write(service/topsales-api/src/main/java/com/topsales/api/cache/CacheShell.jav
+       a)
+  ⎿  Wrote 33 lines to service/topsales-api/src/main/java/com/topsales/api/
+     cache/CacheShell.java
+       1 package com.topsales.api.cache;
+       2 
+       3 import com.topsales.common.api.TopKQuery;
+       4 import com.topsales.common.api.TopKResponse;
+       5 
+       6 import java.util.function.Supplier;
+       7 
+       8 import org.springframework.stereotype.Component;
+       9 
+      10 /**
+     … +33 lines (ctrl+o to expand)
+
+⏺ Now the application.yml — add Redis connection + cache lock settings:
+
+⏺ Update(service/topsales-api/src/main/resources/application.yml)
+  ⎿  Added 7 lines
+      13    flyway:
+      14      enabled: true
+      15      locations: classpath:db/migration
+      16 +  # Redis-backed read cache (Phase 4). Lettuce connects lazily,
+         + so the app boots with Redis down and                          
+      17 +  # the CacheShell fails open to the serving table / DB. Provis
+         +ioned by local/docker-compose.yml.                             
+      18 +  data:                                                        
+      19 +    redis:                                                     
+      20 +      host: localhost                                          
+      21 +      port: 6379                                               
+      22 +      timeout: 500ms          # short: a slow/dead cache must n
+         +ot slow reads — fail open quickly                              
+      23    # Omit nulls (intervals/confidence are absent in actuals/pend
+          ing responses).
+      24    jackson:
+      25      default-property-inclusion: non_null
+
+⏺ Update(service/topsales-api/src/main/resources/application.yml)
+  ⎿  Added 3 lines
+      68        max-folds: 12
+      69        wape-dense-max: 0.20
+      70        wape-sparse-min: 0.40
+      71 +  # Read-cache knobs (docs/lld.md §7). base-ttl ± jitter-pct% s
+         +preads expiry to avoid lock-step                               
+      72 +  # stampedes; lock-ttl bounds the single-flight lease so a cra
+         +shed leader can't wedge a hot key.                             
+      73    cache:
+      74      base-ttl: 15m
+      75      jitter-pct: 20
+      76 +    lock-ttl: 2s                                               
+      77    rawlog:
+      78      dir: ./data/rawlog       # local S3 stand-in for the immuta
+          ble raw event log
+
+⏺ I added lock-ttl to the cache config; I should add the matching field to the
+  TopsalesProperties.Cache record so Agent B can bind it cleanly. Let me read
+  that record.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      grep -n "Cache" topsales-common/src/main/java/com/topsales/common/config/T
+      opsalesProperties.java…)  ⎿  25:        Read read, WindowDays windowDays, Forecast forecast, Cache
+     cache, Rawlog rawlog) {
+     98:    public record Cache(Duration baseTtl, int jitterPct) {}
+     … +7 lines (ctrl+o to expand)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(service/topsales-common/src/main/java/com/topsales/common/config/Topsal
+        esProperties.java)
+  ⎿  Added 6 lines, removed 2 lines
+       94                  double wapeSparseMin) {}
+       95      }
+       96  
+       97 -    /** Read-through cache knobs (placeholders until Phase 4 /
+          - Redis). */                                                   
+       98 -    public record Cache(Duration baseTtl, int jitterPct) {}   
+       97 +    /**                                                       
+       98 +     * Read-through cache knobs (Phase 4 / Redis, docs/lld.md 
+          +§7). {@code baseTtl} ± {@code jitterPct}%                     
+       99 +     * is the per-key expiry; {@code lockTtl} bounds the singl
+          +e-flight lease so a crashed leader cannot                     
+      100 +     * wedge a hot key.                                       
+      101 +     */                                                       
+      102 +    public record Cache(Duration baseTtl, int jitterPct, Durat
+          +ion lockTtl) {}                                               
+      103  
+      104      /** Local immutable raw-event-log directory (the S3 stand-
+           in). */
+      105      public record Rawlog(String dir) {}
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      echo "=== forecast application.yml ==="; cat
+      topsales-forecast/src/main/resources/application.yml…)
+  ⎿  === forecast application.yml ===
+     spring:
+       application:
+     … +50 lines (ctrl+o to expand)
+
+⏺ Update(service/topsales-forecast/src/main/resources/application.yml)
+  ⎿  Added 8 lines
+      15    flyway:
+      16      enabled: true
+      17      locations: classpath:db/migration
+      18 +  # Phase 4: after each tenant's serving swap the batch bumps t
+         +he per-tenant cache version (Redis                             
+      19 +  # INCR) so the read cache invalidates at once (docs/lld.md §7
+         +). Lettuce connects lazily; the batch                          
+      20 +  # still completes with Redis down (the CacheVersion bump no-o
+         +ps on failure).                                                
+      21 +  data:                                                        
+      22 +    redis:                                                     
+      23 +      host: localhost                                          
+      24 +      port: 6379                                               
+      25 +      timeout: 500ms                                           
+      26  
+      27  # Forecast knobs (mirrors topsales-api's application.yml; bound
+           into TopsalesProperties).
+      28  topsales:
+
+⏺ Wave 0 files are in place. Let me verify the foundation compiles (this also
+  validates the pom/classifier/scan changes across the reactor).
+
+⏺ Bash(mvn -q -pl topsales-api -am test-compile 2>&1 | tail -40)
+  ⎿  [ERROR] COMPILATION ERROR :
+     [ERROR] /Users/heminjoshi/code/sales-forecasting-platform/service/tops
+     ales-api/src/test/java/com/topsales/api/service/ActualsServiceTest.jav
+     … +34 lines (ctrl+o to expand)
+
+⏺ Main code compiles; two existing tests construct Cache(Duration, int). Let me
+  update those call sites to include the new lockTtl.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      grep -rn "new TopsalesProperties.Cache(\|Cache(Duration\|new .*\.Cache("
+      --include=*.java topsales-…)
+  ⎿  (eval):2: no matches found: --include=*.java
+     ---context A---
+                                 3,
+     … +19 lines (ctrl+o to expand)
+
+⏺ Update(service/topsales-api/src/test/java/com/topsales/api/service/ActualsServ
+        iceTest.java)
+  ⎿  Added 1 line, removed 1 line
+      59                              new TopsalesProperties.Forecast.Hol
+          tWinters(0.3, 0.1, 0.3, 7),
+      60                              new TopsalesProperties.Forecast.Int
+          erval(1.28, 0.15, 0.40),
+      61                              new TopsalesProperties.Forecast.Eva
+          l(84, 7, 7, 12, 0.20, 0.40)),
+      62 -                    new TopsalesProperties.Cache(Duration.ofMin
+         -utes(15), 20),                                                 
+      62 +                    new TopsalesProperties.Cache(Duration.ofMin
+         +utes(15), 20, Duration.ofSeconds(2)),                          
+      63                      new TopsalesProperties.Rawlog("./data/rawlo
+          g"));
+      64  
+      65      @BeforeEach
+
+⏺ Update(service/topsales-api/src/test/java/com/topsales/api/web/TopCategoriesCo
+        ntrollerTest.java)
+  ⎿  Added 1 line, removed 1 line
+      50                              new TopsalesProperties.Forecast.Hol
+          tWinters(0.3, 0.1, 0.3, 7),
+      51                              new TopsalesProperties.Forecast.Int
+          erval(1.28, 0.15, 0.40),
+      52                              new TopsalesProperties.Forecast.Eva
+          l(84, 7, 7, 12, 0.20, 0.40)),
+      53 -                    new TopsalesProperties.Cache(Duration.ofMin
+         -utes(15), 20),                                                 
+      53 +                    new TopsalesProperties.Cache(Duration.ofMin
+         +utes(15), 20, Duration.ofSeconds(2)),                          
+      54                      new TopsalesProperties.Rawlog("./data/rawlo
+          g"));
+      55  
+      56      @BeforeEach
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      grep -rln "\.Cache(" --include="*.java" . ; echo "=== recompile api ===";
+      mvn -q -pl topsales-api -…)
+  ⎿  topsales-api/src/test/java/com/topsales/api/web/TopCategoriesControlle
+     rTest.java
+     topsales-api/src/test/java/com/topsales/api/service/ActualsServiceTest
+     … +2 lines (ctrl+o to expand)
+
+⏺ Wave 0 compiles. Let me run the API unit tests to confirm nothing broke, then
+  launch Wave 1.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      mvn -q -pl topsales-api -am test 2>&1 | tail -25)
+  ⎿  05:43:11.861 [main] INFO org.springframework.test.web.servlet.TestDisp
+     atcherServlet -- Completed initialization in 0 ms
+     05:43:11.867 [main] INFO org.springframework.mock.web.MockServletConte
+     … +39 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service
+      mvn -pl topsales-api -am test 2>&1 | grep -E "Tests run|BUILD
+      SUCCESS|BUILD FAILURE" | tail -20)
+  ⎿  [INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed:
+      0.047 s -- in com.topsales.datagen.gen.SeasonalityModelTest
+     [INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed:
+     … +31 lines (ctrl+o to expand)
+
+⏺ All green — Wave 0 is solid. One refinement before fanning out: to keep Agent
+  A and Agent B fully decoupled (B will change the cache's constructor deps),
+  I'll make CacheShell an interface with a no-op default impl now, so A can test
+  against a trivial stub while B writes the Redis impl.
+
+⏺ Write(service/topsales-api/src/main/java/com/topsales/api/cache/CacheShell.jav
+       a)
+  ⎿  Added 10 lines, removed 16 lines
+       5  
+       6  import java.util.function.Supplier;
+       7  
+       8 -import org.springframework.stereotype.Component;               
+       9 -                                                               
+       8  /**
+       9   * Cache-aside shell over the forecast read path (docs/lld.md §
+          7). The read pipeline calls
+      10   * {@link #getOrCompute} with the query and a supplier that run
+          s the (cache-miss) degradation chain;
+      13 - * the shell returns a cached {@link TopKResponse} on a hit, ot
+         -herwise computes, populates, and                               
+      14 - * returns. The cache is an accelerator, never a correctness de
+         -pendency: on any Redis failure it                              
+      15 - * <b>fails open</b> and just runs the supplier.               
+      11 + * an implementation returns a cached {@link TopKResponse} on a
+         + hit, otherwise computes, populates,                           
+      12 + * and returns.                                                
+      13   *
+      17 - * <p>Phase-4 foundation stub: pass-through only. The Redis imp
+         -lementation — per-tenant version                               
+      18 - * keying ({@code topk:{tenant}:{ver}:{window}:{mode}:{channel}
+         -:{k}}), jittered TTL, single-flight                            
+      19 - * lease, and fail-open — lands in the cache wave. Keeping the 
+         -seam here lets the controller and the                          
+      20 - * read pipeline compile and run against the final method shape
+         - now.                                                          
+      14 + * <p>The cache is an accelerator, never a correctness dependen
+         +cy: implementations must <b>fail                               
+      15 + * open</b> — on any cache-layer fault, run {@code compute} and
+         + return its result rather than throwing.                       
+      16 + * The built impl ({@code RedisCacheShell}) adds per-tenant ver
+         +sion keying                                                    
+      17 + * ({@code topk:{tenant}:{ver}:{window}:{mode}:{channel}:{k}}),
+         + jittered TTL, and a single-flight                             
+      18 + * lease. {@link NoOpCacheShell} is the trivial pass-through us
+         +ed as a fallback / in tests.                                   
+      19   */
+      22 -@Component                                                     
+      23 -public class CacheShell {                                      
+      20 +public interface CacheShell {                                  
+      21  
+      22      /**
+      23       * Return the cached response for {@code query}, or run {@c
+          ode compute} (the degradation chain),
+      27 -     * cache it, and return it. Must never throw on a cache-lay
+         -er fault — fall through to                                     
+      28 -     * {@code compute} instead.                                
+      24 +     * cache it, and return it. Never throws on a cache-layer f
+         +ault — falls through to {@code compute}.                       
+      25       */
+      30 -    public TopKResponse getOrCompute(TopKQuery query, Supplier<
+         -TopKResponse> compute) {                                       
+      31 -        return compute.get();                                  
+      32 -    }                                                          
+      26 +    TopKResponse getOrCompute(TopKQuery query, Supplier<TopKRes
+         +ponse> compute);                                               
+      27  }
+
+⏺ Write(service/topsales-api/src/main/java/com/topsales/api/cache/NoOpCacheShell
+       .java)
+  ⎿  Wrote 22 lines to service/topsales-api/src/main/java/com/topsales/api/
+     cache/NoOpCacheShell.java
+       1 package com.topsales.api.cache;
+       2 
+       3 import com.topsales.common.api.TopKQuery;
+       4 import com.topsales.common.api.TopKResponse;
+       5 
+       6 import java.util.function.Supplier;
+       7 
+       8 import org.springframework.stereotype.Component;
+       9 
+      10 /**
+     … +16 lines (ctrl+o to expand)
+
+⏺ Bash(mvn -q -pl topsales-api -am test-compile 2>&1 | tail -8 && echo
+      "COMPILE_OK")
+  ⎿  COMPILE_OK
+⏺ Wave 0 complete. Marking it done and launching the three Wave 1 agents in
+  parallel.
+
+⏺ Now I'll launch the three Wave 1 agents in parallel. First, a quick check of
+  existing UI/Postman assets so I can give Agent C exact paths.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== static dir ==="; ls -la
+      service/topsales-api/src/main/resources/static/…)
+  ⎿  === static dir ===
+     total 40
+     drwxr-xr-x@ 6 heminjoshi  staff    192 Jun 29 03:50 .
+     … +89 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      sed -n '60,95p' service/topsales-forecast/src/main/java/com/topsales/forec
+      ast/math/SeriesPrep.java)
+  ⎿          for (AggregateRow row : history) {
+                 int idx = (int) ChronoUnit.DAYS.between(min, row.bucketDat
+     e());
+     … +33 lines (ctrl+o to expand)
+
+⏺ I have everything needed. SeriesPrep already sums per-day defensively, so the
+  fallback can group by category and pass rows straight to the forecaster.
+  Launching the three Wave 1 agents in parallel now.
+
+⏺ Agent(Agent A: degradation chain)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+⏺ Agent A is running. Agent C (UI + Postman) touches no Java and won't run
+  Maven, so it's safe to run concurrently. But Agent B compiles topsales-api too
+  — running it concurrently with A risks Maven target/ races, so I'll hold B
+  until A finishes. Launching C now.
+
+⏺ Agent(Agent C: dashboard + Postman)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+⏺ Wave 0 is complete and merged into the foundation; Agents A (degradation
+  chain) and C (UI + Postman) are running in parallel. I'm holding Agent B
+  (Redis cache) until Agent A finishes, since both compile topsales-api and
+  concurrent Maven builds would race on target/.
+
+  Status so far:
+  - Wave 0 done — topsales-forecast now publishes a plain library jar (app
+  classifier) with datagen marked optional; topsales-api depends on it +
+  spring-boot-starter-data-redis; the API component-scan excludes
+  com.topsales.forecast so the batch beans don't boot in the read app;
+  PrecomputedForecastProvider, ReadWiring beans, the CacheShell interface +
+  NoOpCacheShell, and Redis/cache config are all in place. Full reactor compiles
+  and all 23 API + 39 forecast unit tests pass.
+  - Running: Agent A (ForecastReadService 4-tier ladder + SeasonalNaiveFallback
+  + controller rewrite), Agent C (status badge/banner, confidence chips,
+  interval error bars, Postman wipe scenario).
+
+  I'll launch Agent B and continue once A reports back.
+
+✻ Baked for 17m 0s
+
+⏺ Agent "Agent A: degradation chain" finished · 3m 36s
+
+⏺ Agent A is done cleanly (34 tests pass, Mockito available). Agent C is still
+  on static assets (no Java build), so launching Agent B now won't race. Marking
+  A complete and launching B.
+
+⏺ Agent(Agent B: Redis cache + bump)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+⏺ Agent "Agent C: dashboard + Postman" finished · 3m 20s
+
+⏺ Agent C is done — and its placeholder names
+  (serving_rows/serving_active_version, topsales/topsales, tenantver:t_demo)
+  happen to match the actual schema and the cache-key scheme I confirmed in Wave
+  0, so they're correct. Marking C complete; waiting on Agent B (Redis cache +
+  batch bump).
+⏺ Agents A and C are complete; Agent B (Redis cache + invalidation) is still
+  running. Once it reports back, I'll move to Wave 2: a full reactor build,
+  end-to-end verification of the fresh/stale/degraded/pending/fail-open
+  scenarios, and the Phase 4 handoff. I'll continue when B finishes.
+
+✻ Sautéed for 1m 8s
+
+⏺ Agent "Agent B: Redis cache + bump" finished · 5m 49s
+
+⏺ All three Wave 1 agents are done. Now Wave 2: integration build + end-to-end
+  verification. Let me run the full reactor (clean, so the stale-common-jar
+  artifact issue Agent B noted is gone) and confirm everything compiles and all
+  unit tests pass together.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service && mvn -q
+      clean test 2>&1 | grep -E "Tests run:|BUILD|ERROR|Building topsales" |
+      tail -40)
+  ⎿  (No output)
+  ⎿  (timeout 5m)
+
+⏺ Bash(mvn clean test 2>&1 | grep -E "Tests run:|BUILD SUCCESS|BUILD
+      FAILURE|ERROR\]" | tail -45)
+  ⎿  [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed:
+      0.121 s -- in com.topsales.common.api.TopKResponseTest
+     [INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed:
+     … +47 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+⏺ Full reactor is green — common 8, ingestion 12, datagen 9, forecast 39, api 
+  42, BUILD SUCCESS. Now the end-to-end smoke test. Let me check Docker
+  availability and the compose service names first.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== docker ? ==="; docker info >/dev/null 2>&1 && echo "docker UP"
+      || echo "docker DOWN"…)
+  ⎿  === docker ? ===
+     docker UP
+     === compose services ===
+     … +15 lines (ctrl+o to expand)
+
+⏺ Docker is up. Let me read the Makefile targets so I run the stack correctly.
+
+⏺ Bash(sed -n '1,200p' Makefile)
+  ⎿  # Thin wrappers over the real commands. See README for prerequisites.
+     .PHONY: up down run test verify seed trickle forecast eval demo synth
+     … +55 lines (ctrl+o to expand)
+
+⏺ Docker is up and the stack is straightforward. Let me bring up Postgres +
+  Redis, then seed history.
+
+⏺ Bash(make up 2>&1 | tail -8 && echo "--- wait for healthy ---" && sleep 6 &&
+      docker ps --filter name=topsales --format '{{.Names}}: {{.Status}}')
+  ⎿  docker compose -f local/docker-compose.yml up -d
+      Container topsales-postgres Running
+      Container topsales-redis Running
+     … +3 lines (ctrl+o to expand)
+
+⏺ Containers are already healthy. Let me check whether the DB already has seed +
+  serving data (from a prior session) before re-running the slow seed/forecast
+  steps.
+
+⏺ Bash(docker exec topsales-postgres psql -U topsales -d topsales -tc "select
+      'aggregates='||count(*) from aggregates; select 'serving_rows='||count(*)
+      from serving_ro…)
+  ⎿   aggregates=11192
+
+      serving_rows=108
+     … +8 lines (ctrl+o to expand)
+
+⏺ Existing data is present, but the serving rows are from a prior batch run
+  (likely stale as_of, and no tenantver:* keys exist yet — confirming the new
+  bumper hasn't run). Let me re-run make forecast to write fresh serving rows
+  AND exercise the new CacheVersionBumper (it should create tenantver:* keys).
+
+⏺ Bash(make forecast 2>&1 | grep -iE "batch|BUILD|ERROR|forecast" | tail -25)
+  ⎿  [INFO] Installing /Users/heminjoshi/code/sales-forecasting-platform/se
+     rvice/topsales-forecast/pom.xml to /Users/heminjoshi/.m2/repository/co
+     m/topsales/topsales-forecast/0.1.0-SNAPSHOT/topsales-forecast-0.1.0-SN
+     … +49 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+⏺ Batch ran clean (2 tenants × 9 writes). Let me confirm the new
+  CacheVersionBumper fired (Redis tenantver:* keys should now exist) and the
+  serving rows are fresh.
+
+⏺ Bash(echo "=== redis tenantver keys (proves bump fired) ==="; docker exec
+      topsales-redis redis-cli keys 'tenantver:*'
+      echo "=== values ==="; docker exec topsales-red…)
+  ⎿  === redis tenantver keys (proves bump fired) ===
+     tenantver:t_demo
+     tenantver:t_acme
+     … +10 lines (ctrl+o to expand)
+⏺ Bump fired (tenantver = 1 for both tenants) and serving rows are fresh (as_of
+  ~now). Now boot the API in the background and wait for health.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      mvn -q -f service/pom.xml -pl topsales-api -am -DskipTests install 2>&1 |
+      grep -E "BUILD|ERROR" | tail -3)
+  ⎿  (No output)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      mvn -f service/pom.xml -pl topsales-api spring-boot:run >
+      /private/tmp/claude-501/-Users-heminjoshi-code-sa…)
+  ⎿  Running in the background (↓ to manage)
+
+⏺ Let me wait for the API to come up by polling, then run the fresh-forecast
+  scenario.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      for i in $(seq 1 60); do…)
+  ⎿  API up after 1s
+     === /api/v1/config ===
+     {
+     … +58 lines (ctrl+o to expand)
+
+⏺ Background command "Boot API in background" completed (exit code 0)
+
+⏺ pending with a populated trailing window means the forecast path fell through
+  to the actuals floor — and the API "up after 1s" plus the background
+  spring-boot:run exiting (exit 0) strongly suggests a stale API instance from a
+  prior session is already holding port 8080, so my new Phase-4 build never
+  bound. Let me investigate and clear it.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== who is on 8080 ==="; lsof -nP -iTCP:8080 -sTCP:LISTEN
+      2>/dev/null…)
+  ⎿  === who is on 8080 ===
+     COMMAND   PID       USER   FD   TYPE             DEVICE SIZE/OFF NODE
+     NAME
+     … +4 lines (ctrl+o to expand)
+
+⏺ Confirmed — a stale API (PID 32061) from a prior session holds port 8080, so
+  my Phase‑4 build never bound and curl hit the old Phase‑2 behavior. Let me
+  kill the stale instance and any stray launchers, then boot the new build
+  cleanly.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      # Kill whatever holds 8080 + any lingering spring-boot:run for
+      topsales-api…)
+  ⎿  === 8080 now ===
+     free
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      SCRATCH=/private/tmp/claude-501/-Users-heminjoshi-code-sales-forecasting-p
+      latform/626536ba-1a9c-4756-bb72-3…)
+  ⎿  launched, waiting for bind...
+     API up after ~6s
+     === which build? grep startup + ReadWiring beans in log ===
+     … +6 lines (ctrl+o to expand)
+  ⎿  (timeout 3m 20s)
+
+⏺ Fresh Phase‑4 API is up (PID 39829). Now the verification scenarios — fresh
+  forecast first, then a cache-hit repeat.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== FRESH: forecast month k=5 (t_demo) ==="…)
+  ⎿  === FRESH: forecast month k=5 (t_demo) ===
+     {
+         "tenantId": "t_demo",
+     … +71 lines (ctrl+o to expand)
+
+⏺ Fresh path is fully working — status=fresh, items carry deltaVsPrior +
+  confidence + interval, windowFrom/To correctly omitted, cache key
+  topk:t_demo:1:month:forecast:all:5 written (ver matches tenantver=1), and the
+  repeat call is a cache hit. Now the headline degraded scenario: wipe serving
+  rows + bump the cache version.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== wipe serving tables (t_demo only would need row filter; truncate
+      all for the demo) ==="…)
+  ⎿  === wipe serving tables (t_demo only would need row filter; truncate a
+     ll for the demo) ===
+     TRUNCATE TABLE
+     … +43 lines (ctrl+o to expand)
+
+⏺ Degraded path confirmed — serving table wiped → status=degraded, items carry
+  value + confidence:LOW, no interval/delta. The dashboard still renders
+  honestly (the headline acceptance criterion). Now fail-open: stop Redis and
+  confirm reads still succeed (no 5xx).
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== stop redis ==="; docker stop topsales-redis >/dev/null && echo
+      "redis stopped"…)
+  ⎿  === stop redis ===
+     redis stopped
+     === read with redis DOWN (must still 200, fail-open) ===
+     … +4 lines (ctrl+o to expand)
+
+⏺ Fail-open confirmed — Redis down → HTTP 200, still serves (degraded), no 5xx.
+  Let me verify actuals mode (bypasses cache, always fresh), then restore
+  serving rows by re-running the batch so the demo is left in a clean state.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      sleep 3  # let redis finish restarting…)
+  ⎿  === ACTUALS mode (always fresh, no cache) ===
+     status= fresh mode= actuals windowFrom= 2026-06-23 rank1= cat_electron
+     ics
+     … +4 lines (ctrl+o to expand)
+
+⏺ All edge paths pass (actuals fresh + cache-bypass, 403, 400). Let me restore
+  serving rows by re-running the batch so the system is left in a clean,
+  fresh-forecast demo state.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      make forecast 2>&1 | grep -iE "batch (starting|complete|.*pkWrites)|BUILD
+      (SUCCESS|FAILURE)" | tail -6…)
+  ⎿  [INFO] BUILD SUCCESS
+     2026-06-29T06:02:50.436-07:00  INFO 40048 --- [topsales-forecast] [
+             main] c.topsales.forecast.batch.ForecasterJob  : Forecast batc
+     … +11 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+⏺ End-to-end verification is fully green:
+
+  ┌─────────────────┬───────────────────────────────────────────────────────┐
+  │    Scenario     │                        Result                         │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │                 │ status=fresh, items carry                             │
+  │ Fresh forecast  │ deltaVsPrior+confidence+interval; cache key           │
+  │                 │ topk:t_demo:1:month:forecast:all:5 written            │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Cache hit       │ identical body, served from Redis                     │
+  │ (repeat)        │                                                       │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Degraded (wipe  │ status=degraded, value+confidence:LOW, no interval —  │
+  │ table)          │ dashboard still renders ✅ (headline acceptance)      │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Fail-open       │ HTTP 200, still serves — no 5xx                       │
+  │ (Redis down)    │                                                       │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Actuals mode    │ status=fresh, trailing window set, bypasses cache     │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Event-driven    │ batch bumped tenantver (t_demo 1→3, t_acme 1→2);      │
+  │ invalidation    │ reads key off current version                         │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ 403             │                                                       │
+  │ cross-tenant /  │ preserved                                             │
+  │ 400 bad-k       │                                                       │
+  └─────────────────┴───────────────────────────────────────────────────────┘
+
+  (pending wasn't reproducible from seeded data since every category has history
+  → degraded fallback wins; it's covered by ForecastReadServiceTest and is the
+  same actuals floor proven via actuals mode.)
+
+  The API is left running for the dashboard demo. Now the final Wave 2 step —
+  the Phase 4 handoff doc.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "API pid: $(lsof -nP -iTCP:8080 -sTCP:LISTEN -t 2>/dev/null)"…)
+  ⎿  API pid: 39829
+     === files changed on this branch vs main ===
+      M postman/TopSales.postman_collection.json
+     … +28 lines (ctrl+o to expand)
+
+⏺ All Phase 4 changes are present (the large diff-vs-main is just because this
+  branch carries unmerged Phase 2.5/3 work too). Let me write the Phase 4
+  handoff doc via the skill.
+
+⏺ Skill(handoff)
+  ⎿  Successfully loaded skill
+
+⏺ I'll gather the inputs the skill requires — prior handoffs, the plan index,
+  and current git/PR state — before writing.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== handoff docs ==="; ls -1 claude-sessions/handoff-docs/
+      2>/dev/null…)
+  ⎿  === handoff docs ===
+     phase-0-handoff.md
+     phase-1-handoff.md
+     … +25 lines (ctrl+o to expand)
+
+⏺ Let me read the most recent handoff (Phase 3, the template to mirror) and the
+  plan README so the new doc fits the through-line.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ I have the template and live results. Writing the Phase 4 handoff.
+
+⏺ Write(claude-sessions/handoff-docs/phase-4-handoff.md)
+  ⎿  Wrote 191 lines to claude-sessions/handoff-docs/phase-4-handoff.md
+       2 # Phase 4 — Handoff
+         ase4-forecast-serving-cache`**,ified live — on branch **`feat/ph
+       4 > **not yet committed / no PR** (working tree changes; commit wh
+       5 > Covers the **forecast read path**, the **degradation chain**, 
+         the **Redis read cache** + event-driven
+          Hand-off for whoever picks up **Phase 5**.s/forecast surfacing.
+         employer/interview specifics.ivate/gitignored** — may reference 
+       8 
+      10 `mode=forecast` is now wired end-to-end. The read path reads **p
+         recomputed serving rows** through a new
+     … +334 lines (ctrl+o to expand)
+
+⏺ Now the concise Phase 4 implementation-plan doc and the README index update.
+
+⏺ Write(claude-sessions/implementation-plan/phase-4-forecast-serving.md)
+  ⎿  Wrote 34 lines to
+     claude-sessions/implementation-plan/phase-4-forecast-serving.md
+       2 # Phase 4 — Forecast serving + resilience
+       3 > **Milestone:** FORECAST-READY · **Status:** ✅ done — see [pha
+       4 > Full execution detail in `~/.claude/plans/come-up-with-a-jazzy
+         -eagle.md` (private).
+       6 ## Objective & acceptance
+       7 Wire `mode=forecast` end-to-end: read precomputed serving rows b
+       8 so reads never fail closed, and surface honest freshness to the 
+         dashboard.
+         s wiped → dashboard still renders** precompute+cache; **forecast
+      10 (degraded, flagged). _(Met live — see handoff.)_
+     … +43 lines (ctrl+o to expand)
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 1 line, removed 1 line
+      25  | 2 | Walking skeleton (vertical slice + minimal UI) | ⭐ DEMO 
+          | [phase-2-walking-skeleton.md](phase-2-walking-skeleton.md) | 
+          [phase-2-handoff](../handoff-docs/phase-2-handoff.md) | ✅ done
+           |
+      26  | 2.5 | Synthetic data + channel dimension | — | [phase-2.5-cha
+          nnel-and-synthetic-data.md](phase-2.5-channel-and-synthetic-dat
+          a.md) | [phase-3-handoff](../handoff-docs/phase-3-handoff.md) |
+           ✅ done |
+      27  | 3 | Forecasting engine | — | [phase-3-forecasting-engine.md](
+          phase-3-forecasting-engine.md) | [phase-3-handoff](../handoff-d
+          ocs/phase-3-handoff.md) | ✅ done |
+      28 -| 4 | Forecast serving + resilience | FORECAST-READY | _todo_ |
+         - | |                                                           
+      28 +| 4 | Forecast serving + resilience | FORECAST-READY | [phase-4
+         +-forecast-serving.md](phase-4-forecast-serving.md) | [phase-4-h
+         +andoff](../handoff-docs/phase-4-handoff.md) | ✅ done |        
+      29  | 5 | GenAI insight layer | AI-READY | _todo_ | | |
+      30  | 6 | Hardening: resilience & observability | — | _todo_ | | |
+      31  | 7 | UI production path & infra validation | — | _todo_ | | |
+
+⏺ Let me confirm the handoff/plan docs are gitignored and untracked (skill step
+  5 — these are private, must never be committed).
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git check-ignore claude-sessions/handoff-docs/phase-4-handoff.md
+      claude-sessions/implementation-plan/phase-…)
+  ⎿  claude-sessions/handoff-docs/phase-4-handoff.md
+     claude-sessions/implementation-plan/phase-4-forecast-serving.md
+     claude-sessions/implementation-plan/README.md
+     --- are any claude-sessions files tracked? (expect none) ---
+
+⏺ All three private docs are gitignored and nothing under claude-sessions/ is
+  tracked. Wave 2 is complete — marking the final task done.
+
+⏺ Phase 4 complete — Forecast serving + resilience
+
+  I planned and implemented Phase 4 end-to-end: reviewed the source-of-truth
+  docs, planned the slice (you approved it), then built it via a Wave-0 
+  foundation I laid myself + 3 parallel subagents (degradation chain · Redis
+  cache + batch bump · dashboard + Postman), with file-ownership partitioning so
+  concurrent Maven builds wouldn't race.
+
+  What's working (verified live against real Postgres + Redis):
+
+  ┌─────────────────┬───────────────────────────────────────────────────────┐
+  │    Scenario     │                        Result                         │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Fresh forecast  │ status=fresh with deltaVsPrior+confidence+interval;   │
+  │                 │ cached under a version-keyed key                      │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Cache hit       │ repeat call served from Redis                         │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Degraded (wipe  │ status=degraded, value+confidence:LOW, no interval —  │
+  │ table)          │ dashboard still renders ✅ headline acceptance        │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Fail-open       │ HTTP 200, still serves, no 5xx                        │
+  │ (Redis down)    │                                                       │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Actuals mode    │ fresh, cache-bypassed                                 │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ Event-driven    │ batch bumps tenantver; reads key off current version  │
+  │ invalidation    │                                                       │
+  ├─────────────────┼───────────────────────────────────────────────────────┤
+  │ 403 / 400       │ preserved                                             │
+  └─────────────────┴───────────────────────────────────────────────────────┘
+
+  make test is green across the reactor — 110 tests (common 8, ingestion 12,
+  datagen 9, forecast 39, api 42).
+
+  Key design points: 4-tier ladder that never fails closed
+  (fresh→stale→degraded→pending); the read API reuses SeasonalNaiveForecaster
+  via a classifier=app dependency + a @ComponentScan exclude so the batch never
+  boots in the read app; cache is fail-open with per-tenant version-bump
+  invalidation and single-flight; I added {channel} to the §7 cache key (a
+  correctness fix vs the literal doc).
+
+  Notes / open items:
+  - The Phase-4 changes are uncommitted on branch
+  feat/phase4-forecast-serving-cache — I didn't commit since you didn't ask.
+  Suggested next: commit per slice and open a PR to main.
+  - The API is left running on http://localhost:8080 (PID 39829) for the
+  dashboard demo — kill it when done.
+  - I deviated from the Phase‑3 handoff's suggestion to populate windowFrom/To
+  with a forward window — shipped as null for forecast tiers (the UI drops the
+  range cleanly); cheap to add later.
+  - Documented (not built) the true forecast-vs-actual time-series overlay as a
+  future enhancement, per your request — full design is in the plan and handoff.
+  - Handoff written to claude-sessions/handoff-docs/phase-4-handoff.md
+  (private/gitignored), plan index updated. A couple of tracked-doc syncs
+  (docs/lld.md §7/§13, README, openapi) are flagged to do alongside the commit.
+
+  Next phase is Phase 5 — GenAI insight layer.
+
+✻ Churned for 46m 13s
+
+※ recap: Phase 4 (forecast read path, degradation chain, Redis cache) is built and verified live; all 110 tests pass. The changes are uncommitted on branch feat/phase4-forecast-serving-cache. Next action: commit per slice and open a PR to main. (disable recaps in /config)

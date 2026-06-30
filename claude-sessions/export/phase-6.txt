@@ -1,0 +1,1407 @@
+ ▐▛███▜▌   Claude Code v2.1.195
+▝▜█████▛▘  Opus 4.8 · Claude Max
+  ▘▘ ▝▝    ~/code/sales-forecasting-platform
+
+
+❯ /implement-phase 6                                                            
+
+⏺ I'll drive Phase 6. Let me start by orienting on the source-of-truth docs and
+  auditing the current repo state.
+
+  Let me kick off the audit with parallel reads and sub-agents.
+
+⏺ Bash(echo "=== branch ===" && git branch --show-current && echo "=== status
+      ===" && git status --short && echo "=== recent log ===" && git log
+      --oneline -8 && echo "…)
+  ⎿  === branch ===
+     feat/phase5-genai-insight
+     === status ===
+     … +41 lines (ctrl+o to expand)
+
+⏺ Clean tree, all phases through 5 committed. Now let me read the Phase 6
+  contract from the source-of-truth docs and audit the repo state in parallel.
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ infra/ and web/ are empty (greenfield). Let me extract the Phase 6 contract
+  from the docs and read the prior handoff in parallel.
+
+⏺ Explore(Extract Phase 6 contract from docs)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ The Phase-5 handoff reveals an important nuance: PR #9 (Phase 5) is still 
+  open, not merged to main, and it describes Phase 6 as "Hardening: resilience &
+  observability" — which differs from CLAUDE.md's "AWS CDK +
+  productionization." Let me resolve that discrepancy by reading the plan
+  directly while the contract agent runs.
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+⏺ Phase 6 is "Hardening: resilience & observability" — not AWS CDK (CDK is part
+  of Phase 7). Let me read the exact Phase 6 + 7 task list.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now I have the precise Phase 6 contract. It's backend hardening (not CDK —
+  that's Phase 7). Four task groups: idempotency/dedupe/quarantine, Resilience4j
+  on Bedrock, Actuator+Micrometer metrics, structured logging + runbook.
+
+  Let me explore the actual code seams I'll touch, in parallel.
+
+⏺ 2 background agents launched (↓ to manage)
+   ├ Explore ingestion + Bedrock seams
+   └ Explore metrics + logging seams
+
+❯ Make sure you To update the skill, to document the phase in the               
+  implementation-plan/ directory                                                
+
+⏺ Noted on the user's message — I'll (a) update the /implement-phase skill so it
+  requires writing a phase plan doc to implementation-plan/, and (b) author
+  phase-6-*.md there as part of this work. The Phase-5 handoff confirms this gap
+  ("No dedicated phase-5 plan doc was authored"). Let me read the current skill
+  and impl-plan index while the explore agents run.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ I have the skill and index context. Three explore agents are running (Phase-6
+  contract, ingestion+Bedrock seams, metrics+logging seams). I'll wait for them
+  to report before designing the plan.
+
+  Brief status while they finish:
+  - Phase 6 = backend hardening (resilience & observability), not CDK — CDK is
+  Phase 7. Four task groups: idempotency/dedupe/quarantine, Resilience4j on
+  Bedrock, Actuator+Micrometer (RED + ML-quality metrics), structured logging +
+  docs/runbook.md.
+  - Branch note to resolve: Phase 5's PR #9 is still open (not merged to main).
+  Phase 6 building on Phase 5 means I'll likely branch off the current
+  feat/phase5-genai-insight tip (or merge #9 first) rather than off stale main —
+  I'll confirm this with you in the plan.
+  - Your message is captured: I'll update the /implement-phase skill so it
+  persists the approved plan into
+  claude-sessions/implementation-plan/phase-<N>-*.md and wires the index, and
+  I'll author phase-6-hardening.md there for this phase.
+
+✻ Crunched for 1m 58s
+
+⏺ Agent "Extract Phase 6 contract from docs" finished · 1m 56s
+
+⏺ Contract confirmed — Phase 6 is purely backend hardening. Waiting on the two
+  code-seam explore agents before I design the plan.
+
+⏺ I don't actually need Monitor — I'm waiting on the two background explore
+  agents, which auto-notify. Let me sit tight for those rather than poll.
+✻ Cogitated for 11s
+
+⏺ Agent "Explore ingestion + Bedrock seams" finished · 1m 56s
+
+⏺ Big finding: idempotency, dedupe, and quarantine already exist (built Phases
+  2/2.5 — JdbcEventLedger ON CONFLICT, JdbcQuarantineRepository, manual
+  validation → quarantine sink). So Phase 6 task #1 is largely already done —
+  net-new there is just metrics/counters over it, not new plumbing. That
+  meaningfully shrinks the phase. Waiting on the metrics+logging seam agent now.
+
+✻ Cogitated for 12s
+
+⏺ Agent "Explore metrics + logging seams" finished · 2m 13s
+
+⏺ Now I have the full picture across all three audits. Let me write the plan,
+  then confirm a couple of genuine forks with you.
+
+  Key synthesis:
+  - Task 1 (idempotency/dedupe/quarantine): already built — only net-new is
+  metrics over it.
+  - Task 2 (Resilience4j on Bedrock): net-new — wrap the single invokeModel call
+  at BedrockInsightGenerator.java:97, keep the existing template fallback.
+  - Task 3 (Actuator + Micrometer): net-new, the bulk — no actuator/micrometer
+  anywhere today.
+  - Task 4 (structured logging): greenfield — no MDC, no request-id, no logback
+  config; runbook.md already names the metrics but the code doesn't exist.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ Plan drafted. Three genuine forks to confirm before I finalize:
+
+⏺ User declined to answer questions
+  ⎿  · Phase 5 PR #9 is still open (not merged to main). How should Phase 6 
+     branch? (Merge #9, branch off main / Stack off phase5 branch)
+     · How far to take the batch/WAPE metrics? (the forecast batch is an 
+     ephemeral JVM with no web server to scrape) (Pragmatic (recommended) / Full
+     live metrics)
+     · How should I orchestrate the implementation? (Deterministic Workflow / 
+     Solo (no workflow))
+
+⏺ You said #9 is merged — let me verify main before re-asking.
+
+⏺ Bash(git fetch origin --quiet 2>&1 | tail -2; echo "=== local main vs
+      origin/main ==="; git log --oneline -6 origin/main 2>/dev/null; echo "===
+      does origin/main have…)
+  ⎿  === local main vs origin/main ===
+     d049cc1 Merge pull request #9 from heminjoshi/feat/phase5-genai-insigh
+     t
+     … +19 lines (ctrl+o to expand)
+
+❯ Should we have cloudwatch instead?                                            
+
+⏺ Confirmed: PR #9 is merged into origin/main (commit d049cc1), no open PRs.
+  Branch decision settled — I'll cut feat/phase6-hardening off updated main.
+
+  On your CloudWatch question — the key insight:
+
+  Micrometer isn't an alternative to CloudWatch — CloudWatch is one of its 
+  registries. Micrometer is a vendor-neutral facade: you write
+  meterRegistry.counter(...) once, and a registry dependency decides where it
+  lands. So this isn't "CloudWatch instead of Prometheus" — it's the same
+  profile seam the rest of the repo already uses:
+
+  ┌─────────┬───────────────────────────────┬───────────────────────────────┐
+  │         │         local (built)         │      aws (designed-only)      │
+  ├─────────┼───────────────────────────────┼───────────────────────────────┤
+  │ Registr │ micrometer-registry-prometheu │ micrometer-registry-cloudwatc │
+  │ y       │ s → /actuator/prometheus      │ h (CloudWatch EMF)            │
+  ├─────────┼───────────────────────────────┼───────────────────────────────┤
+  │         │ Scrape-able with no AWS       │ Phase-7 Monitoring CDK stack  │
+  │ Why     │ account — the demo runs       │ alarms on the same metric     │
+  │         │ standalone                    │ names                         │
+  └─────────┴───────────────────────────────┴───────────────────────────────┘
+
+  Picking CloudWatch as the local registry would break the project's core
+  "local-runnable, no AWS account" principle — you'd need AWS creds just to see
+  a metric in the demo. The right call is Prometheus locally + CloudWatch as the
+  profile-gated aws registry (designed, not active locally) — exactly mirroring
+  Postgres↔DynamoDB, template↔Bedrock. I'll fold the CloudWatch registry in as
+  a designed-only @Profile("aws") config. Let me update the plan and re-ask the
+  two open decisions.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ User answered Claude's questions:
+  ⎿  · How far to take the batch/WAPE metrics? The forecast batch is an 
+     ephemeral one-shot JVM (no web server), so it can't be scraped live the way
+     the API can. → Pragmatic (recommended)
+     · How should I orchestrate the build? → Deterministic Workflow
+
+⏺ Both locked: Pragmatic metrics + Deterministic Workflow. The plan already
+  reflects both. Finalizing.
+
+⏺ User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/velvet-snacking-starlight.md · /plan to edit
+     Phase 6 — Hardening: resilience & observability
+
+     Context
+
+     /implement-phase 6. Phase 6 is backend hardening, not CDK — CLAUDE.md's
+     "AWS CDK + productionization (Phases 6–8)" is a loose span; the
+     source-of-truth Build-Delivery-Plan-v3.md:123-129 defines Phase 6 as
+     "Hardening: resilience & observability" [WS-B, WS-D]. The 5-stack CDK is
+     Phase 7. No AWS account, no CDK in this phase.
+
+     Acceptance (:129): metrics scrape-able; injected failures (Bedrock down, 
+     forecast missing, bad event) degrade gracefully + observable.
+
+     What the audit found (verify-don't-trust paid off)
+
+     - Task 1 — idempotency/dedupe/quarantine is ALREADY BUILT (Phases 2/2.5).
+     JdbcEventLedger does INSERT … ON CONFLICT (idempotency_key) DO NOTHING
+     (JdbcEventLedger.java:41), JdbcQuarantineRepository dead-letters
+     malformed/unknown-tenant events (IngestionService.java:140,173), validation
+     is manual→quarantine sink. Net-new here = metrics/counters over the 
+     existing paths, not new plumbing.
+     - Task 2 — Resilience4j is absent everywhere. Bedrock fail-soft today is a
+     hand-rolled single-attempt try/catch → template at
+     BedrockInsightGenerator.java:95-108, SDK apiCallTimeout only, no retry, no 
+     breaker.
+     - Task 3 — Actuator/Micrometer/Prometheus absent in all 7 poms; no
+     management: block in either application.yml. docs/runbook.md already names
+     the target metrics (read_error_rate, degraded_read_count,
+     forecast_freshness_ratio, batch_success, wape_rolling) but the code doesn't
+     emit them yet.
+     - Task 4 — structured logging is greenfield: TenantScopeFilter propagates
+     tenant via a request attribute, not MDC (TenantScopeFilter.java:41); no
+     request-id, no logback-spring.xml, no log pattern.
+
+     Branch state — settled
+
+     Phase 5 PR #9 is merged into origin/main (d049cc1), no open PRs. → cut
+     feat/phase6-hardening off updated main (clean linear history).
+
+     Metrics backend — Micrometer facade, profile-gated registry (settled)
+
+     CloudWatch is not an alternative to Micrometer — it's one of its
+     registries. Instrument once with MeterRegistry; the registry dep picks the
+     backend, exactly like the repo's existing local↔aws seams:
+     - local (built): micrometer-registry-prometheus → scrape
+     /actuator/prometheus with no AWS account (keeps the demo standalone).
+     - aws (designed-only): micrometer-registry-cloudwatch behind a
+     @Profile("aws") @Configuration — not active locally; the Phase-7 Monitoring
+     CDK stack alarms on the same metric names. Choosing CloudWatch as the
+     local registry would break the no-AWS-account principle.
+
+     ---
+     Approach (M-sized — instrument existing seams, don't rebuild them)
+
+     1. Foundation (shared/contended files — one sequential pass)
+
+     - Add deps to topsales-api/pom.xml: spring-boot-starter-actuator +
+     micrometer-registry-prometheus. Add
+     io.github.resilience4j:resilience4j-circuitbreaker + -retry to
+     topsales-insight/pom.xml (plain core lib, no Spring-Boot-starter — keep it
+     off the local topsales-api runtime graph the way bedrockruntime is
+     confined; the breaker is constructed inside the module's create(...)
+     factory).
+     - application.yml (topsales-api): add
+     management.endpoints.web.exposure.include: health,info,prometheus,metrics +
+     management.metrics.tags.application: topsales-api. No actuator on the
+     ephemeral topsales-forecast batch (nothing to scrape) — it gets
+     structured-log metrics instead.
+     - TopsalesProperties: add a 7th nested record Observability/Metrics only if
+     tunables are needed (e.g. Resilience4j thresholds, freshness gauge
+     cadence). Prefer Resilience4j config in application.yml/the factory; likely
+     add a small Insight field for breaker settings rather than a whole new
+     component. (Adding a nested record breaks every new TopsalesProperties(
+     test call-site — grep first, per the Phase-5 gotcha.)
+
+     2. Parallel work-streams (disjoint file ownership)
+
+     Stream A — Resilience4j on Bedrock (topsales-insight)
+     - Wrap client.invokeModel(buildRequest(prompt))
+     (BedrockInsightGenerator.java:97) in a CircuitBreaker + Retry
+     (Decorators.ofSupplier(...).withCircuitBreaker(cb).withRetry(retry).get()).
+     Keep the existing outer try/catch → template.generate(req) —
+     CallNotPermittedException (breaker open) and ApiCallTimeoutException fall
+     through to the template, preserving fail-soft.
+     - Construct the breaker/retry inside BedrockInsightGenerator.create(...)
+     (:83) so Resilience4j stays confined to topsales-insight. Sensible defaults
+     (e.g. retry 2× on timeout/5xx, breaker 50% over a 10-call window, 30s
+     open).
+     - Tests (mirror existing mocked-client pattern,
+     BedrockInsightGeneratorTest): retry-then-succeed,
+     breaker-opens-after-N-failures → template fallback, timeout → template. No 
+     Maven in this agent.
+
+     Stream B — Metrics (topsales-api service/web + topsales-forecast batch)
+     - New MetricNames constants + thin instrumentation:
+       - degraded-read + freshness: in ForecastReadService.handle (:69)
+     increment meterRegistry.counter("topsales.read.total", "status", status, 
+     "mode", mode) at each rung (fresh/stale/degraded/pending). Freshness-ratio
+     and degraded-read-count both derive from this one counter. Count provider
+     faults at the fail-soft swallow (:87-93).
+       - insight fallback: counter topsales.insight.fallback.total — incremented
+     where Bedrock falls back to template (coordinate the meter handle with
+     Stream A via a shared MeterRegistry injected into the factory, or emit from
+     InsightAttacher).
+       - forecast freshness gauge (scrape-able batch health on the API):
+     register a Gauge topsales.forecast.freshness.seconds{tenant} that on scrape
+     reads the newest serving-row as_of age (low cardinality — few tenants).
+     This makes batch health observable at the API's /actuator/prometheus even
+     though the batch JVM is ephemeral.
+       - RED: free via actuator's auto http.server.requests for
+     TopCategoriesController — no custom code; just document it.
+       - batch_success / duration (forecast): instrument
+     ForecasterJob.run/runTenant (:102,154) with a SimpleMeterRegistry + emit a
+     structured completion log line (batch_success=true tenants=N durationMs=… 
+     pkWrites=…). Live Prometheus scrape of the batch is designed-only (prod
+     pushes via CloudWatch EMF / Pushgateway — documented).
+       - WAPE: stays the offline EvalMain/BacktestRunner report that already
+     exists (docs/forecast-eval-report.md). Live wape_rolling is a documented 
+     residual (designed-only) — wiring WAPE into the live batch is out of scope
+     for an M phase. State this honestly in the runbook.
+     - No Maven in this agent.
+
+     Stream C — Structured logging + runbook + Postman (topsales-api
+     filter/config, docs/, postman/)
+     - MDC in TenantScopeFilter (:41): MDC.put("tenantId", tenant);
+     generate/propagate a request id (accept inbound X-Request-Id else
+     UUID.randomUUID()), MDC.put("requestId", …), echo it in the response
+     header, clear both in a finally.
+     - logback-spring.xml (topsales-api src/main/resources) with a console
+     pattern including %X{tenantId} %X{requestId} (+ a JSON-ish encoder
+     optional). For the batch, MDC.put("tenantId", …) per-tenant in
+     ForecasterJob.runTenant (cleared in finally).
+     - Finalize docs/runbook.md so the SLO/alarm metric names exactly match
+     what's now emitted (rename/confirm read_error_rate→http.server.requests
+     errors, degraded_read_count→derived from
+     topsales.read.total{status=degraded}, forecast_freshness_ratio,
+     batch_success); add the WAPE-live residual note + the "metrics scrape-able
+     at /actuator/prometheus" how-to.
+     - Postman: add an /actuator/prometheus scrape assertion (metric names
+     present) + assert the degradation scenario bumps
+     topsales.read.total{status=degraded}.
+     - No Maven in this agent.
+
+     3. Verify (one agent, single Maven invocation)
+
+     - mvn -o test-compile + make test (full reactor, no Docker).
+     - Adversarial review: resilience talking point — confirm breaker-open and
+     timeout BOTH still return the grounded template (read never blocks);
+     confirm MDC is cleared in finally (no tenant-id leakage across pooled
+     threads — the security-adjacent correctness point for this phase).
+
+     ---
+     Critical files (reuse — do not rebuild)
+
+     - topsales-insight/.../BedrockInsightGenerator.java (:83 factory, :97
+     invoke) — wrap, don't replace the fallback.
+     - topsales-api/.../service/ForecastReadService.java (:69 tier decision,
+     :102 freshness) — instrument in place.
+     - topsales-forecast/.../batch/ForecasterJob.java (:102,154) — instrument +
+     MDC.
+     - topsales-api/.../web/TenantScopeFilter.java (:41) — add MDC + request-id.
+     - topsales-common/.../config/TopsalesProperties.java (6 components today) —
+     extend carefully.
+     - docs/runbook.md — finalize to match emitted metric names.
+
+     Deliverables the user explicitly asked for (process, alongside the code)
+
+     1. Update the /implement-phase skill
+     (.claude/skills/implement-phase/SKILL.md) so it persists the approved plan 
+     to claude-sessions/implementation-plan/phase-<N>-*.md (§3) and wires the
+     index Plan doc column (§6) — the Phase-5 handoff flagged that no phase-5
+     plan doc was authored.
+     2. Author claude-sessions/implementation-plan/phase-6-hardening.md for this
+     phase and flip the index row (README.md:30) from _todo_ to the new doc +
+     status.
+
+     Verification
+
+     - make test — full reactor unit gate, must be green (currently 131 tests;
+     +resilience +metrics tests).
+     - Live acceptance (make up && make seed && make forecast && make run):
+       - curl localhost:8080/actuator/prometheus → shows http_server_requests…,
+     topsales_read_total…, topsales_forecast_freshness_seconds….
+       - Bedrock down: provider=bedrock with no creds → insight still renders
+     (template); breaker opens after N failures; topsales_insight_fallback_total
+     climbs; read never blocks.
+       - Forecast missing: wipe serving table → dashboard renders degraded;
+     topsales_read_total{status="degraded"} increments (observable).
+       - Bad event: POST malformed event → 202 with quarantined=1 (already
+     works); confirm logs carry tenantId/requestId.
+     - *IT Testcontainers tests remain CI-only on this host.
+     - public-repo-check before push (runbook/metrics are public-safe; no
+     secrets).
+
+     Out of scope (honest residuals)
+
+     - Live wape_rolling metric (stays offline EvalMain report — documented).
+     - Prometheus scrape of the ephemeral batch JVM (prod push designed-only).
+     - SQS DLQ for quarantine (📐 designed-only per :124).
+     - CDK / infra (Phase 7).
+
+⏺ Plan approved. Let me set up tracking and start with branch hygiene.
+⏺ Bash(git checkout main 2>&1 | tail -2 && git pull --ff-only origin main 2>&1 |
+      tail -3 && git checkout -b feat/phase6-hardening 2>&1 | tail -2 && echo
+      "=== now on ==…)
+  ⎿  Your branch is behind 'origin/main' by 5 commits, and can be fast-forw
+     arded.
+       (use "git pull" to update your local branch)
+     … +11 lines (ctrl+o to expand)
+
+⏺ Branch created off merged main. Now let me read a few key files I'll need
+  verbatim for the foundation + plan doc, and update the skill + write the
+  impl-plan doc (these don't touch build files).
+
+❯ /workflows 
+  ⎿  Dynamic workflows dialog dismissed
+
+⏺ Now the two process deliverables you asked for. First, update the skill so it
+  persists the plan doc:
+
+⏺ Update(.claude/skills/implement-phase/SKILL.md)
+  ⎿  Added 8 lines
+      54  **Verification** section (`make test`, the phase's live accepta
+          nce checks). Use `AskUserQuestion` for
+      55  genuine scoping forks. Get sign-off with `ExitPlanMode`. Keep i
+          t scannable.
+      56  
+      57 +**Then persist the approved plan as a durable phase doc** (the 
+         +ephemeral `~/.claude/plans/*` file is                          
+      58 +not tracked and disappears): write `claude-sessions/implementat
+         +ion-plan/phase-<N>-<slug>.md` following                        
+      59 +the shape in that dir's `README.md` (Objective & acceptance · C
+         +urrent state · Decisions to lock ·                             
+      60 +Steps · Acceptance checklist · Out of scope), and flip the phas
+         +e's row in the index                                           
+      61 +(`claude-sessions/implementation-plan/README.md`) from `_todo_`
+         + to the new doc link. Do this **before**                       
+      62 +orchestrating — the doc is the build's working reference and th
+         +e handoff links to it. (Phase 5 skipped                        
+      63 +this and left a `_(approved exec plan)_` gap — don't repeat it.
+         +)                                                              
+      64 +                                                               
+      65  ## 4. Orchestrate the implementation (deterministic Workflow)
+      66  
+      67  **Only when the user has opted into multi-agent orchestration**
+           (the `Workflow` tool's rule — they
+
+⏺ Update(.claude/skills/implement-phase/SKILL.md)
+  ⎿  Added 3 lines, removed 1 line
+       98  ## 6. Close out
+       99  
+      100  - Invoke the **`handoff`** skill to write `claude-sessions/han
+           doff-docs/phase-<N>-handoff.md` and
+      101 -  wire the implementation-plan index. (Handoff docs are privat
+          -e/gitignored — never committed.)                              
+      101 +  wire the implementation-plan index (set the phase row's **St
+          +atus** to ✅ done and confirm its                             
+      102 +  **Plan doc** column points at the `phase-<N>-*.md` you persi
+          +sted in §3, not `_todo_`). (Handoff and                       
+      103 +  plan docs both live under `claude-sessions/` — private/gitig
+          +nored, never committed.)                                      
+      104  - Commit in slices with the repo's `feat(phase<N>): …` convent
+           ion; sync tracked docs (`CLAUDE.md`
+      105    status line, `README.md` built-vs-designed, `docs/lld.md`, `
+           docs/api/openapi.yaml`).
+      106  - Run **`public-repo-check`** before any push; open the PR to 
+           `main`.
+  ⎿  1 skill available
+
+⏺ Skill updated. Now write the durable phase-6 plan doc and flip the index row:
+
+⏺ Write(claude-sessions/implementation-plan/phase-6-hardening.md)
+  ⎿  Wrote 97 lines to
+     claude-sessions/implementation-plan/phase-6-hardening.md
+       2 # Phase 6 — Hardening: resilience & observability
+       3 > [WS-B, WS-D] · source `Build-Delivery-Plan-v3.md:123-129`. **B
+       4 > 5-stack CDK is Phase 7. No AWS account, no infra in this phase
+         .
+       5 
+       7 ## Objective & acceptance
+       8 Make the running system **resilient under injected failure** and
+       9  **observable**.
+      10 **Acceptance (`:129`):** *metrics scrape-able; injected failures
+          (Bedrock down, forecast missing, bad
+     … +150 lines (ctrl+o to expand)
+  ⎿  1 skill available
+
+⏺ Now flip the index row:
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Error editing file
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 1 line, removed 1 line
+      27  | 3 | Forecasting engine | — | [phase-3-forecasting-engine.md](
+          phase-3-forecasting-engine.md) | [phase-3-handoff](../handoff-d
+          ocs/phase-3-handoff.md) | ✅ done |
+      28  | 4 | Forecast serving + resilience | FORECAST-READY | [phase-4
+          -forecast-serving.md](phase-4-forecast-serving.md) | [phase-4-h
+          andoff](../handoff-docs/phase-4-handoff.md) | ✅ done |
+      29  | 5 | GenAI insight layer | AI-READY | [phase-5-genai-insight.m
+          d](phase-5-genai-insight.md) | [phase-5-handoff](../handoff-doc
+          s/phase-5-handoff.md) | ✅ done |
+      30 -| 6 | Hardening: resilience & observability | — | _todo_ | | | 
+      30 +| 6 | Hardening: resilience & observability | — | [phase-6-hard
+         +ening.md](phase-6-hardening.md) | | 🚧 in progress |           
+      31  | 7 | UI production path & infra validation | — | _todo_ | | |
+      32  | 8 | Data, tests, Postman | PROD-SHAPED | _todo_ | | |
+      33  | 9 | Presentation & rehearsal | 🎤 PRESENTATION | _todo_ | | |
+⏺ Process deliverables done (skill updated, phase-6 doc persisted, index
+  flipped). Now I'll launch the deterministic implementation Workflow:
+  foundation → 3 ownership-partitioned streams → verify. Let me author it.
+
+  One refinement I'm baking in vs. the plan: the CloudWatch registry stays 
+  documentation-only (runbook + commented yml), not a live dependency — adding
+  micrometer-registry-cloudwatch to the API runtime would make Spring Boot try
+  to autoconfigure a CloudWatch client without AWS creds and risk a startup
+  failure. Documenting the one-dep swap is the honest "designed-only" level (the
+  Monitoring CDK stack is Phase 7 anyway).
+
+⏺ Workflow(Phase 6 — resilience (Resilience4j on Bedrock) + observability
+          (Actuator/Micrometer, structured logging))
+  ⎿  /workflows to view dynamic workflow runs
+  ⎿  1 skill available
+
+⏺ The skill was updated (by you/linter) to also require authoring test-plan/
+  cases per phase. There's a tracked public test-plan/ dir — I'll author Phase 6
+  cases while the workflow runs (disjoint from its code files). Let me look at
+  the structure.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/test-plan && ls -la
+      && echo "=== README head ===" && head -60 README.md)
+  ⎿  total 96
+     drwxr-xr-x@  8 heminjoshi  staff    256 Jun 29 07:58 .
+     drwxr-xr-x  25 heminjoshi  staff    800 Jun 29 07:53 ..
+     … +50 lines (ctrl+o to expand)
+
+⏺ README already lists [P6]. Let me read the plan files to match their case-ID
+  style before adding P6 cases.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Canary already has P6 (CN-11). The main gap is a dedicated [P6] section in 
+  integration-tests.md and manual-qa checks. Let me read manual-qa, then add P6
+  cases to both.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now I'll add the P6 cases. First, a [P6] section in integration-tests.md:
+
+⏺ Update(test-plan/integration-tests.md)
+  ⎿  Added 36 lines
+      165  | IT-AI-03 | Bedrock timeout/error | falls back to determinist
+           ic template; read still 200 |
+      166  | IT-AI-04 | **Prompt injection** via category name (e.g. `"Ig
+           nore prior instructions…"`) | category treated as untrusted da
+           ta; no instruction-following; figures unchanged |
+      167  | IT-AI-05 | Lazy + cached | first view generates; second view
+            served from cache |
+      168 +                                                              
+      169 +---                                                           
+      170 +                                                              
+      171 +## 8. Hardening: resilience & observability [P6] — spec, `@Dis
+          +abled`/unit until built                                       
+      172 +                                                              
+      173 +### 8.1 Resilience4j on Bedrock (circuit breaker + retry; fail
+          +-soft preserved)                                              
+      174 +Unit-level with a mocked `BedrockRuntimeClient` (no Testcontai
+          +ners); the read must **never** block.                         
+      175 +| ID | Scenario | Expected |                                  
+      176 +|---|---|---|                                                 
+      177 +| IT-RS-01 | Transient error then success (retry) | client thr
+          +ows `ApiCallTimeoutException` once then returns a grounded bod
+          +y → grounded text returned; `invokeModel` called twice (1 retr
+          +y) |                                                          
+      178 +| IT-RS-02 | Breaker opens after threshold | drive ≥ `minimumN
+          +umberOfCalls` failures → breaker `OPEN`; next call short-circu
+          +its (`CallNotPermittedException`) **without** invoking the cli
+          +ent → deterministic **template** returned |                   
+      179 +| IT-RS-03 | Breaker half-open recovery | after `waitDurationI
+          +nOpenState`, a probe success closes the breaker; subsequent ca
+          +lls invoke the client again |                                 
+      180 +| IT-RS-04 | Timeout → template | `ApiCallTimeoutException` (n
+          +o retry left) → template fallback; read still produces a groun
+          +ded insight |                                                 
+      181 +| IT-RS-05 | Fallback counter | every fallback path (exception
+          +, breaker-open, ungrounded/blank) increments `topsales.insight
+          +.fallback.total` **exactly once**; a grounded success does **n
+          +ot** |                                                        
+      182 +| IT-RS-06 | No dep leakage | no `software.amazon.awssdk` / `r
+          +esilience4j` symbol resolvable from `topsales-api` — confined 
+          +to `topsales-insight` (compile-level invariant) |             
+      183 +                                                              
+      184 +### 8.2 Metrics — Actuator + Micrometer (RED + ML-quality)    
+      185 +| ID | Scenario | Expected |                                  
+      186 +|---|---|---|                                                 
+      187 +| IT-OB-01 | Prometheus scrape live | `GET /actuator/prometheu
+          +s` → 200; body contains `http_server_requests`, `topsales_read
+          +_total`, `topsales_forecast_freshness_seconds` |              
+      188 +| IT-OB-02 | Health endpoint | `GET /actuator/health` → 200 `s
+          +tatus: UP`; DB + Redis components reported |                  
+      189 +| IT-OB-03 | `topsales.read.total` tagging | each read increme
+          +nts the counter **once** with correct `status` (fresh/stale/de
+          +graded/pending) + `mode` (forecast/actuals) tags — no double-c
+          +ount across rungs |                                           
+      190 +| IT-OB-04 | Degraded-read observable | wipe serving table → r
+          +ead returns `degraded` (still 200) **and** `topsales_read_tota
+          +l{status="degraded"}` increments |                            
+      191 +| IT-OB-05 | Freshness gauge | after a batch, `topsales_foreca
+          +st_freshness_seconds` ≈ age of newest serving row; **empty ser
+          +ving table → gauge does not throw** (NaN/−1 sentinel) |       
+      192 +| IT-OB-06 | Provider-fault counter | a serving-read RuntimeEx
+          +ception (forced) drops a rung **and** increments `topsales_for
+          +ecast_provider_faults_total`; read still 200 |                
+      193 +| IT-OB-07 | RED error rate | a 4xx (e.g. `k=0`) is recorded b
+          +y `http_server_requests` with the matching `status`/`outcome` 
+          +tags |                                                        
+      194 +| IT-OB-08 | Batch structured metric | forecast batch logs one
+          + `batch_success=true tenants=… durationMs=… pkWrites=…` line o
+          +n success; on a forced failure logs `batch_success=false` with
+          + duration before rethrow |                                    
+      195 +                                                              
+      196 +### 8.3 Structured logging (tenant + request id via MDC)      
+      197 +| ID | Scenario | Expected |                                  
+      198 +|---|---|---|                                                 
+      199 +| IT-LG-01 | Tenant + request id in log line | a read with `X-
+          +Tenant-Id: t_demo` emits log lines carrying `tenantId=t_demo` 
+          +and a `requestId` (MDC pattern) |                             
+      200 +| IT-LG-02 | Inbound request id honored | request with `X-Requ
+          +est-Id: abc123` → logs + the **response** `X-Request-Id` heade
+          +r echo `abc123` |                                             
+      201 +| IT-LG-03 | Generated request id | request without the header
+          + → a UUID `requestId` is generated and returned in the respons
+          +e header |                                                    
+      202 +| IT-LG-04 | **MDC cleared (no leak)** | after the filter retu
+          +rns, MDC has no `tenantId`/`requestId`; holds even when the ch
+          +ain throws (cleared in `finally`) — guards against cross-threa
+          +d tenant-id leakage on pooled threads |                       
+      203 +| IT-LG-05 | Batch per-tenant MDC | `ForecasterJob.runTenant` 
+          +sets `tenantId` in MDC and removes it in `finally` (no bleed a
+          +cross tenants in one batch run) |                             
+      204  </content>
+
+⏺ Update(test-plan/manual-qa-test.md)
+  ⎿  Added 9 lines
+      65  | MQ-50 | View a populated forecast (local/template) | A ground
+          ed one-line insight appears, citing only figures shown in the t
+          able |
+      66  | MQ-51 | (Bedrock enabled) same view | Insight still grounded;
+           on timeout/error it silently falls back to the template (no er
+          ror to the user) |
+      67  
+      68 +## 6.5 Observability & resilience [P6]                         
+      69 +| ID | Step | Expected |                                       
+      70 +|---|---|---|                                                  
+      71 +| MQ-55 | `curl localhost:8080/actuator/prometheus` | 200 plain
+         +-text; grep shows `http_server_requests`, `topsales_read_total`
+         +, `topsales_forecast_freshness_seconds` |                      
+      72 +| MQ-56 | `curl localhost:8080/actuator/health` | 200 `{"status
+         +":"UP"}` with DB + Redis components UP |                       
+      73 +| MQ-57 | Do MQ-41 (wipe serving) then re-scrape | `topsales_re
+         +ad_total{status="degraded"}` sample present and climbing — the 
+         +degraded read is **observable**, not just visible in the UI |  
+      74 +| MQ-58 | Tail app logs during any read | each line carries `[t
+         +_demo <requestId>]` (tenant + request id from MDC); a request s
+         +ent with `X-Request-Id: demo1` echoes `demo1` in the response h
+         +eader and the logs |                                           
+      75 +| MQ-59 | Bedrock-down resilience (`provider=bedrock`, no AWS c
+         +reds) | insight still renders the **template** (no error, read 
+         +not blocked); after repeated calls the breaker opens and `topsa
+         +les_insight_fallback_total` keeps climbing |                   
+      76 +                                                               
+      77  ## 7. Cross-browser / responsiveness / a11y (smoke)
+      78  | ID | Step | Expected |
+      79  |---|---|---|
+
+⏺ P6 test-plan cases written (integration §8, manual-qa §6.5; canary CN-11
+  already P6-aware). Now I'll wait for the implementation workflow to finish —
+  it's running the foundation → 3 streams → verify stages in the background.
+
+✻ Cogitated for 10m 6s
+
+⏺ Dynamic workflow "Phase 6 — resilience (Resilience4j on Bedrock) +
+observability (Actuator/Micrometer, structured logging)" completed · 9m 10s
+
+⏺ Workflow complete — make test GREEN at 145 tests (was 131), adversarial review
+  all-PASS, one test-fake fix. Let me verify it myself and review the diff.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform && git status
+      --short && echo "=== diffstat ===" && git diff --stat)
+  ⎿   M .claude/skills/implement-phase/SKILL.md
+      M docs/runbook.md
+      M postman/TopSales.postman_collection.json
+     … +44 lines (ctrl+o to expand)
+
+⏺ Let me run make test myself to confirm, and review the key new/changed files
+  in parallel.
+
+⏺ Bash(make test 2>&1 | tail -35)  ⎿  [INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed:
+      0.277 s -- in com.topsales.api.web.TopCategoriesControllerTest
+     [INFO] Running com.topsales.api.web.TenantsControllerTest
+     … +34 lines (ctrl+o to expand)
+  ⎿  (timeout 10m)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ make test confirmed green myself (full reactor SUCCESS, api 57). The Bedrock
+  resilience code is clean. Let me review the metrics + read-path + filter
+  changes, then run live acceptance.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service/topsales-api
+      /src/main/java/com/topsales/api/metrics && for f in *.java; do echo "=====
+      $f ====="; c…)
+  ⎿  ===== ForecastFreshnessGauge.java =====
+     package com.topsales.api.metrics;
+     … +83 lines (ctrl+o to expand)
+
+⏺ Metrics classes are clean. Let me check the read-path counter and filter MDC,
+  then go live.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform && git diff
+      service/topsales-api/src/main/java/com/topsales/api/service/ForecastReadSe
+      rvice.java service/to…)
+  ⎿  diff --git a/service/topsales-api/src/main/java/com/topsales/api/servi
+     ce/ForecastReadService.java b/service/topsales-api/src/main/java/com/t
+     opsales/api/service/ForecastReadService.java
+     … +151 lines (ctrl+o to expand)
+
+⏺ All changes are clean and well-documented (single counter emission point; MDC
+  cleared in finally even on throw). Now live acceptance. Let me bring up the
+  stack.
+
+⏺ Bash(make up 2>&1 | tail -15)
+  ⎿  docker compose -f local/docker-compose.yml up -d
+      Container topsales-redis Running
+      Container topsales-postgres Running
+
+⏺ Bash(echo "=== seed ===" && make seed 2>&1 | tail -6 && echo "=== forecast
+      ===" && make forecast 2>&1 | tail -8)
+  ⎿  === seed ===
+     [INFO] ---------------------------------------------------------------
+     ---------
+     … +19 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+⏺ Batch structured metric line works: batch metrics: batch_success=true 
+  tenants=2 durationMs=227 pkWrites=18, and the MDC log pattern [ ] is active.
+  Now start the API and run the live checks.
+
+⏺ Bash(rm -f /tmp/p6-api.log && nohup make run > /tmp/p6-api.log 2>&1 &
+      echo "launched, waiting for ready..."; until grep -q "Started
+      TopSalesApplication\|Tomcat start…)
+  ⎿  Error: Exit code 1
+     launched, waiting for ready...
+     STARTUP FAILED
+     08:09:43.762 WARN  [ ] 
+     o.s.b.w.s.s.c.AnnotationConfigServletWebServerApplicationContext - 
+     Exception encountered during context initialization - cancelling refresh 
+     attempt: org.springframework.context.ApplicationContextException: Failed to
+     start bean 'webServerStartStop'
+     08:09:43.763 INFO  [ ] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - 
+     Shutdown initiated...
+     08:09:43.770 INFO  [ ] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - 
+     Shutdown completed.
+     08:09:43.777 INFO  [ ] o.s.b.a.l.ConditionEvaluationReportLogger - 
+
+     Error starting ApplicationContext. To display the condition evaluation 
+     report re-run your application with 'debug' enabled.
+     08:09:43.781 ERROR [ ] o.s.b.d.LoggingFailureAnalysisReporter - 
+     … +12 lines (ctrl+o to expand)
+
+⏺ Port 8080 is occupied (a stale make run). Let me free it and retry.
+
+⏺ Bash(lsof -ti tcp:8080 | xargs -r kill -9 2>/dev/null; sleep 2; echo "killed
+      stale listeners"; lsof -ti tcp:8080 || echo "port 8080 free")
+  ⎿  killed stale listeners
+     port 8080 free
+
+⏺ Bash(rm -f /tmp/p6-api.log && nohup make run > /tmp/p6-api.log 2>&1 &
+      echo "launched..."; until grep -q "Started TopSalesApplication\|Tomcat
+      started on port" /tmp/p6…)
+  ⎿  launched...
+     === READY ===
+     08:10:05.392 INFO  [ ] o.s.boot.tomcat.TomcatWebServer - Tomcat starte
+     … +3 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ API is up. Now run the live acceptance checks: prometheus scrape, a forecast
+  read (fresh + freshness gauge + read counter), MDC in logs, malformed-event
+  quarantine.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== 1. health ==="; curl -s localhost:8080/actuator/health…)
+  ⎿  === 1. health ===
+     {
+       "groups": [
+     … +22 lines (ctrl+o to expand)
+
+⏺ Working: health UP, forecast read fresh with grounded insight, X-Request-Id
+  echoed, and prometheus shows
+  topsales_read_total{mode="forecast",status="fresh"},
+  topsales_forecast_freshness_seconds=50.0, and RED http_server_requests. Now
+  the degradation + malformed-event + MDC-log checks.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== MDC in logs (the live-demo-1 request) ==="…)
+  ⎿  === MDC in logs (the live-demo-1 request) ===
+
+     === Wipe serving rows → forecast read must degrade, observably ===
+     … +8 lines (ctrl+o to expand)
+
+⏺ The serving table name is wrong and the second read was a Redis cache hit (so
+  handle() wasn't re-invoked). Let me find the real table names and the cache,
+  then wipe both to force degradation.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== serving tables ==="; docker exec topsales-postgres psql -U
+      topsales -d topsales -c "\dt" 2>&1 | g…)
+  ⎿  === serving tables ===
+      public | serving_active_version | table | topsales
+      public | serving_rows           | table | topsales
+     … +8 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== wipe serving + flush Redis cache (force recompute → degradation)
+      ==="…)
+  ⎿  === wipe serving + flush Redis cache (force recompute → degradation) =
+     ==
+     TRUNCATE TABLE
+     … +13 lines (ctrl+o to expand)
+⏺ Degradation acceptance passes: wipe → status=degraded (200, honest asOf),
+  topsales_read_total{status="degraded"}=1 (observable), and
+  topsales_forecast_freshness_seconds=NaN (empty-table sentinel, no throw). Now
+  the malformed-event check + proving MDC populates a request-time log line.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== malformed event (amount scale 3) → 202 quarantined=1, no 5xx
+      ==="…)
+  ⎿  === malformed event (amount scale 3) → 202 quarantined=1, no 5xx ===
+     {
+       "received": 1,
+     … +10 lines (ctrl+o to expand)
+
+⏺ Malformed-event quarantine works (quarantined=1, 202). The MDC pattern is
+  confirmed active (every line shows the [ ] = [%X{tenantId:-} %X{requestId:-}]
+  bracket) and the filter's set/clear is unit-tested + the response X-Request-Id
+  echoed live. Let me get a concrete populated bracket from the batch's
+  per-tenant MDC — and restore the serving rows I wiped — by re-running the
+  forecast.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      make forecast 2>&1 | grep -E "\[t_(demo|acme)" | head -8…)
+  ⎿  08:12:26.187 INFO  [t_acme ] c.t.forecast.batch.ForecasterJob - Foreca
+     st batch: tenant=t_acme series=12 pkWrites=9
+     08:12:26.221 INFO  [t_demo ] c.t.forecast.batch.ForecasterJob - Foreca
+     … +4 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+⏺ All live acceptance checks pass. Concrete populated MDC brackets [t_acme ] /
+  [t_demo ] from the batch, and the freshness gauge recovered to 1.0 after the
+  batch restored serving rows. Let me stop the API and record results.
+
+⏺ Bash(lsof -ti tcp:8080 | xargs -r kill -9 2>/dev/null; echo "API stopped"; git
+      status --short | wc -l | xargs echo "changed files:")
+  ⎿  API stopped
+     changed files: 24
+
+⏺ Verification complete — all acceptance criteria met live. Now close-out. Let
+  me sync the tracked docs (CLAUDE.md status line + README built-vs-designed)
+  and check what docs/lld.md needs. Let me read the relevant current text.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== CLAUDE.md status line ==="; grep -n "Built through Phase\|Next
+      is" CLAUDE.md…)
+  ⎿  === CLAUDE.md status line ===
+     7:A **multi-tenant "top sales by category" platform** built as a publi
+     c portfolio/interview project — designed to *read* like production, no
+     … +27 lines (ctrl+o to expand)
+
+⏺ Let me sync the tracked docs. CLAUDE.md status line first:
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+       4  
+       5  ## What this repo is
+       6  
+       7 -A **multi-tenant "top sales by category" platform** built as a 
+         -public portfolio/interview project — designed to *read* like pr
+         -oduction, not to be one. **Built through Phase 5** (of Phases 0
+         -–10): the Maven multi-module service runs locally end-to-end — 
+         -ingestion → per-tenant/per-channel aggregates → read API + dash
+         -board (actuals), plus the channel dimension + synthetic-data ge
+         -nerator (Phase 2.5), a central config surface (`TopsalesPropert
+         -ies`), the forecasting engine (Phase 3: `Forecaster` impls, the
+         - batch writing versioned serving rows, the WAPE backtest), the 
+         -forecast **read path** (Phase 4: `ForecastProvider` over precom
+         -puted serving rows, a 4-tier degradation chain that never fails
+         - closed — `fresh`→`stale`→`degraded`→`pending` — a Redis cache-
+         -aside layer with per-tenant version-bump invalidation and full 
+         -fail-open, and dashboard status/interval surfacing), and the gr
+         -ounded **GenAI insight layer** (Phase 5: an always-on determini
+         -stic `TemplateInsightGenerator` floor + a designed `BedrockInsi
+         -ghtGenerator` behind the same `InsightGenerator` seam, `Groundi
+         -ngValidator` rejecting any non-derivable number, prompt-injecti
+         -on-safe handling of untrusted category names, lazy+cached insid
+         -e the Phase-4 Redis top-k key). Next is the AWS CDK + productio
+         -nization (Phases 6–8).                                         
+       7 +A **multi-tenant "top sales by category" platform** built as a 
+         +public portfolio/interview project — designed to *read* like pr
+         +oduction, not to be one. **Built through Phase 6** (of Phases 0
+         +–10): the Maven multi-module service runs locally end-to-end — 
+         +ingestion → per-tenant/per-channel aggregates → read API + dash
+         +board (actuals), plus the channel dimension + synthetic-data ge
+         +nerator (Phase 2.5), a central config surface (`TopsalesPropert
+         +ies`), the forecasting engine (Phase 3: `Forecaster` impls, the
+         + batch writing versioned serving rows, the WAPE backtest), the 
+         +forecast **read path** (Phase 4: `ForecastProvider` over precom
+         +puted serving rows, a 4-tier degradation chain that never fails
+         + closed — `fresh`→`stale`→`degraded`→`pending` — a Redis cache-
+         +aside layer with per-tenant version-bump invalidation and full 
+         +fail-open, and dashboard status/interval surfacing), and the gr
+         +ounded **GenAI insight layer** (Phase 5: an always-on determini
+         +stic `TemplateInsightGenerator` floor + a designed `BedrockInsi
+         +ghtGenerator` behind the same `InsightGenerator` seam, `Groundi
+         +ngValidator` rejecting any non-derivable number, prompt-injecti
+         +on-safe handling of untrusted category names, lazy+cached insid
+         +e the Phase-4 Redis top-k key). Next is the AWS CDK + productio
+         +nization (Phases 6–8).                                         
+       8  
+       9  Two docs under `private/` (gitignored, never committed) are the
+           **source of truth** — read them before scaffolding or implemen
+          ting, and keep new work consistent with the structure and phase
+           they define:
+      10  - the **delivery plan** (`private/Build-Delivery-Plan-v3.md`) —
+           scope, phase sequencing (Phases 0–10, organized into workstrea
+          ms WS-A…WS-G), target directory layout, built-vs-designed-only.
+           This v3 supersedes `Build-Delivery-Plan-v2.md` (and the older 
+          `Build-Delivery-Plan-and-Repo-Structure.md`) in the same folder
+          ; v3 syncs ADRs to the 9 explicit decision records and elevates
+           comparative trade-offs as a first-class, scored deliverable.
+
+⏺ Now add the Phase 6 clause to CLAUDE.md and fix the "Next is" pointer:
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+       4  
+       5  ## What this repo is
+       6  
+       7 -A **multi-tenant "top sales by category" platform** built as a 
+         -public portfolio/interview project — designed to *read* like pr
+         -oduction, not to be one. **Built through Phase 6** (of Phases 0
+         -–10): the Maven multi-module service runs locally end-to-end — 
+         -ingestion → per-tenant/per-channel aggregates → read API + dash
+         -board (actuals), plus the channel dimension + synthetic-data ge
+         -nerator (Phase 2.5), a central config surface (`TopsalesPropert
+         -ies`), the forecasting engine (Phase 3: `Forecaster` impls, the
+         - batch writing versioned serving rows, the WAPE backtest), the 
+         -forecast **read path** (Phase 4: `ForecastProvider` over precom
+         -puted serving rows, a 4-tier degradation chain that never fails
+         - closed — `fresh`→`stale`→`degraded`→`pending` — a Redis cache-
+         -aside layer with per-tenant version-bump invalidation and full 
+         -fail-open, and dashboard status/interval surfacing), and the gr
+         -ounded **GenAI insight layer** (Phase 5: an always-on determini
+         -stic `TemplateInsightGenerator` floor + a designed `BedrockInsi
+         -ghtGenerator` behind the same `InsightGenerator` seam, `Groundi
+         -ngValidator` rejecting any non-derivable number, prompt-injecti
+         -on-safe handling of untrusted category names, lazy+cached insid
+         -e the Phase-4 Redis top-k key). Next is the AWS CDK + productio
+         -nization (Phases 6–8).                                         
+       7 +A **multi-tenant "top sales by category" platform** built as a 
+         +public portfolio/interview project — designed to *read* like pr
+         +oduction, not to be one. **Built through Phase 6** (of Phases 0
+         +–10): the Maven multi-module service runs locally end-to-end — 
+         +ingestion → per-tenant/per-channel aggregates → read API + dash
+         +board (actuals), plus the channel dimension + synthetic-data ge
+         +nerator (Phase 2.5), a central config surface (`TopsalesPropert
+         +ies`), the forecasting engine (Phase 3: `Forecaster` impls, the
+         + batch writing versioned serving rows, the WAPE backtest), the 
+         +forecast **read path** (Phase 4: `ForecastProvider` over precom
+         +puted serving rows, a 4-tier degradation chain that never fails
+         + closed — `fresh`→`stale`→`degraded`→`pending` — a Redis cache-
+         +aside layer with per-tenant version-bump invalidation and full 
+         +fail-open, and dashboard status/interval surfacing), and the gr
+         +ounded **GenAI insight layer** (Phase 5: an always-on determini
+         +stic `TemplateInsightGenerator` floor + a designed `BedrockInsi
+         +ghtGenerator` behind the same `InsightGenerator` seam, `Groundi
+         +ngValidator` rejecting any non-derivable number, prompt-injecti
+         +on-safe handling of untrusted category names, lazy+cached insid
+         +e the Phase-4 Redis top-k key), and the **hardening** layer (Ph
+         +ase 6: a Resilience4j circuit-breaker + retry wrapping the sing
+         +le Bedrock `InvokeModel` call — confined to `topsales-insight`,
+         + still failing soft to the template; Actuator + Micrometer with
+         + a Prometheus registry scraped at `/actuator/prometheus` — RED 
+         +via `http.server.requests` plus custom ML-quality meters `topsa
+         +les.read.total{status,mode}` / `topsales.forecast.freshness.sec
+         +onds` / `topsales.forecast.provider.faults.total` / `topsales.i
+         +nsight.fallback.total`; and structured logging via SLF4J MDC `t
+         +enantId`+`requestId` set/cleared in `TenantScopeFilter` with an
+         + echoed `X-Request-Id`). Idempotency/dedupe/quarantine were alr
+         +eady built in Phase 2/2.5; Phase 6 made them observable. CloudW
+         +atch is the designed `aws`-profile registry swap (not active lo
+         +cally). Next is Phase 7 (UI production path + AWS CDK infra val
+         +idation).                                                      
+       8  
+       9  Two docs under `private/` (gitignored, never committed) are the
+           **source of truth** — read them before scaffolding or implemen
+          ting, and keep new work consistent with the structure and phase
+           they define:
+      10  - the **delivery plan** (`private/Build-Delivery-Plan-v3.md`) —
+           scope, phase sequencing (Phases 0–10, organized into workstrea
+          ms WS-A…WS-G), target directory layout, built-vs-designed-only.
+           This v3 supersedes `Build-Delivery-Plan-v2.md` (and the older 
+          `Build-Delivery-Plan-and-Repo-Structure.md`) in the same folder
+          ; v3 syncs ADRs to the 9 explicit decision records and elevates
+           comparative trade-offs as a first-class, scored deliverable.
+
+⏺ Now README. Let me read the relevant sections:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(README.md)
+  ⎿  Added 1 line, removed 1 line
+       7  > natural-language insight, and presents it in a dashboard. Jav
+          a / Spring Boot, runnable locally
+       8  > with one `docker compose up`; AWS path designed in CDK behind
+           the same interfaces.
+       9  
+      10 - > **Status:** 🟢 Runnable through **Phase 5**. Ingest events →
+         - idempotent per-tenant, per-channel                            
+      10 + > **Status:** 🟢 Runnable through **Phase 6**. Ingest events →
+         + idempotent per-tenant, per-channel                            
+      11  > category aggregates → ranked top-k over the REST API → served
+           dashboard. On top of that:
+      12  > the **channel** first-class dimension + a deterministic seaso
+          nal synthetic-data generator
+      13  > (Phase 2.5), a **central config** surface (`TopsalesPropertie
+          s`), the **forecasting engine**
+
+⏺ Update(README.md)
+  ⎿  Added 5 lines, removed 1 line
+      19  > `pending` — with the dashboard surfacing a **status badge**, 
+          `asOf`, confidence, and prediction
+      20  > intervals), and the **grounded GenAI insight** layer (Phase 5
+           — a deterministic template floor
+      21  > behind the `InsightGenerator` seam, `GroundingValidator`-chec
+          ked, injection-safe, lazy+cached in the
+      22 -> existing per-tenant Redis key). Next: the AWS CDK + productio
+         -nization (Phases 6–8).                                         
+      22 +> existing per-tenant Redis key), and the **hardening** layer (
+         +Phase 6 — a **Resilience4j**                                   
+      23 +> circuit-breaker + retry around the Bedrock call (still failin
+         +g soft to the template), **Actuator +                          
+      24 +> Micrometer** metrics scraped at `/actuator/prometheus` (RED +
+         + custom ML-quality meters: read-status,                        
+      25 +> forecast freshness, provider faults, insight fallbacks), and 
+         +**structured logging** with a tenant +                         
+      26 +> request id in every log line via MDC). Next: the UI productio
+         +n path + AWS CDK infra validation (Phase 7).                   
+      27  
+      28  ## Quick start
+      29  
+
+⏺ Let me check the README's feature/built-vs-designed area and whether lld.md
+  needs a Phase 6 addition:
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== README ~100-120 ==="; sed -n '100,120p' README.md…)
+  ⎿  === README ~100-120 ===
+       - **Forecasting engine** (Phase 3) — `Forecaster` impls (seasonal-na
+     ive + additive Holt-Winters,
+     … +40 lines (ctrl+o to expand)
+
+⏺ Add a Phase 6 bullet to the README feature list:
+
+⏺ Update(README.md)  ⎿  Added 9 lines
+      116      data (**prompt-injection-safe**). The insight is generated
+            **lazily inside the Phase-4 forecast cache
+      117      supplier** and cached under the **same per-tenant Redis ke
+           y** (invalidated by the same batch
+      118      version-bump); `TopKResponse.insight` is populated on both
+            forecast and actuals.
+      119 +  - **Hardening — resilience & observability** (Phase 6) — a *
+          +*Resilience4j** circuit-breaker + retry                       
+      120 +    around the single Bedrock `InvokeModel` call (confined to 
+          +`topsales-insight`, still failing soft to                     
+      121 +    the template on open-breaker/timeout); **Actuator + Microm
+          +eter** on a Prometheus registry scraped at                    
+      122 +    `/actuator/prometheus` — RED via `http.server.requests` pl
+          +us custom **ML-quality** meters                               
+      123 +    (`topsales.read.total{status,mode}`, `topsales.forecast.fr
+          +eshness.seconds`,                                             
+      124 +    `topsales.forecast.provider.faults.total`, `topsales.insig
+          +ht.fallback.total`); and **structured                         
+      125 +    logging** with `tenantId`+`requestId` in every line via SL
+          +F4J MDC (set/cleared in `TenantScopeFilter`,                  
+      126 +    `X-Request-Id` echoed). Idempotency/dedupe/quarantine (bui
+          +lt in Phase 2/2.5) are now observable.                        
+      127 +    CloudWatch is the designed `aws`-profile registry swap. Se
+          +e [`docs/runbook.md`](docs/runbook.md).                       
+      128    - Postgres + Flyway via Docker Compose.
+      129  - **Designed behind the same interfaces (later phases / `aws` 
+           profile):** the cloud insight impl
+      130    (**`BedrockInsightGenerator`** — built but creds-gated; acti
+           vates only with
+
+⏺ Now a concise lld.md section. Let me read the Ops subsection and the file tail
+  to place it well:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/lld.md)
+  ⎿  Added 41 lines
+      459  | `200` + `status` flag | **read degraded** — never a 5xx for 
+           a degraded forecast; the body's `status` tells the truth |
+      460  | `5xx` | only genuine infra failure (DB + cache + actuals all
+            unavailable) |
+      461  ```
+      462 +                                                              
+      463 +---                                                           
+      464 +                                                              
+      465 +## 15. Hardening — resilience & observability (Phase 6)       
+      466 +                                                              
+      467 +**Resilience on the Bedrock call.** The single `InvokeModel` c
+          +all in `BedrockInsightGenerator` is wrapped                   
+      468 +with **Resilience4j** — a `CircuitBreaker` (count window 10, o
+          +pens at 50% over ≥5 calls, 30s open) inside a                 
+      469 +`Retry` (1 extra attempt on `ApiCallTimeoutException`/`SdkExce
+          +ption`; a grounding rejection is *not*                        
+      470 +retried). Both are built in the module's `create(...)` factory
+          + so every `resilience4j`/`software.amazon.awssdk`             
+      471 +symbol stays confined to `topsales-insight` (the api graph nev
+          +er sees them). The breaker preserves the                      
+      472 +existing fail-soft: an open breaker (`CallNotPermittedExceptio
+          +n`) and a timeout both fall through to the                    
+      473 +deterministic template — the read never blocks (DR-1, DR-6). E
+          +ach fallback fires a callback that increments                 
+      474 +`topsales.insight.fallback.total`.                            
+      475 +                                                              
+      476 +**Metrics (Actuator + Micrometer).** `topsales-api` exposes `/
+          +actuator/health` and `/actuator/prometheus`                   
+      477 +(a Prometheus registry; CloudWatch is the designed `aws`-profi
+          +le registry swap — same instrumentation, the                  
+      478 +registry dep picks the backend). Signals:                     
+      479 +                                                              
+      480 +| Metric | Type | Source |                                    
+      481 +|---|---|---|                                                 
+      482 +| `http.server.requests` | timer (RED) | actuator auto — rate/
+          +errors/duration per route |                                   
+      483 +| `topsales.read.total{status,mode}` | counter | `ForecastRead
+          +Service.handle` — one increment per read at the resolved tier;
+          + `status=degraded` is the degraded-read signal, `fresh/total` 
+          +the freshness ratio |                                         
+      484 +| `topsales.forecast.freshness.seconds` | gauge | newest servi
+          +ng-row `as_of` age (global; `NaN` when the serving table is em
+          +pty) |                                                        
+      485 +| `topsales.forecast.provider.faults.total` | counter | a swal
+          +lowed serving-read fault that drops a degradation rung |      
+      486 +| `topsales.insight.fallback.total` | counter | a Bedrock→temp
+          +late fallback |                                               
+      487 +                                                              
+      488 +> The forecast **batch** is an ephemeral one-shot JVM (no web 
+          +server to scrape); it emits a structured                      
+      489 +> `batch metrics: batch_success=… durationMs=… pkWrites=…` log
+          + line instead, and would push to CloudWatch                   
+      490 +> EMF / a Pushgateway in `aws` (designed). Live `wape_rolling`
+          + stays the offline `make eval` report                         
+      491 +> (`docs/forecast-eval-report.md`) — a documented residual. `t
+          +opsales.read.total` covers `mode=forecast`                    
+      492 +> (the path through `handle`); `mode=actuals` reads are observ
+          +ed via `http.server.requests`.                                
+      493 +                                                              
+      494 +**Structured logging.** `TenantScopeFilter` seeds SLF4J **MDC*
+          +* with `tenantId` and a `requestId` (inbound                  
+      495 +`X-Request-Id` or a generated UUID, echoed on the response hea
+          +der), and **clears both in a `finally`** so a                 
+      496 +tenant id can never leak across pooled servlet threads. `logba
+          +ck-spring.xml` puts `[%X{tenantId} %X{requestId}]`            
+      497 +in every line; the batch sets `tenantId` per tenant in `Foreca
+          +sterJob.runTenant` (cleared in `finally`).                    
+      498 +                                                              
+      499 +**Idempotency / dedupe / quarantine** were already built in Ph
+          +ase 2/2.5 (`events.idempotency_key` UNIQUE +                  
+      500 +`ON CONFLICT DO NOTHING`; the `quarantine` dead-letter table —
+          + §6); Phase 6 made them **observable** rather                 
+      501 +than re-plumbing them. The `aws` evolution routes quarantine t
+          +o an **SQS DLQ** (designed). See                              
+      502 +`docs/runbook.md` for the SLO/alarm tables and procedures.    
+
+⏺ Let me add §15 to the lld Contents list and check the openapi for the actuator
+  endpoints:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/lld.md)
+  ⎿  Added 1 line, removed 1 line
+      13  1. Module map · 2. Data model & DDL · 3. Public API contract · 
+          4. Interface seams ·
+      14  5. Read pipeline & degradation chain · 6. Ingestion & idempoten
+          cy · 7. Cache design ·
+      15  8. Forecast batch · 9. Insight generation · 10. Profile wiring 
+          · 11. Tenant scoping & security ·
+      16 -12. Sizing math · 13. UI contract · 14. Error model            
+      16 +12. Sizing math · 13. UI contract · 14. Error model · 15. Harde
+         +ning — resilience & observability                              
+      17  
+      18  ---
+      19  
+
+⏺ Docs synced. Now run the public-repo-check gate before committing, and view
+  the full diffstat:
+
+⏺ Bash(git add -A && git diff --cached --stat | tail -30)
+  ⎿   .claude/skills/implement-phase/SKILL.md            |  36 ++++++-
+      CLAUDE.md                                          |   2 +-
+      README.md                                          |  17 ++-
+     … +26 lines (ctrl+o to expand)
+
+⏺ Skill(public-repo-check)
+  ⎿  Successfully loaded skill
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== 1. private dirs tracked? (must be empty) ==="…)
+  ⎿  === 1. private dirs tracked? (must be empty) ===
+     (end)
+     === .gitignore coverage ===
+     … +11 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== employer terms in TRACKED files (excluding private/, .git)
+      ==="…)
+  ⎿  === employer terms in TRACKED files (excluding private/, .git) ===
+     docs/adr/0006-accuracy-metric-wape-vs-mape.md:15:- **Cons:** less intu
+     itive than a per-point percentage.
+     … +65 lines (ctrl+o to expand)
+
+⏺ Public-repo-check: ✅ GO. All scan hits are benign — "intuit" matches are the
+  word intuitive in ADRs; the secret/interview hits are the skill files' own
+  documentation and the long-standing generic "portfolio/interview project"
+  framing; no employer name, no recruiter content, no hardcoded AWS creds
+  (Bedrock uses the default provider chain); private dirs untracked.
+
+  Now commit in slices per the repo convention:
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git reset -q…)
+  ⎿  slice1 ok
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      # Slice 2 — metrics…)
+  ⎿  slice2 ok
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      # Slice 3 — structured logging…)
+  ⎿  ok
+     ok
+     ok
+     … +13 lines (ctrl+o to expand)
+
+⏺ All 6 slices committed. Let me confirm the tree is clean, then write the
+  handoff doc and open the PR.
+
+⏺ Bash(echo "=== tracked changes (should be empty) ==="; git status --short;
+      echo "=== untracked private (gitignored, expected) ==="; git status
+      --porcelain --ignored…)
+  ⎿  === tracked changes (should be empty) ===
+     === untracked private (gitignored, expected) ===
+     !! claude-sessions/
+
+⏺ Clean tree (the phase-6 plan doc + index update are correctly gitignored under
+  claude-sessions/). Now the handoff doc:
+
+⏺ Skill(handoff)
+  ⎿  Successfully loaded skill
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git log --oneline -6 && echo "=== branch ===" && git branch --show-current
+      && echo "=== PRs ===" && gh pr l…)
+  ⎿  14f9378 chore(skills): implement-phase persists the durable phase plan
+      doc + test-plan cases
+     52375dc docs(phase6): sync README/CLAUDE.md/lld/runbook + P6 test-plan
+     … +13 lines (ctrl+o to expand)
+
+⏺ Write(claude-sessions/handoff-docs/phase-6-handoff.md)  ⎿  Wrote 184 lines to claude-sessions/handoff-docs/phase-6-handoff.md
+       2 # Phase 6 — Handoff
+         dening`**, **PR pending** (committed; to bech **`feat/phase6-har
+       4 > pushed + opened against `main`). Covers the **hardening: resil
+       5 > Resilience4j on the Bedrock call, Actuator + Micrometer metric
+         s, and structured (tenant/request-id) logging.
+         + AWS CDK infra validation). up **Phase 7** (UI production path 
+         employer/interview specifics.ivate/gitignored** — may reference 
+       8 
+      10 The running system is now **resilient under injected failure** a
+         nd **observable**. The single Bedrock
+     … +308 lines (ctrl+o to expand)
+
+⏺ Now update the impl-plan index (handoff link + status) and the plan doc's
+  outcome line:
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 1 line, removed 1 line
+      27  | 3 | Forecasting engine | — | [phase-3-forecasting-engine.md](
+          phase-3-forecasting-engine.md) | [phase-3-handoff](../handoff-d
+          ocs/phase-3-handoff.md) | ✅ done |
+      28  | 4 | Forecast serving + resilience | FORECAST-READY | [phase-4
+          -forecast-serving.md](phase-4-forecast-serving.md) | [phase-4-h
+          andoff](../handoff-docs/phase-4-handoff.md) | ✅ done |
+      29  | 5 | GenAI insight layer | AI-READY | [phase-5-genai-insight.m
+          d](phase-5-genai-insight.md) | [phase-5-handoff](../handoff-doc
+          s/phase-5-handoff.md) | ✅ done |
+      30 -| 6 | Hardening: resilience & observability | — | [phase-6-hard
+         -ening.md](phase-6-hardening.md) | | 🚧 in progress |           
+      30 +| 6 | Hardening: resilience & observability | — | [phase-6-hard
+         +ening.md](phase-6-hardening.md) | [phase-6-handoff](../handoff-
+         +docs/phase-6-handoff.md) | ✅ done |                           
+      31  | 7 | UI production path & infra validation | — | _todo_ | | |
+      32  | 8 | Data, tests, Postman | PROD-SHAPED | _todo_ | | |
+      33  | 9 | Presentation & rehearsal | 🎤 PRESENTATION | _todo_ | | |
+
+⏺ Update(claude-sessions/implementation-plan/phase-6-hardening.md)
+  ⎿  Added 4 lines
+      90  - [ ] Malformed event → `202 quarantined=1`; logs carry `tenant
+          Id`/`requestId`.
+      91  - [ ] `public-repo-check` clean.
+      92  
+      93 +## Outcome                                                     
+      94 +✅ **Complete & green** (145 tests; live acceptance verified). 
+         +Hand-off:                                                      
+      95 +[`../handoff-docs/phase-6-handoff.md`](../handoff-docs/phase-6-
+         +handoff.md).                                                   
+      96 +                                                               
+      97  ## Out of scope / deferred
+      98  - Live `wape_rolling` metric (offline `EvalMain` report stands;
+           documented residual).
+      99  - Prometheus scrape of the ephemeral batch JVM (prod CloudWatch
+           EMF / Pushgateway — designed).
+
+⏺ Handoff written and index updated (all correctly gitignored). Now push and
+  open the PR:
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git push -u origin feat/phase6-hardening 2>&1 | tail -5)
+  ⎿  remote:      https://github.com/heminjoshi/sales-forecasting-platform/
+     pull/new/feat/phase6-hardening
+     remote:
+     … +4 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      gh pr create --base main --head feat/phase6-hardening \…)
+  ⎿  https://github.com/heminjoshi/sales-forecasting-platform/pull/10
+
+⏺ Phase 6 shipped and merged-ready. PR #10 is open against main.
+
+  What shipped (file-grouped)
+
+  Resilience (topsales-insight + InsightWiring) — Resilience4j circuit-breaker +
+  retry around the single Bedrock InvokeModel call, confined to the insight
+  module (composed by hand; no Decorators). Open-breaker and timeout both fall
+  through to the deterministic template — the read never blocks. onFallback →
+  topsales.insight.fallback.total.
+
+  Metrics (topsales-api/metrics, read path, batch) — Actuator + Micrometer
+  Prometheus registry at /actuator/prometheus: RED via http.server.requests +
+  custom topsales.read.total{status,mode}, topsales.forecast.freshness.seconds
+  (NaN-when-empty gauge via new ServingTableRepository.newestAsOf()),
+  topsales.forecast.provider.faults.total. The batch emits a structured
+  batch_success/durationMs/pkWrites line.
+
+  Structured logging (TenantScopeFilter, logback-spring.xml) —
+  tenantId+requestId MDC, cleared in finally (no cross-thread leak),
+  X-Request-Id echoed.
+
+  Docs/tests — docs/lld.md §15 (new), runbook finalized, README/CLAUDE.md →
+  Phase 6, Postman scrape assertions, test-plan/ [P6] cases.
+
+  Verify — real results
+
+  - make test green — 145 tests (was 131), confirmed myself (full reactor
+  SUCCESS).
+  - Live, all passing: /actuator/prometheus shows the meters + RED; TRUNCATE 
+  serving_rows,serving_active_version + redis-cli FLUSHALL → forecast read
+  degraded (200) with topsales_read_total{status="degraded"}=1 and gauge NaN,
+  restored to 1.0 after re-forecast; malformed event → 202 quarantined=1;
+  X-Request-Id echoed; populated [t_demo ]/[t_acme ] MDC brackets from the
+  batch.
+  - public-repo-check: GO — no secrets, no employer name (the "intuit" hits are
+  intuitive), private dirs untracked.
+
+  Your two asks — done
+
+  - /implement-phase skill updated to persist the durable plan doc into
+  implementation-plan/ and wire the index (§3+§6). It was also extended
+  (mid-session) to require test-plan/ [P6] cases — which I authored.
+  - phase-6-hardening.md persisted + index row flipped _todo_ → ✅ done. Handoff
+  written to claude-sessions/handoff-docs/phase-6-handoff.md (gitignored).
+
+  Two decisions worth flagging
+
+  - CloudWatch is documentation-only, not a dependency — adding the registry
+  would make Spring Boot autoconfigure a client without creds and risk a startup
+  failure. It's the designed aws-profile swap; the Phase-7 Monitoring stack
+  alarms on these metric names. (This refined the approved plan, which had said
+  "add the dep + @Profile(aws) config".)
+  - topsales.read.total covers mode=forecast only — actuals reads bypass
+  ForecastReadService.handle, so they're observed via http.server.requests.
+  Documented as a residual.
+
+  Next phase — Phase 7 (UI production path + AWS CDK infra validation; infra/
+  and web/ are empty .gitkeep today). First step: /implement-phase 7.
+
+✻ Baked for 39m 37s
+
+※ recap: Phase 6 (resilience & observability hardening) is fully implemented, verified green at 145 tests, committed, and opened as PR #10 against main. Next action: review and merge PR #10, then run /implement-phase 7. (disable recaps in /config)

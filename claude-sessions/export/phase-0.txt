@@ -1,0 +1,2493 @@
+╭─── Claude Code v2.1.195 ─────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Hemin!                │ started                 │
+│                                                    │ ✔ Run /init to create … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ What's new              │
+│                        ▘▘ ▝▝                       │ Added `CLAUDE_CODE_DIS… │
+│   Opus 4.8 · Claude Max · joshihemin@gmail.com's   │ Fixed hook matchers wi… │
+│   Organization                                     │ Fixed voice dictation … │
+│          ~/code/sales-forecasting-platform         │ /release-notes for more │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+❯ init                                                                          
+
+⏺ Skill(init)
+  ⎿  Successfully loaded skill
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ No existing CLAUDE.md found. Let me set one up.
+
+  ▎ Quick context:
+  ▎ - CLAUDE.md files give Claude persistent instructions for a project, your 
+  ▎ personal workflow, or your organization. Claude reads them at the start of 
+  ▎ every session.
+  ▎ - Skills are packaged instructions Claude invokes automatically when a task 
+  ▎ matches, or that you trigger with a slash command (e.g. /frontend-design, 
+  ▎ /commit-push-pr).
+  ▎ - Hooks allow you to run shell commands automatically on lifecycle events: 
+  ▎ get notified when Claude is blocked on your input, auto-format after edits, 
+  ▎ enforce checks before commits — these are deterministic and Claude can't 
+  ▎ skip them.
+
+⏺ User answered Claude's questions:
+  ⎿  · Which CLAUDE.md files should /init set up? → Both project + personal
+
+⏺ The user picked Both project + personal. Now Q2:
+
+⏺ User answered Claude's questions:
+  ⎿  · Also set up skills and hooks? → Skills + hooks
+
+⏺ Now let me explore the codebase.
+
+⏺ Explore(Survey codebase for init)
+  ⎿  Done (18 tool uses · 25.1k tokens · 1m 5s)
+  (ctrl+o to expand)
+
+⏺ This is essentially a greenfield/planning-stage project — only a delivery plan
+  doc exists, no code yet, and not even a git repo. Let me read the plan doc
+  directly to get the facts right.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ I now have a clear picture: this is a planning-stage portfolio project — a
+  detailed delivery plan exists, but no code, no scaffolding, and not yet a git
+  repo. CLAUDE.md's job here is to encode the plan's conventions and constraints
+  so future scaffolding stays consistent.
+
+  Let me fill a few gaps the plan doesn't pin down.
+
+⏺ User answered Claude's questions:
+  ⎿  · The plan recommends Maven multi-module but says Gradle is fine. Which 
+     build tool should I lock in for the service/ modules? → Maven multi-module
+     · How familiar are you with this project's stack (Java/Spring Boot, AWS 
+     CDK/TypeScript), so Claude can calibrate explanation depth? → Learning the 
+     stack
+     · Any communication preferences for how Claude should work with you on 
+     this? → Be terse, Explain tradeoffs, Plan before coding, Tie work to phases
+
+⏺ Here's what I'd set up:
+
+  - Project CLAUDE.md — covers that this is a planning-stage portfolio project
+  (no code yet), the planned structure/stack (Java 21 + Spring Boot multi-module
+  Maven, AWS CDK/TS infra, Postgres+Redis local), the guiding principles
+  (vertical-slice-first, local-runnable vs cloud-designed, interface seams),
+  planned Makefile/mvn/cdk commands, the public-repo hygiene rule (no secrets,
+  generic framing, no Intuit references), and a pointer to
+  Build-Delivery-Plan-and-Repo-Structure.md as the source of truth. Includes
+  notes: plan before coding, explain tradeoffs, frame work against the phases.
+  - Personal CLAUDE.local.md (gitignored) — your context (learning this stack →
+  explain decisions/tradeoffs), and comms prefs (be terse).
+  - Skill /public-repo-check — scans for secrets, .env/creds, and any Intuit
+  references before you publish/push; enforces the public/private split that's
+  central to this repo. Recurring concern (Phase 0 and Phase 10).
+
+  One deviation from your "skills + hooks" pick: hooks don't fit yet. There's no
+  code, formatter, or linter configured (Phase 0 isn't scaffolded), so a
+  format/lint-on-edit hook would have nothing to run. I'd skip hooks now —
+  re-run /init after Phase 0 and I'll wire a format-on-edit hook to whatever
+  formatter you land on.
+
+⏺ User answered Claude's questions:
+  ⎿  · Does this look right? → Add a phase-status skill
+
+⏺ Proceeding: both CLAUDE.md files, plus /public-repo-check and /phase-status
+  skills. Writing now.
+
+⏺ Write(CLAUDE.md)
+  ⎿  Wrote 36 lines to CLAUDE.md
+      2 # CLAUDE.md
+        working with code in this repository. Code (claude.ai/code) when 
+      5 ## What this repo is
+      7 A **multi-tenant sales-forecasting platform** built as a public p
+        ortfolio/interview project — designed to *read* like production, 
+        e delivery plan exists; there is no source code, build tooling, o
+      8 r git repo yet.
+        uth** for scope, sequencing, the target directory layout, and wha
+        enting — keep new work consistent with the structure and phase it
+         defines.
+     … +61 lines (ctrl+o to expand)
+
+⏺ Write(CLAUDE.local.md)
+  ⎿  Wrote 8 lines to CLAUDE.local.md
+      2 # CLAUDE.local.md
+      3 Personal, private instructions for this project (gitignored — not
+         shared).
+      5 ## About me / how to calibrate
+      6 
+      7 - I'm **learning this stack** (Java/Spring Boot and AWS CDK/TypeS
+         the tradeoffs rather than just applying it. Briefly flag stack-s
+        pecific idioms I might not know.
+      8 - **Be terse** otherwise — minimal preamble, no end-of-turn summa
+        ries.
+     … +3 lines (ctrl+o to expand)
+
+⏺ Now the .gitignore (none exists yet) to keep CLAUDE.local.md private, plus the
+  obvious ignores the plan calls for:
+
+⏺ Write(.gitignore)
+  ⎿  Wrote 19 lines to .gitignore
+       1 # Personal Claude Code instructions (private)
+       2 CLAUDE.local.md
+       3 
+       4 # Secrets / env
+       5 .env
+       6 .env.*
+       7 *.pem
+       8 
+       9 # Java / Maven
+      10 target/
+     … +9 lines (ctrl+o to expand)
+⏺ Now the two skills:
+
+⏺ Write(.claude/skills/public-repo-check/SKILL.md)
+  ⎿  Wrote 29 lines to .claude/skills/public-repo-check/SKILL.md
+       2 name: public-repo-check
+         repo. Scans for secrets, .env/credentials, and any private/Intui
+          before any push, before tagging a release, or when the user ask
+         s to publish/share the repo.
+       5 ---
+       7 # Public-repo hygiene check
+       8 This is a **public** portfolio repo. Before it is pushed or publ
+         ndings; do not auto-delete — surface what you find and let the u
+       9 ser decide.
+      10 ## Steps
+     … +41 lines (ctrl+o to expand)
+
+⏺ Write(.claude/skills/phase-status/SKILL.md)
+  ⎿  Wrote 28 lines to .claude/skills/phase-status/SKILL.md
+       2 name: phase-status
+       3 description: Report build progress against the Build-Delivery-Pl
+         r asks "where are we", "what's next", "phase status", or wants t
+         o plan the next chunk of work on the sales-forecasting platform.
+       4 ---
+       6 # Phase status
+       7 
+         po-Structure.md` and recommend the next step.elivery-Plan-and-Re
+       9 
+      10 ## Steps
+     … +30 lines (ctrl+o to expand)
+
+⏺ Let me check the environment for a couple of optimizations.
+
+⏺ Bash(which gh 2>/dev/null && echo "GH_FOUND" || echo "GH_MISSING"; which git
+      && git remote -v 2>/dev/null)
+  ⎿  Error: Exit code 128
+     /opt/homebrew/bin/gh
+     GH_FOUND
+     /opt/homebrew/bin/git
+
+⏺ gh is installed — good. Not a git repo yet, so no remote to check. Linting
+  setup would be premature (no code), and hooks I've deferred as noted. Nothing
+  else to act on here.
+
+  Done — here's what was set up
+
+  Files written:
+  - CLAUDE.md — flags this as a planning-stage public portfolio project; points
+  to Build-Delivery-Plan-and-Repo-Structure.md as source of truth; locks in the
+  planned stack (Java 21 / Spring Boot / Maven multi-module, AWS CDK,
+  Postgres+Redis local); records the core design seams
+  (Forecaster/ForecastProvider/InsightGenerator, degradation chain, grounded
+  GenAI, tenant isolation); the public-repo hygiene rule; and your working prefs
+  (plan first, explain tradeoffs, tie work to phases).
+  - CLAUDE.local.md (gitignored) — you're learning the stack (explain
+  decisions/tradeoffs), otherwise be terse.
+  - .gitignore (new) — ignores CLAUDE.local.md, .env/secrets, target/,
+  node_modules/, cdk.out/, .idea/.
+  - .claude/skills/public-repo-check/ — /public-repo-check: secret +
+  private/Intuit-framing scan before publishing.
+  - .claude/skills/phase-status/ — /phase-status: progress against the plan's
+  phases + what's next.
+
+  Deferred: hooks — re-run /init after Phase 0 scaffolds a formatter/linter and
+  I'll wire format-on-edit.
+
+  These are a starting point — review and tweak them, and re-run /init anytime
+  to re-scan.
+
+  ---
+  Suggested next optimizations for this repo
+
+  - [ ] Initialize git — you're not in a repo yet. git init, commit the
+  skeleton, then create the public GitHub repo (Phase 0). gh is already
+  installed, so I can help with the repo/PR flow once initialized.
+  - [ ] Do NOT commit Build-Delivery-Plan-and-Repo-Structure.md to the public 
+  repo — it contains Intuit/interview framing. Keep it private (or gitignore it)
+  before any push. /public-repo-check will flag this.
+  - [ ] Scaffold Phase 0 (Maven module tree, local/docker-compose.yml, Makefile,
+  CI skeleton) so there's a runnable, green-CI baseline — then linting and a
+  format-on-edit hook become worth adding.
+  - [ ] Set up linting/formatting once code exists (Spotless for Java,
+  ESLint+Prettier for CDK) so Claude gets fast feedback on its own edits.
+  - [ ] Install the skill-creator plugin to refine these skills with evals:
+  /plugin install skill-creator@claude-plugins-official, then /skill-creator 
+  <name>.
+  - [ ] Browse /plugin for official plugins (skills, agents, hooks, MCP servers)
+  — and you can package your own to share.
+
+✻ Sautéed for 4m 13s
+
+❯ Initialize git. Build-Delivery-Plan-and-Repo-Structure.md should be in        
+  .gitignore                                                                    
+
+⏺ Update(.gitignore)
+  ⎿  Added 3 lines
+      1  # Personal Claude Code instructions (private)
+      2  CLAUDE.local.md
+      3  
+      4 +# Private interview/delivery plan (contains Intuit framing — kee
+        +p out of public repo)                                           
+      5 +Build-Delivery-Plan-and-Repo-Structure.md                       
+      6 +                                                                
+      7  # Secrets / env
+      8  .env
+      9  .env.*
+
+⏺ Bash(git init -b main && git status --short && echo "--- ignored check ---" &&
+      git status --ignored --short | grep -E 'Build-Delivery|CLAUDE.local')
+  ⎿  Initialized empty Git repository in /Users/heminjoshi/code/sales-forec
+     asting-platform/.git/
+     ?? .claude/
+     … +6 lines (ctrl+o to expand)
+
+⏺ Done. Git is initialized (branch main), and
+  Build-Delivery-Plan-and-Repo-Structure.md is now gitignored alongside
+  CLAUDE.local.md — both confirmed ignored (!!) and won't be tracked.
+
+  Untracked and ready to commit when you want: .claude/, .gitignore, CLAUDE.md,
+  and the demo PDF.
+
+  One flag: Builder Craft Demo - Quickbooks Commerce.pdf is currently trackable
+  — if that's reference/private material, tell me and I'll gitignore it too.
+  Otherwise, want me to make the first commit?
+
+✻ Baked for 15s
+
+❯ gitignore the PDF too, then commit                                            
+
+⏺ Update(.gitignore)
+  ⎿  Added 3 lines
+       4  # Private interview/delivery plan (contains Intuit framing — ke
+          ep out of public repo)
+       5  Build-Delivery-Plan-and-Repo-Structure.md
+       6  
+       7 +# Private reference material                                   
+       8 +Builder Craft Demo - Quickbooks Commerce.pdf                   
+       9 +                                                               
+      10  # Secrets / env
+      11  .env
+      12  .env.*
+
+⏺ Bash(git add . && echo "--- staged ---" && git status --short && echo "---
+      ignored ---" && git status --ignored --short | grep '!!')
+  ⎿  --- staged ---
+     A  .claude/skills/phase-status/SKILL.md
+     A  .claude/skills/public-repo-check/SKILL.md
+     … +7 lines (ctrl+o to expand)
+
+⏺ The PDF is now ignored along with the plan, CLAUDE.local.md, and .idea/. Only
+  the four intended files are staged. Committing:
+
+⏺ Bash(git commit -q -m "Initial setup: CLAUDE.md, Claude Code skills,
+      gitignore" && git log --oneline -1 && git show --stat --oneline HEAD |
+      tail -n +2)
+  ⎿  b6c1213 Initial setup: CLAUDE.md, Claude Code skills, gitignore
+      .claude/skills/phase-status/SKILL.md      | 28 ++++++++++++++++++++++
+     ++
+     … +6 lines (ctrl+o to expand)
+
+⏺ Committed (b6c1213) on main with the four intended files. The PDF, plan doc,
+  CLAUDE.local.md, and .idea/ are all gitignored and stayed out of the commit.
+
+✻ Cooked for 18s
+
+※ recap: Set up Claude Code config for the planning-stage sales-forecasting portfolio repo: wrote CLAUDE.md, two skills, and gitignore, then initialized git and made the first commit. Next, scaffold Phase 0 (Maven modules, docker-compose, Makefile, CI) when you're ready. (disable recaps in /config)
+
+❯ Take a look at the repo again and check the HLD v2 plan. Refine the files     
+  touched accordingly.                                                          
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ There's a new Intuit-HLD-v2.md. Let me read it.
+
+  Read 1 file (ctrl+o to expand)
+⏺ This is a significant update — HLD v2 adds a whole presentation tier (UI) that
+  my files don't mention, plus it's another private, Intuit-named doc. Let me
+  check what's tracked vs ignored first.
+
+⏺ Bash(git status --short && echo "--- tracked files containing 'Intuit' ---" &&
+      git grep -il intuit 2>/dev/null || echo "(none tracked)")
+  ⎿  ?? Intuit-HLD-v2.md
+     --- tracked files containing 'Intuit' ---
+     .claude/skills/public-repo-check/SKILL.md
+     … +2 lines (ctrl+o to expand)
+
+⏺ Confirmed the hygiene problem: the new Intuit-HLD-v2.md is untracked (good),
+  but three tracked files contain "Intuit" — including .gitignore and CLAUDE.md,
+  which would themselves leak the employer name in a public repo. I'll
+  gitignore the new doc and scrub the literals from tracked files as part of
+  this refinement.
+
+  Let me update .gitignore first:
+
+⏺ Update(.gitignore)
+  ⎿  Added 2 lines, removed 1 line
+      1  # Personal Claude Code instructions (private)
+      2  CLAUDE.local.md
+      3  
+      4 -# Private interview/delivery plan (contains Intuit framing — kee
+        -p out of public repo)                                           
+      4 +# Private planning/design docs (employer-specific framing — keep
+        + out of public repo)                                            
+      5  Build-Delivery-Plan-and-Repo-Structure.md
+      6 +Intuit-HLD-v2.md                                                
+      7  
+      8  # Private reference material
+      9  Builder Craft Demo - Quickbooks Commerce.pdf
+
+⏺ The .gitignore line still contains the literal "Intuit". Since .gitignore is
+  itself tracked/public, I'll match the file with a non-revealing glob instead:
+
+⏺ Update(.gitignore)
+  ⎿  Added 1 line, removed 1 line
+      3  
+      4  # Private planning/design docs (employer-specific framing — keep
+          out of public repo)
+      5  Build-Delivery-Plan-and-Repo-Structure.md
+      6 -Intuit-HLD-v2.md                                                
+      6 +*HLD-v2*.md                                                     
+      7  
+      8  # Private reference material
+      9  Builder Craft Demo - Quickbooks Commerce.pdf
+
+⏺ Now refine CLAUDE.md — add the presentation tier, Spring profiles, local
+  prereqs/run sequence, and scrub the "Intuit" literal:
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 4 lines, removed 2 lines
+       4  
+       5  ## What this repo is
+       6  
+       7 -A **multi-tenant sales-forecasting platform** built as a public
+         - portfolio/interview project — designed to *read* like producti
+         -on, not to be one. It is currently at the **planning stage**: o
+         -nly the delivery plan exists; there is no source code, build to
+         -oling, or git repo yet.                                        
+       7 +A **multi-tenant "top sales by category" platform** built as a 
+         +public portfolio/interview project — designed to *read* like pr
+         +oduction, not to be one. It is currently at the **planning stag
+         +e**: only design/plan docs exist; there is no source code or bu
+         +ild tooling yet.                                               
+       8  
+       9 -`Build-Delivery-Plan-and-Repo-Structure.md` is the **source of 
+         -truth** for scope, sequencing, the target directory layout, and
+         - what is built vs designed-only. Read it before scaffolding or 
+         -implementing — keep new work consistent with the structure and 
+         -phase it defines.                                              
+       9 +Two private (gitignored) docs are the **source of truth** — rea
+         +d them before scaffolding or implementing, and keep new work co
+         +nsistent with the structure and phase they define:             
+      10 +- the **delivery plan** (`Build-Delivery-Plan-and-Repo-Structur
+         +e.md`) — scope, phase sequencing, target directory layout, buil
+         +t-vs-designed-only.                                            
+      11 +- the **HLD v2 design doc** — the architecture: four tiers (pre
+         +sentation → serving → forecast batch → ingestion), interface se
+         +ams, decision records. v2 adds the user-facing dashboard tier. 
+      12  
+      13  ## How to work in this repo
+      14  
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 5 lines, removed 3 lines
+      19  ## Planned stack & conventions (when scaffolding)
+      20  
+      21  - **Service:** Java 21 + Spring Boot, **Maven multi-module** (r
+          oot `pom.xml` aggregating `topsales-common`, `-ingestion`, `-fo
+          recast`, `-insight`, `-api`, `db/migration`).
+      22 -- **Infra:** AWS CDK in TypeScript, 5 stacks (network, storage,
+         - intelligence, application, monitoring) under `infra/`.        
+      23 -- **Local dev:** `docker-compose` (Postgres + Redis) under `loc
+         -al/`; no AWS account required to run the demo.                 
+      22 +- **UI (presentation tier):** the demo dashboard is **static HT
+         +ML + vanilla JS + Chart.js via CDN**, served from Spring Boot s
+         +tatic resources — **no Node toolchain, no build step for the de
+         +mo UI**. The production React SPA (Vite + Recharts on S3+CloudF
+         +ront) is **designed-only** — don't build it for the demo. The d
+         +ashboard is a thin, read-only view over the REST API; keep busi
+         +ness logic out of it.                                          
+      23 +- **Infra:** AWS CDK in TypeScript, 5 stacks (network, storage,
+         + intelligence, application, monitoring) under `infra/`. The App
+         +lication/Storage stacks also carry the S3 site bucket + CloudFr
+         +ont for the designed React SPA.                                
+      24 +- **Profiles:** a Spring profile selects impls behind the same 
+         +interfaces — `local` (Postgres / Redis / filesystem raw log / t
+         +emplate insight / Java forecaster / static dashboard) vs `aws` 
+         +(Kinesis / DynamoDB / S3 / Bedrock / SageMaker / React SPA). Do
+         +n't hardcode cloud services on the common path.                
+      25  - **Migrations:** Flyway/Liquibase SQL.
+      26  - **Tests:** JUnit + Testcontainers (Postgres + Redis) for inte
+          gration.
+      26 -- **Commands** (once Phase 0 scaffolds them): `make run | test 
+         -| seed | demo | synth | up | down`; `mvn clean test` in `servic
+         -e/`; `npm install && npx cdk synth` in `infra/`.               
+      27 +- **Local dev:** prerequisites are **Docker Desktop, JDK 21, Ma
+         +ven, and a browser — no Node, no AWS account.** Run sequence: `
+         +docker-compose up` → `make run` → `make seed` → open the dashbo
+         +ard.                                                           
+      28 +- **Commands** (once Phase 0 scaffolds them): `make run | test 
+         +| seed | demo | synth | up | down`; `mvn clean test` in `servic
+         +e/`; `npm install && npx cdk synth` in `infra/` (CDK is the *on
+         +ly* place Node is used).                                       
+      29  
+      30  ## Core design principles (the talking points — preserve these 
+          seams)
+      31  
+
+⏺ Now update the degradation principle to reflect the UI's honest-rendering
+  requirement, and scrub the hygiene section:
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+      31  
+      32  - **Local-runnable vs cloud-designed:** the same interfaces bac
+          k both a local impl and an AWS impl. Local paths must work stan
+          dalone; cloud paths live behind the interface.
+      33  - **Interface seams:** `Forecaster`, `ForecastProvider`, `Insig
+          htGenerator`, and repository abstractions let local↔cloud and b
+          aseline↔ML swap without rewrites. Don't bypass them.
+      34 -- **Degradation chain:** when forecasts are unavailable, fall b
+         -ack last-good → seasonal-naive from actuals → actuals with a `f
+         -orecast_pending`/status flag. Reads must always succeed (flagge
+         -d).                                                            
+      34 +- **Degradation chain:** when forecasts are unavailable, fall b
+         +ack last-good → seasonal-naive from actuals → actuals with a `f
+         +orecast_pending`/status flag. Reads must always succeed (flagge
+         +d); the read path survives a total ML-plane outage and the dash
+         +board always renders something honest (status badge: `fresh|sta
+         +le|pending|degraded` + as-of).                                 
+      35  - **Grounded GenAI:** insight prompts receive only computed num
+          bers; output is validated to contain only those figures; fall b
+          ack to the deterministic template on failure/timeout. Treat cat
+          egory names as untrusted (injection).
+      36  - **Multi-tenant isolation:** `TenantScopeFilter` enforced from
+           the start.
+      37  
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+      37  
+      38  ## Public-repo hygiene (important — easy to get wrong)
+      39  
+      40 -This is a **public** repo. Never commit secrets, `.env`, or cre
+         -dentials. Keep all framing **generic** — no Intuit references, 
+         -recruiter emails, the verbatim problem statement, or interview-
+         -prep material in tracked files. Those stay private (see the pla
+         -n's "Keep PRIVATE" section). Run `/public-repo-check` before pu
+         -blishing or pushing.                                           
+      40 +This is a **public** repo. Never commit secrets, `.env`, or cre
+         +dentials. Keep all framing **generic** — no employer/company na
+         +me, recruiter emails, the verbatim problem statement, or interv
+         +iew-prep material in tracked files (this applies to `CLAUDE.md`
+         +, `.gitignore`, and skills too — they're tracked and public). T
+         +he private planning and design docs (the delivery plan and the 
+         +HLD v2 doc) stay **gitignored and never committed**. Run `/publ
+         +ic-repo-check` before publishing or pushing.                   
+
+⏺ Now refine the public-repo-check skill — scrub "Intuit" literals, reference
+  both private docs generically, and have it derive forbidden terms at runtime:
+
+⏺ Update(.claude/skills/public-repo-check/SKILL.md)
+  ⎿  Added 4 lines, removed 4 lines
+      17     - Hardcoded connection strings with credentials.
+      18  
+      19  3. **Scan for private / interview framing** that must stay out 
+          of the public repo:
+      20 -   - Case-insensitive `intuit`, recruiter names, the verbatim p
+         -roblem statement.                                              
+      21 -   - Interview-prep content: STAR stories, "why Intuit" narrati
+         -ves, DSA practice, probe-bank framed as interview prep, round-b
+         -y-round strategy.                                              
+      22 -   - Cross-check against the "Keep PRIVATE" section of `Build-D
+         -elivery-Plan-and-Repo-Structure.md`.                           
+      23 -   - Note: `Build-Delivery-Plan-and-Repo-Structure.md` itself c
+         -ontains Intuit/interview framing — it should NOT be committed t
+         -o the public repo. Flag it.                                    
+      20 +   - Read the private planning/design docs to learn the specifi
+         +c terms to block, then case-insensitive scan tracked files for 
+         +the **employer/company name** and **recruiter names** found the
+         +re, plus the verbatim problem statement.                       
+      21 +   - Interview-prep content: STAR stories, "why <company>" narr
+         +atives, DSA practice, probe-bank framed as interview prep, roun
+         +d-by-round strategy.                                           
+      22 +   - Cross-check against the "Keep PRIVATE" section of the deli
+         +very plan.                                                     
+      23 +   - The private planning/design docs themselves — the **delive
+         +ry plan** and the **HLD v2 design doc** — must NEVER be committ
+         +ed. Confirm both are gitignored and untracked (`git ls-files`);
+         + flag if either is tracked. Their filenames may contain the com
+         +pany name, so prefer non-revealing globs in `.gitignore`.      
+      24  
+      25  4. **Confirm generic framing** in user-facing files (`README.md
+          `, `docs/`, `presentation/`): the project should read as a gene
+          ric sales-forecasting platform.
+      26  
+
+⏺ Now the phase-status skill — account for the HLD v2 presentation tier:
+
+⏺ Update(.claude/skills/phase-status/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+       9  
+      10  ## Steps
+      11  
+      12 -1. **Read the plan** (`Build-Delivery-Plan-and-Repo-Structure.m
+         -d`) for the phase list, exit criteria, and milestone map.      
+      12 +1. **Read the plan** (`Build-Delivery-Plan-and-Repo-Structure.m
+         +d`) for the phase list, exit criteria, and milestone map. Also 
+         +read the **HLD v2 design doc** — v2 adds the user-facing dashbo
+         +ard (presentation tier) as a built component; fold the dashboar
+         +d into the relevant phase's expectations even though the origin
+         +al plan text predates it.                                      
+      13  
+      14  2. **Inspect the actual repo state** to judge each phase agains
+          t its exit criteria — don't trust the plan's status markers, ve
+          rify:
+      15     - Is it a git repo yet? CI present (`.github/workflows/`)?
+
+⏺ Update(.claude/skills/phase-status/SKILL.md)
+  ⎿  Added 1 line
+      15     - Is it a git repo yet? CI present (`.github/workflows/`)?
+      16     - `service/` scaffolded? Which `topsales-*` modules exist an
+          d compile?
+      17     - `infra/` CDK present? `local/docker-compose.yml`? `Makefil
+          e`? `docs/` artifacts? `data/`, `postman/`, `presentation/`?
+      18 +   - Dashboard present (static HTML/JS + Chart.js under Spring 
+         +Boot static resources)? Does it render table + chart + insight 
+         ++ status badge?                                                
+      19     - Tests present (Testcontainers)? Migrations?
+      20  
+      21  3. **Map each phase (0–10) to a status:** done / in-progress / 
+          not-started, with one line of evidence each (what exists or is 
+          missing).
+
+⏺ Now verify everything: ignores correct, no "Intuit" left in tracked files, and
+  the glob works.
+
+⏺ Bash(echo "--- HLD doc ignored? ---"; git check-ignore Intuit-HLD-v2.md &&
+      echo "IGNORED ✓" || echo "NOT IGNORED ✗"
+      echo "--- 'Intuit' in tracked files? ---"; git ad…)
+  ⎿  --- HLD doc ignored? ---
+     Intuit-HLD-v2.md
+     IGNORED ✓
+     … +8 lines (ctrl+o to expand)
+
+⏺ The skill still has "Intuit" somewhere — let me find it:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ It's in the frontmatter description. Fixing:
+
+⏺ Update(.claude/skills/public-repo-check/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+      1  ---
+      2  name: public-repo-check
+      3 -description: Pre-publish hygiene gate for this public portfolio 
+        -repo. Scans for secrets, .env/credentials, and any private/Intui
+        -t-specific framing before pushing or making the repo public. Use
+        - before any push, before tagging a release, or when the user ask
+        -s to publish/share the repo.                                    
+      3 +description: Pre-publish hygiene gate for this public portfolio 
+        +repo. Scans for secrets, .env/credentials, and any private/emplo
+        +yer-specific or interview-prep framing before pushing or making 
+        +the repo public. Use before any push, before tagging a release, 
+        +or when the user asks to publish/share the repo.                
+      4  ---
+      5  
+      6  # Public-repo hygiene check
+⏺ Bash(git add -A && echo "--- 'Intuit' in tracked files? ---" && (git grep -il
+      intuit 2>/dev/null && echo "STILL PRESENT ✗" || echo "NONE ✓") && echo
+      "--- staged ---"…)
+  ⎿  --- 'Intuit' in tracked files? ---
+     NONE ✓
+     --- staged ---
+     … +4 lines (ctrl+o to expand)
+
+⏺ All clean — no "Intuit" in any tracked file, and the HLD doc is ignored.
+  Committing:
+
+⏺ Bash(git commit -q -m "Refine for HLD v2: presentation tier, Spring profiles,
+      local prereqs; scrub employer name from tracked files; gitignore HLD v2
+      doc" && git log…)
+  ⎿  8bced13 Refine for HLD v2: presentation tier, Spring profiles, local p
+     rereqs; scrub employer name from tracked files; gitignore HLD v2 doc
+     b6c1213 Initial setup: CLAUDE.md, Claude Code skills, gitignore
+
+⏺ Done. Read Intuit-HLD-v2.md and refined every file I'd touched.
+
+  What changed (committed 8bced13):
+
+  - CLAUDE.md
+    - Source of truth is now both private docs (delivery plan + HLD v2), with
+  the four-tier architecture noted.
+    - New presentation tier: demo dashboard = static HTML/JS + Chart.js via CDN
+  served from Spring Boot — no Node toolchain for the demo; React SPA is
+  designed-only. (The key "would get wrong" gotcha — Claude might otherwise
+  scaffold a React/npm UI.)
+    - Spring profiles local vs aws select impls behind the interfaces; don't
+  hardcode cloud services on the common path.
+    - Local prereqs (Docker, JDK 21, Maven, browser — no Node/AWS) + run
+  sequence docker-compose up → make run → make seed → open dashboard.
+    - Degradation principle now notes the dashboard always renders something
+  honest under a total ML-plane outage.
+  - .gitignore — ignores the HLD v2 doc via a non-revealing glob (*HLD-v2*.md)
+  so the employer name doesn't leak through the gitignore line itself.
+  - public-repo-check skill — derives the blocklist (company/recruiter names)
+  from the private docs at runtime instead of hardcoding them; explicitly checks
+  both private docs are untracked.
+  - phase-status skill — reads HLD v2 too and inspects for the dashboard.
+
+  Hygiene fix worth calling out: three tracked files (CLAUDE.md, .gitignore, the
+  skill) contained the literal "Intuit" — a violation of the repo's own
+  public-hygiene rule. I scrubbed all of them; git grep -i intuit over tracked
+  files now returns nothing.
+
+  Two things to be aware of:
+
+  1. Git history still contains "Intuit" — commit b6c1213 has the old
+  CLAUDE.md/skill text. It's local-only (no remote), and the plan's Phase 10
+  already calls for tidying history before going public. If you'd rather not
+  carry it, I can squash the two commits into one clean initial commit now.
+  2. Filenames are the weak point. Both private docs are named after the
+  employer-adjacent context. A cleaner long-term setup: a gitignored private/
+  directory holding all private docs (one .gitignore line: private/), so no
+  employer-revealing filename ever needs to appear in tracked config. Want me to
+  set that up and move the docs?
+
+✻ Baked for 4m 28s
+
+※ recap: Set up Claude Code config for the sales-forecasting portfolio repo; refined CLAUDE.md, gitignore, and skills for HLD v2 and scrubbed the employer name from tracked files, all committed. Next: optionally squash the two commits or move private docs into a gitignored private/ directory. (disable recaps in /config)
+
+❯ Set up the private/ directory and move the docs                               
+
+⏺ Bash(mkdir -p private && mv "Build-Delivery-Plan-and-Repo-Structure.md"
+      "Intuit-HLD-v2.md" "Builder Craft Demo - Quickbooks Commerce.pdf" private/
+      && echo "--- priva…)
+  ⎿  --- private/ ---
+     Build-Delivery-Plan-and-Repo-Structure.md
+     Builder Craft Demo - Quickbooks Commerce.pdf
+     … +5 lines (ctrl+o to expand)
+
+⏺ Now simplify .gitignore to a single private/ line:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(.gitignore)
+  ⎿  Added 2 lines, removed 6 lines
+       1  # Personal Claude Code instructions (private)
+       2  CLAUDE.local.md
+       3  
+       4 -# Private planning/design docs (employer-specific framing — kee
+         -p out of public repo)                                          
+       5 -Build-Delivery-Plan-and-Repo-Structure.md                      
+       6 -*HLD-v2*.md                                                    
+       4 +# Private docs & reference material (planning, design, employer
+         +-specific — never committed)                                   
+       5 +private/                                                       
+       6  
+       8 -# Private reference material                                   
+       9 -Builder Craft Demo - Quickbooks Commerce.pdf                   
+      10 -                                                               
+       7  # Secrets / env
+       8  .env
+       9  .env.*
+
+⏺ Now update the doc-path references in CLAUDE.md and the skills to point at
+  private/:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 3 lines, removed 3 lines
+       6  
+       7  A **multi-tenant "top sales by category" platform** built as a 
+          public portfolio/interview project — designed to *read* like pr
+          oduction, not to be one. It is currently at the **planning stag
+          e**: only design/plan docs exist; there is no source code or bu
+          ild tooling yet.
+       8  
+       9 -Two private (gitignored) docs are the **source of truth** — rea
+         -d them before scaffolding or implementing, and keep new work co
+         -nsistent with the structure and phase they define:             
+      10 -- the **delivery plan** (`Build-Delivery-Plan-and-Repo-Structur
+         -e.md`) — scope, phase sequencing, target directory layout, buil
+         -t-vs-designed-only.                                            
+      11 -- the **HLD v2 design doc** — the architecture: four tiers (pre
+         -sentation → serving → forecast batch → ingestion), interface se
+         -ams, decision records. v2 adds the user-facing dashboard tier. 
+       9 +Two docs under `private/` (gitignored, never committed) are the
+         + **source of truth** — read them before scaffolding or implemen
+         +ting, and keep new work consistent with the structure and phase
+         + they define:                                                  
+      10 +- the **delivery plan** (`private/Build-Delivery-Plan-and-Repo-
+         +Structure.md`) — scope, phase sequencing, target directory layo
+         +ut, built-vs-designed-only.                                    
+      11 +- the **HLD v2 design doc** (in `private/`) — the architecture:
+         + four tiers (presentation → serving → forecast batch → ingestio
+         +n), interface seams, decision records. v2 adds the user-facing 
+         +dashboard tier.                                                
+      12  
+      13  ## How to work in this repo
+      14  
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+      37  
+      38  ## Public-repo hygiene (important — easy to get wrong)
+      39  
+      40 -This is a **public** repo. Never commit secrets, `.env`, or cre
+         -dentials. Keep all framing **generic** — no employer/company na
+         -me, recruiter emails, the verbatim problem statement, or interv
+         -iew-prep material in tracked files (this applies to `CLAUDE.md`
+         -, `.gitignore`, and skills too — they're tracked and public). T
+         -he private planning and design docs (the delivery plan and the 
+         -HLD v2 doc) stay **gitignored and never committed**. Run `/publ
+         -ic-repo-check` before publishing or pushing.                   
+      40 +This is a **public** repo. Never commit secrets, `.env`, or cre
+         +dentials. Keep all framing **generic** — no employer/company na
+         +me, recruiter emails, the verbatim problem statement, or interv
+         +iew-prep material in tracked files (this applies to `CLAUDE.md`
+         +, `.gitignore`, and skills too — they're tracked and public). E
+         +verything under `private/` (the delivery plan, the HLD v2 doc, 
+         +reference material) stays **gitignored and never committed**. R
+         +un `/public-repo-check` before publishing or pushing.          
+
+⏺ Update(.claude/skills/phase-status/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+       5  
+       6  # Phase status
+       7  
+       8 -Assess where the repo stands against `Build-Delivery-Plan-and-R
+         -epo-Structure.md` and recommend the next step.                 
+       8 +Assess where the repo stands against the private planning/desig
+         +n docs under `private/` and recommend the next step.           
+       9  
+      10  ## Steps
+      11  
+
+⏺ Update(.claude/skills/phase-status/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+       9  
+      10  ## Steps
+      11  
+      12 -1. **Read the plan** (`Build-Delivery-Plan-and-Repo-Structure.m
+         -d`) for the phase list, exit criteria, and milestone map. Also 
+         -read the **HLD v2 design doc** — v2 adds the user-facing dashbo
+         -ard (presentation tier) as a built component; fold the dashboar
+         -d into the relevant phase's expectations even though the origin
+         -al plan text predates it.                                      
+      12 +1. **Read the plan** (`private/Build-Delivery-Plan-and-Repo-Str
+         +ucture.md`) for the phase list, exit criteria, and milestone ma
+         +p. Also read the **HLD v2 design doc** (in `private/`) — v2 add
+         +s the user-facing dashboard (presentation tier) as a built comp
+         +onent; fold the dashboard into the relevant phase's expectation
+         +s even though the original plan text predates it.              
+      13  
+      14  2. **Inspect the actual repo state** to judge each phase agains
+          t its exit criteria — don't trust the plan's status markers, ve
+          rify:
+      15     - Is it a git repo yet? CI present (`.github/workflows/`)?
+
+⏺ Now update the public-repo-check skill for the private/ layout:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(.claude/skills/public-repo-check/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+       9  
+      10  ## Steps
+      11  
+      12 -1. **Confirm `.gitignore` covers private files.** Ensure `CLAUD
+         -E.local.md`, `.env`, `.env.*`, and credential files are ignored
+         -. Flag if any are tracked anyway (`git ls-files | grep -Ei 'CLA
+         -UDE.local|\.env($|\.)'`).                                      
+      12 +1. **Confirm `.gitignore` covers private files.** Ensure `priva
+         +te/`, `CLAUDE.local.md`, `.env`, `.env.*`, and credential files
+         + are ignored. Critically, confirm **nothing under `private/` is
+         + tracked** (`git ls-files private/` must return nothing) — that
+         + directory holds the planning/design docs and reference materia
+         +l. Also flag any tracked `CLAUDE.local.md` or `.env*`.         
+      13  
+      14  2. **Scan for secrets** across tracked files (skip `.git/`, `no
+          de_modules/`, `target/`, `cdk.out/`):
+      15     - AWS keys: `AKIA[0-9A-Z]{16}`, `aws_secret_access_key`
+
+⏺ Update(.claude/skills/public-repo-check/SKILL.md)
+  ⎿  Added 2 lines, removed 3 lines
+      17     - Hardcoded connection strings with credentials.
+      18  
+      19  3. **Scan for private / interview framing** that must stay out 
+          of the public repo:
+      20 -   - Read the private planning/design docs to learn the specifi
+         -c terms to block, then case-insensitive scan tracked files for 
+         -the **employer/company name** and **recruiter names** found the
+         -re, plus the verbatim problem statement.                       
+      20 +   - Read the docs under `private/` to learn the specific terms
+         + to block, then case-insensitive scan **tracked** files for the
+         + **employer/company name** and **recruiter names** found there,
+         + plus the verbatim problem statement.                          
+      21     - Interview-prep content: STAR stories, "why <company>" narr
+          atives, DSA practice, probe-bank framed as interview prep, roun
+          d-by-round strategy.
+      22 -   - Cross-check against the "Keep PRIVATE" section of the deli
+         -very plan.                                                     
+      23 -   - The private planning/design docs themselves — the **delive
+         -ry plan** and the **HLD v2 design doc** — must NEVER be committ
+         -ed. Confirm both are gitignored and untracked (`git ls-files`);
+         - flag if either is tracked. Their filenames may contain the com
+         -pany name, so prefer non-revealing globs in `.gitignore`.      
+      22 +   - Cross-check against the "Keep PRIVATE" section of the deli
+         +very plan (in `private/`).                                     
+      23  
+      24  4. **Confirm generic framing** in user-facing files (`README.md
+          `, `docs/`, `presentation/`): the project should read as a gene
+          ric sales-forecasting platform.
+      25  
+
+⏺ Now verify the whole setup — private/ ignored, docs accessible, no employer
+  name in tracked files, no stale references:
+
+⏺ Bash(git add -A
+      echo "--- private/ ignored? ---"; git check-ignore private/ >/dev/null &&
+      echo "IGNORED ✓" || echo "NOT IGNORED ✗"…)
+  ⎿  --- private/ ignored? ---
+     IGNORED ✓
+     --- anything under private/ tracked? ---
+     … +10 lines (ctrl+o to expand)
+⏺ All checks pass. Committing:
+
+⏺ Bash(git commit -q -m "Move private docs into gitignored private/ dir; update
+      refs in CLAUDE.md and skills" && git log --oneline && echo "--- private/
+      contents (untr…)
+  ⎿  d6a9f5f Move private docs into gitignored private/ dir; update refs in
+      CLAUDE.md and skills
+     8bced13 Refine for HLD v2: presentation tier, Spring profiles, local p
+     … +6 lines (ctrl+o to expand)
+
+⏺ Done (committed d6a9f5f).
+
+  What changed:
+  - Created private/ and moved all three private docs into it (delivery plan,
+  HLD v2, the demo PDF). They're on disk but untracked.
+  - .gitignore now has a single private/ line replacing the three per-file/glob
+  entries — no employer-revealing filename in any tracked file.
+  - Updated doc-path references in CLAUDE.md and both skills to point at
+  private/.
+  - public-repo-check now hard-checks that nothing under private/ is tracked.
+
+  Verified: private/ is ignored, nothing under it is tracked, no "Intuit" in any
+  tracked file, and no stale root-path references remain.
+
+  Workflow note: drop any future private material (recruiter emails, STAR
+  stories, problem statement) into private/ and it's automatically kept out of
+  git. The only remaining loose end is the earlier point #1: commits
+  b6c1213/8bced13 still carry the old "Intuit" text in history — say the word
+  and I'll squash all three into one clean initial commit.
+
+✻ Churned for 1m 45s
+
+❯ Check out the build and delivery plan v2 in the private folder and refine any 
+  documents that need to be changed.                                            
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ There's a new Build-Delivery-Plan-v2.md. Let me read it.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ This is the more granular Build & Delivery Plan v2. Key changes that affect my
+  tracked files:
+  - New top-level web/ dir for the designed React SPA; demo dashboard lives in
+  the API module's static resources.
+  - New private artifact claude-sessions/ (raw transcript exports — contain
+  employer material) and interview-prep/ must be gitignored.
+  - It supersedes v1 as the delivery-plan source of truth.
+
+  Let me check the current CLAUDE.md text and update accordingly.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+       7  A **multi-tenant "top sales by category" platform** built as a 
+          public portfolio/interview project — designed to *read* like pr
+          oduction, not to be one. It is currently at the **planning stag
+          e**: only design/plan docs exist; there is no source code or bu
+          ild tooling yet.
+       8  
+       9  Two docs under `private/` (gitignored, never committed) are the
+           **source of truth** — read them before scaffolding or implemen
+          ting, and keep new work consistent with the structure and phase
+           they define:
+      10 -- the **delivery plan** (`private/Build-Delivery-Plan-and-Repo-
+         -Structure.md`) — scope, phase sequencing, target directory layo
+         -ut, built-vs-designed-only.                                    
+      10 +- the **delivery plan** (`private/Build-Delivery-Plan-v2.md`) —
+         + scope, phase sequencing (Phases 0–10, organized into workstrea
+         +ms WS-A…WS-G), target directory layout, built-vs-designed-only.
+         + This v2 supersedes the older `Build-Delivery-Plan-and-Repo-Str
+         +ucture.md` in the same folder.                                 
+      11  - the **HLD v2 design doc** (in `private/`) — the architecture:
+           four tiers (presentation → serving → forecast batch → ingestio
+          n), interface seams, decision records. v2 adds the user-facing 
+          dashboard tier.
+      12  
+      13  ## How to work in this repo
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+      19  ## Planned stack & conventions (when scaffolding)
+      20  
+      21  - **Service:** Java 21 + Spring Boot, **Maven multi-module** (r
+          oot `pom.xml` aggregating `topsales-common`, `-ingestion`, `-fo
+          recast`, `-insight`, `-api`, `db/migration`).
+      22 -- **UI (presentation tier):** the demo dashboard is **static HT
+         -ML + vanilla JS + Chart.js via CDN**, served from Spring Boot s
+         -tatic resources — **no Node toolchain, no build step for the de
+         -mo UI**. The production React SPA (Vite + Recharts on S3+CloudF
+         -ront) is **designed-only** — don't build it for the demo. The d
+         -ashboard is a thin, read-only view over the REST API; keep busi
+         -ness logic out of it.                                          
+      22 +- **UI (presentation tier):** the demo dashboard is **static HT
+         +ML + vanilla JS + Chart.js via CDN**, served from Spring Boot s
+         +tatic resources (the API module's `src/main/resources/static/`)
+         + — **no Node toolchain, no build step for the demo UI**. The pr
+         +oduction React SPA (Vite + Recharts on S3+CloudFront) lives in 
+         +a separate top-level `web/` dir and is **designed-only / option
+         +al build** — don't build it for the demo. The dashboard is a th
+         +in, read-only view over the REST API; keep business logic out o
+         +f it.                                                          
+      23  - **Infra:** AWS CDK in TypeScript, 5 stacks (network, storage,
+           intelligence, application, monitoring) under `infra/`. The App
+          lication/Storage stacks also carry the S3 site bucket + CloudFr
+          ont for the designed React SPA.
+      24  - **Profiles:** a Spring profile selects impls behind the same 
+          interfaces — `local` (Postgres / Redis / filesystem raw log / t
+          emplate insight / Java forecaster / static dashboard) vs `aws` 
+          (Kinesis / DynamoDB / S3 / Bedrock / SageMaker / React SPA). Do
+          n't hardcode cloud services on the common path.
+      25  - **Migrations:** Flyway/Liquibase SQL.
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+      37  
+      38  ## Public-repo hygiene (important — easy to get wrong)
+      39  
+      40 -This is a **public** repo. Never commit secrets, `.env`, or cre
+         -dentials. Keep all framing **generic** — no employer/company na
+         -me, recruiter emails, the verbatim problem statement, or interv
+         -iew-prep material in tracked files (this applies to `CLAUDE.md`
+         -, `.gitignore`, and skills too — they're tracked and public). E
+         -verything under `private/` (the delivery plan, the HLD v2 doc, 
+         -reference material) stays **gitignored and never committed**. R
+         -un `/public-repo-check` before publishing or pushing.          
+      40 +This is a **public** repo. Never commit secrets, `.env`, or cre
+         +dentials. Keep all framing **generic** — no employer/company na
+         +me, recruiter emails, the verbatim problem statement, or interv
+         +iew-prep material in tracked files (this applies to `CLAUDE.md`
+         +, `.gitignore`, and skills too — they're tracked and public). E
+         +verything under `private/`, plus `claude-sessions/` and `interv
+         +iew-prep/` (raw transcript exports, recruiter emails, probe ban
+         +k, STAR stories — all contain employer/interview material), sta
+         +ys **gitignored and never committed**. Run `/public-repo-check`
+         + before publishing or pushing.                                 
+
+⏺ Now update .gitignore to cover claude-sessions/ and interview-prep/:
+
+⏺ Update(.gitignore)
+  ⎿  Added 2 lines
+       3  
+       4  # Private docs & reference material (planning, design, employer
+          -specific — never committed)
+       5  private/
+       6 +claude-sessions/                                               
+       7 +interview-prep/                                                
+       8  
+       9  # Secrets / env
+      10  .env
+
+⏺ Now update the skills. phase-status → point to v2 plan, add web/ awareness:
+
+⏺ Update(.claude/skills/phase-status/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+       9  
+      10  ## Steps
+      11  
+      12 -1. **Read the plan** (`private/Build-Delivery-Plan-and-Repo-Str
+         -ucture.md`) for the phase list, exit criteria, and milestone ma
+         -p. Also read the **HLD v2 design doc** (in `private/`) — v2 add
+         -s the user-facing dashboard (presentation tier) as a built comp
+         -onent; fold the dashboard into the relevant phase's expectation
+         -s even though the original plan text predates it.              
+      12 +1. **Read the plan** (`private/Build-Delivery-Plan-v2.md` — the
+         + current plan; it has per-task `[ ]` checkboxes and workstreams
+         + WS-A…WS-G) for the phase list, acceptance criteria, and milest
+         +one map. Also read the **HLD v2 design doc** (in `private/`) — 
+         +v2 adds the user-facing dashboard (presentation tier) as a buil
+         +t component; fold the dashboard into the relevant phase's expec
+         +tations even though the original plan text predates it.        
+      13  
+      14  2. **Inspect the actual repo state** to judge each phase agains
+          t its exit criteria — don't trust the plan's status markers, ve
+          rify:
+      15     - Is it a git repo yet? CI present (`.github/workflows/`)?
+
+⏺ Update(.claude/skills/phase-status/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+      15     - Is it a git repo yet? CI present (`.github/workflows/`)?
+      16     - `service/` scaffolded? Which `topsales-*` modules exist an
+          d compile?
+      17     - `infra/` CDK present? `local/docker-compose.yml`? `Makefil
+          e`? `docs/` artifacts? `data/`, `postman/`, `presentation/`?
+      18 -   - Dashboard present (static HTML/JS + Chart.js under Spring 
+         -Boot static resources)? Does it render table + chart + insight 
+         -+ status badge?                                                
+      18 +   - Dashboard present (static HTML/JS + Chart.js in the API mo
+         +dule's `src/main/resources/static/`)? Does it render table + ch
+         +art + insight + status badge? (The `web/` React SPA is designed
+         +-only — absence is expected, not a gap.)                       
+      19     - Tests present (Testcontainers)? Migrations?
+      20  
+      21  3. **Map each phase (0–10) to a status:** done / in-progress / 
+          not-started, with one line of evidence each (what exists or is 
+          missing).
+
+⏺ public-repo-check → add the new private dirs to the untracked check:
+
+⏺ Update(.claude/skills/public-repo-check/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+       9  
+      10  ## Steps
+      11  
+      12 -1. **Confirm `.gitignore` covers private files.** Ensure `priva
+         -te/`, `CLAUDE.local.md`, `.env`, `.env.*`, and credential files
+         - are ignored. Critically, confirm **nothing under `private/` is
+         - tracked** (`git ls-files private/` must return nothing) — that
+         - directory holds the planning/design docs and reference materia
+         -l. Also flag any tracked `CLAUDE.local.md` or `.env*`.         
+      12 +1. **Confirm `.gitignore` covers private files.** Ensure `priva
+         +te/`, `claude-sessions/`, `interview-prep/`, `CLAUDE.local.md`,
+         + `.env`, `.env.*`, and credential files are ignored. Critically
+         +, confirm **nothing under those private dirs is tracked** (`git
+         + ls-files private/ claude-sessions/ interview-prep/` must retur
+         +n nothing) — they hold planning/design docs, raw Claude transcr
+         +ipt exports, recruiter emails, the verbatim problem statement, 
+         +and the probe bank. Also flag any tracked `CLAUDE.local.md` or 
+         +`.env*`.                                                       
+      13  
+      14  2. **Scan for secrets** across tracked files (skip `.git/`, `no
+          de_modules/`, `target/`, `cdk.out/`):
+      15     - AWS keys: `AKIA[0-9A-Z]{16}`, `aws_secret_access_key`
+
+⏺ Now verify everything and check for stale v1 references:
+
+⏺ Bash(git add -A
+      echo "--- claude-sessions/ & interview-prep/ ignored? ---"…)
+  ⎿  --- claude-sessions/ & interview-prep/ ignored? ---
+     private/ IGNORED ✓
+     claude-sessions/ IGNORED ✓
+     … +14 lines (ctrl+o to expand)
+
+⏺ The only v1 reference left is the intentional "supersedes" note in CLAUDE.md.
+  All ignores and hygiene checks pass. Committing:
+
+⏺ Bash(git commit -q -m "Align with Build & Delivery Plan v2: web/ SPA dir,
+      dashboard location, gitignore claude-sessions/ and interview-prep/, point
+      docs to v2 plan"…)
+  ⎿  b81db4a Align with Build & Delivery Plan v2: web/ SPA dir, dashboard l
+     ocation, gitignore claude-sessions/ and interview-prep/, point docs to
+      v2 plan
+⏺ Done (committed b81db4a). Read private/Build-Delivery-Plan-v2.md and refined
+  every affected tracked file.
+
+  What changed:
+
+  - CLAUDE.md
+    - Source-of-truth now points to Build-Delivery-Plan-v2.md (noting it
+  supersedes the v1 plan in the same folder); mentions the WS-A…WS-G workstream
+  organization.
+    - UI bullet now records where things live: demo dashboard in the API 
+  module's src/main/resources/static/, and the designed React SPA in a separate
+  top-level web/ dir (designed-only/optional build).
+    - Hygiene section now also flags claude-sessions/ and interview-prep/ as
+  never-commit (transcript exports + interview material).
+  - .gitignore — added claude-sessions/ and interview-prep/ alongside private/.
+  - phase-status skill — reads the v2 plan (checkbox tasks + workstreams), and
+  knows the dashboard location plus that an absent web/ SPA is expected, not a
+  gap.
+  - public-repo-check skill — now hard-checks all three private dirs (private/,
+  claude-sessions/, interview-prep/) are untracked.
+
+  Verified: all three private dirs are gitignored, no "Intuit" in any tracked
+  file, and no unintended v1-plan references remain.
+
+  One thing I left alone: the old
+  private/Build-Delivery-Plan-and-Repo-Structure.md (v1) still sits in private/.
+  It's harmless since it's gitignored, but if v2 fully replaces it, say the
+  word and I'll delete it to avoid confusion.
+
+✻ Crunched for 2m 4s
+
+❯ It is fine if private/ have intuit in their docs. Since it is gitignored, it  
+  won't go to GH. Take a look at the plan and let's build an implementation     
+  approach for all the phases. Create a folder                                  
+  claude-sessions/implementation-plan/and put together a docs for each phase.   
+  Let's start with Phase 0.                                                     
+
+⏺ Got it — these live under claude-sessions/ (gitignored), so they're private
+  working docs and can reference anything. Let me build the implementation-plan
+  folder with an index covering all phases, then a detailed Phase 0 doc.
+
+  First let me confirm the current repo state so the Phase 0 doc reflects what's
+  already done vs. remaining.
+
+⏺ Bash(echo "=== git ===" && git log --oneline | head -5 && echo "=== tracked
+      files ===" && git ls-files && echo "=== root dirs ===" && ls -1 && echo
+      "=== LICENSE? ===…)
+  ⎿  === git ===
+     b81db4a Align with Build & Delivery Plan v2: web/ SPA dir, dashboard l
+     ocation, gitignore claude-sessions/ and interview-prep/, point docs to
+     … +39 lines (ctrl+o to expand)
+
+⏺ There's already a service/ dir — let me check what's in it and the HLD's
+  infra/package conventions.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Now I'll write the implementation-plan index and the Phase 0 doc.
+
+⏺ Write(claude-sessions/implementation-plan/README.md)
+  ⎿  Wrote 45 lines to claude-sessions/implementation-plan/README.md
+       2 # Implementation Plan — Multi-Tenant Sales-Forecasting Platform
+         what to build, in what order) and the **HLD v2 design doc** (the
+         e doc per phase.nto a concrete, step-by-step build approach — on
+       4 
+         sessions/` and never goes to GitHub. It may reference employer/i
+         ocs/`, README) stay generic — see `/public-repo-check`.(code, `d
+       6 
+       8 ## How to use these docs
+      10 - **Objective & acceptance** — copied from the plan so the bar i
+         s unambiguous.
+     … +59 lines (ctrl+o to expand)
+
+⏺ Write(claude-sessions/implementation-plan/phase-0-foundations.md)
+  ⎿  Wrote 150 lines to
+     claude-sessions/implementation-plan/phase-0-foundations.md
+       2 # Phase 0 — Foundations & Logistics — Implementation Plan
+       3 > Source: `private/Build-Delivery-Plan-v2.md` §Phase 0 · Workstr
+       4 > Effort: S–M. No milestone, but it's the gate everything else d
+         epends on.
+       6 ## Objective
+       7 Repo skeleton, tooling, local env, and the non-negotiable schedu
+          just filling in modules that already compile and run.feature is
+       8 
+      10 - [ ] Public repo exists with generic name + description, MIT `L
+         ICENSE`, README skeleton.
+     … +227 lines (ctrl+o to expand)
+
+⏺ Both docs are created. Let me confirm they're properly gitignored (private,
+  not tracked):
+
+⏺ Bash(echo "=== files ===" && ls -1 claude-sessions/implementation-plan/ &&
+      echo "=== ignored? ===" && git check-ignore
+      claude-sessions/implementation-plan/phase-0-fo…)
+  ⎿  === files ===
+     phase-0-foundations.md
+     README.md
+     … +3 lines (ctrl+o to expand)
+
+⏺ Created the implementation-plan folder with two docs (both confirmed
+  gitignored, nothing staged for commit):
+
+  - claude-sessions/implementation-plan/README.md — the index: how each phase
+  doc is structured, a phase table (0–10) with the tight-on-time ordering, and
+  the cross-phase conventions locked once (Java 21 / Maven / com.topsales,
+  module names, profiles, local stack, UI location, interface seams).
+  - claude-sessions/implementation-plan/phase-0-foundations.md — the detailed
+  Phase 0 approach.
+
+  How I built the Phase 0 doc:
+  - Objective & acceptance lifted verbatim from the plan so the bar is clear.
+  - Current state — reconciled against the actual repo: git's already
+  initialized, .gitignore is already complete, service/ exists but is empty. So
+  the doc tells you not to redo those and lists only what genuinely remains
+  (LICENSE, Maven poms, dir scaffold, docker-compose, Makefile, CI).
+  - Decisions to lock — six open choices the plan left implicit, each with a
+  recommendation + rationale (build tool, Java 21, base package com.topsales,
+  etc.), since you're calibrating while learning the stack.
+  - Steps — 8 ordered steps, each with what / why / concrete file contents or 
+  commands / how to verify.
+  - Acceptance checklist + deferred + risks.
+
+  Two things I want your call on before we execute Phase 0:
+
+  1. Repo public timing (D0-5): the plan says make it public in Phase 0 for an
+  early green badge. I recommend keeping it private until Phase 10 (after
+  history tidy + secret scan), since the current history has setup churn. The
+  badge still works on a private repo. OK with that deviation?
+  2. Spring Boot version (D0-3): I deliberately did not hardcode a version — the
+  doc says pin the current stable 3.x from start.spring.io when we write the
+  parent pom, rather than me guessing one that may be stale.
+
+  Want me to draft the remaining phase docs (1–10) next, or start executing 
+  Phase 0 (write the LICENSE, poms, docker-compose, Makefile, CI) now?
+
+✻ Sautéed for 2m 31s
+
+❯ Yes we do planning and implementation phase by phase like how I have laid out 
+  the plan. I also want you to create a claude-sessions/export/ directory. I    
+  want to export any Claude Sessions for this project over there if I write     
+  /export                                                                       
+
+⏺ Two things: (1) yes — let's do planning + implementation phase by phase,
+  exactly as your plan lays out. (2) Let me set up the claude-sessions/export/
+  directory and a /export mechanism. First let me find where Claude Code stores
+  this project's session transcripts.
+
+⏺ Bash(PROJDIR="$HOME/.claude/projects/-Users-heminjoshi-code-sales-forecasting-
+      platform"
+      echo "=== project storage dir ===" && ls -la "$PROJDIR" 2>/dev/null | head
+      -3…)
+  ⎿  === project storage dir ===
+     total 1544
+     drwxr-xr-x@  4 heminjoshi  staff     128 Jun 27 17:44 .
+     … +11 lines (ctrl+o to expand)
+
+⏺ Found it: this project's transcripts live at
+  ~/.claude/projects/-Users-heminjoshi-code-sales-forecasting-platform/*.jsonl
+  (current session: 1dfb14bd…).
+
+  One concern before I name the skill export: Claude Code may have a built-in 
+  /export that would shadow a custom skill. Let me create the directory now and
+  confirm the built-in behavior in parallel.
+
+⏺ Bash(mkdir -p claude-sessions/export && echo "Done." && ls -ld
+      claude-sessions/export)
+  ⎿  Done.
+     drwxr-xr-x@ 2 heminjoshi  staff  64 Jun 28 14:09 claude-sessions/expor
+     t
+
+⏺ claude-code-guide(Confirm /export built-in behavior)
+  ⎿  Done (6 tool uses · 37.0k tokens · 28s)
+  (ctrl+o to expand)
+
+⏺ Confirmed: a custom skill named export overrides the built-in /export (skills
+  take precedence over commands), so naming it export works exactly as you want.
+  It will shadow the built-in (rendered-conversation export), which is the
+  tradeoff.
+
+  Let me create the skill — written portably (no hardcoded paths) and marked
+  user-only so Claude never auto-triggers it:
+
+⏺ Write(.claude/skills/export/SKILL.md)
+  ⎿  Wrote 32 lines to .claude/skills/export/SKILL.md
+      2 name: export
+      3 description: Copy this project's Claude Code session transcript(s
+        ) into claude-sessions/export/ (gitignored). User-triggered via /
+      4 disable-model-invocation: trueexport.
+      5 ---
+      6 
+      8 # Export session transcripts
+      9 Copy the raw `.jsonl` session transcript(s) for **this** project 
+        from Claude Code's storage into `claude-sessions/export/` (gitign
+        ored, private). User-triggered only.
+     … +37 lines (ctrl+o to expand)
+
+⏺ Now let me verify the path resolution and the copy mechanism actually work:
+⏺ Bash(SRC="$HOME/.claude/projects/$(pwd | tr '/' '-')"
+      echo "Resolved SRC: $SRC"…)
+  ⎿  Resolved SRC: /Users/heminjoshi/.claude/projects/-Users-heminjoshi-cod
+     e-sales-forecasting-platform
+     Exists?
+     … +9 lines (ctrl+o to expand)
+
+⏺ Works — path resolves correctly, transcript copied. Let me generate the
+  manifest too and confirm the whole claude-sessions/ tree (skill output
+  included) is gitignored:
+
+⏺ Bash(cd claude-sessions/export
+      {…)
+  ⎿  # Session Transcript Export Manifest
+
+     Last export: 2026-06-28 14:11:48
+     … +9 lines (ctrl+o to expand)
+
+⏺ Everything works end-to-end. The export skill is new/untracked; the other two
+  skills are committed, so I'll commit this one too for consistency:
+
+⏺ Bash(git add .claude/skills/export/ && git commit -q -m "Add /export skill:
+      copy project session transcripts to gitignored claude-sessions/export/" &&
+      git log --onel…)
+  ⎿  ea156b0 Add /export skill: copy project session transcripts to gitigno
+     red claude-sessions/export/
+     --- final claude-sessions tree (all gitignored) ---
+     … +4 lines (ctrl+o to expand)
+
+⏺ All set. Here's what I did:
+
+  1. Confirmed the working model: we go phase by phase — for each phase, a
+  planning doc in claude-sessions/implementation-plan/, then we execute it —
+  exactly as your plan lays out. Phase 0's plan is drafted and awaiting your
+  go-ahead to execute.
+
+  2. claude-sessions/export/ + /export command:
+  - Created claude-sessions/export/.
+  - Added a /export skill (.claude/skills/export/SKILL.md). When you type
+  /export, it copies this project's raw session transcript .jsonl files from
+  Claude Code's storage into claude-sessions/export/, refreshes a MANIFEST.md,
+  and reports what it copied.
+  - It's portable (computes the transcript path from the cwd — no hardcoded
+  paths) and marked disable-model-invocation: true so only you trigger it, never
+  Claude automatically.
+  - Verified it works: path resolved, the current session transcript (816K)
+  copied, manifest generated.
+
+  Two things worth knowing:
+  - It shadows the built-in /export (which exports a human-readable rendering).
+  I confirmed with the Claude Code guide that custom skills take precedence over
+  built-ins, so /export now does your transcript copy instead. If you ever want
+  the rendered-text export back, you'd rename this skill.
+  - The transcripts land in gitignored claude-sessions/ (verified ignored), so
+  they'll never reach GitHub — which matters since transcripts contain the
+  Intuit/interview material. The export skill itself is committed (ea156b0); if
+  you'd rather not ship that personal-workflow command in the eventual public
+  repo, say so and I'll gitignore it.
+
+  Ready when you are — want me to start executing Phase 0 (LICENSE, README
+  skeleton, Maven multi-module skeleton, docker-compose, Makefile, CI), or first
+  lock the two open decisions from the Phase 0 doc (repo-public timing, and
+  pinning the Spring Boot version)?
+
+✻ Brewed for 3m 25s
+
+❯ I changed the plan to some extent in private/. Take a look and make the       
+  changes in any documents required.                                            
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ Both Build-Delivery-Plan-v2.md and Intuit-HLD-v2.md were modified (both grew).
+  Let me re-read them to find what changed.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Phase 7 changed substantively: the production React SPA now deploys to Vercel
+  (with web/vercel.json, git-push deploys/preview URLs), S3+CloudFront is 
+  demoted to a documented AWS-native alternative (not built), and there's a new
+  API CORS allow-list task (localhost + Vercel origin). Let me read the HLD v2
+  to see the matching design changes.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now I have the full picture. The change in both docs: the production React SPA
+  moves from S3+CloudFront to Vercel hosting (git-push deploys, preview URLs),
+  with S3+CloudFront demoted to a documented AWS-native alternative that isn't 
+  built. Consequences that touch my tracked files: the SPA now hosts outside AWS
+  (so the CDK no longer carries an S3 site bucket + CloudFront), and the API
+  now needs a CORS allow-list (localhost + Vercel origin).
+
+  My CLAUDE.md currently states the old S3+CloudFront story in two places.
+  Updating both, and adding the CORS gotcha:
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 3 lines, removed 2 lines
+      19  ## Planned stack & conventions (when scaffolding)
+      20  
+      21  - **Service:** Java 21 + Spring Boot, **Maven multi-module** (r
+          oot `pom.xml` aggregating `topsales-common`, `-ingestion`, `-fo
+          recast`, `-insight`, `-api`, `db/migration`).
+      22 -- **UI (presentation tier):** the demo dashboard is **static HT
+         -ML + vanilla JS + Chart.js via CDN**, served from Spring Boot s
+         -tatic resources (the API module's `src/main/resources/static/`)
+         - — **no Node toolchain, no build step for the demo UI**. The pr
+         -oduction React SPA (Vite + Recharts on S3+CloudFront) lives in 
+         -a separate top-level `web/` dir and is **designed-only / option
+         -al build** — don't build it for the demo. The dashboard is a th
+         -in, read-only view over the REST API; keep business logic out o
+         -f it.                                                          
+      23 -- **Infra:** AWS CDK in TypeScript, 5 stacks (network, storage,
+         - intelligence, application, monitoring) under `infra/`. The App
+         -lication/Storage stacks also carry the S3 site bucket + CloudFr
+         -ont for the designed React SPA.                                
+      22 +- **UI (presentation tier):** the demo dashboard is **static HT
+         +ML + vanilla JS + Chart.js via CDN**, served from Spring Boot s
+         +tatic resources (the API module's `src/main/resources/static/`)
+         + — **no Node toolchain, no build step for the demo UI**. This l
+         +ocal-served dashboard is what the live demo runs (no internet d
+         +ependency). The production React SPA (Vite + Recharts) lives in
+         + a separate top-level `web/` dir and **deploys to Vercel** (git
+         +-push deploys + preview URLs, via `web/vercel.json`); it's **de
+         +signed-only / optional build** — don't build it for the demo. *
+         +*S3 + CloudFront is the documented AWS-native alternative, not 
+         +built.** The dashboard is a thin, read-only view over the REST 
+         +API; keep business logic out of it.                            
+      23 +- **CORS:** because the prod SPA is hosted on Vercel (cross-ori
+         +gin, outside AWS), the API must **allow-list the UI origin** — 
+         +`localhost` (local) + the Vercel domain (prod). (S3+CloudFront 
+         +would be same-origin and skip CORS — that's the tradeoff.)     
+      24 +- **Infra:** AWS CDK in TypeScript, 5 stacks (network, storage,
+         + intelligence, application, monitoring) under `infra/`. **No CD
+         +K hosting resources for the SPA** — it deploys to Vercel, outsi
+         +de the AWS account; the API stack just allow-lists the Vercel o
+         +rigin via CORS.                                                
+      25  - **Profiles:** a Spring profile selects impls behind the same 
+          interfaces — `local` (Postgres / Redis / filesystem raw log / t
+          emplate insight / Java forecaster / static dashboard) vs `aws` 
+          (Kinesis / DynamoDB / S3 / Bedrock / SageMaker / React SPA). Do
+          n't hardcode cloud services on the common path.
+      26  - **Migrations:** Flyway/Liquibase SQL.
+      27  - **Tests:** JUnit + Testcontainers (Postgres + Redis) for inte
+          gration.
+
+⏺ Let me update the phase-status skill's web/ note for accuracy, and check no
+  other tracked file still references the old S3+CloudFront hosting story:
+
+⏺ Update(.claude/skills/phase-status/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+      15     - Is it a git repo yet? CI present (`.github/workflows/`)?
+      16     - `service/` scaffolded? Which `topsales-*` modules exist an
+          d compile?
+      17     - `infra/` CDK present? `local/docker-compose.yml`? `Makefil
+          e`? `docs/` artifacts? `data/`, `postman/`, `presentation/`?
+      18 -   - Dashboard present (static HTML/JS + Chart.js in the API mo
+         -dule's `src/main/resources/static/`)? Does it render table + ch
+         -art + insight + status badge? (The `web/` React SPA is designed
+         --only — absence is expected, not a gap.)                       
+      18 +   - Dashboard present (static HTML/JS + Chart.js in the API mo
+         +dule's `src/main/resources/static/`)? Does it render table + ch
+         +art + insight + status badge? (The `web/` React SPA is designed
+         +-only and deploys to Vercel; its absence is expected, not a gap
+         +. S3+CloudFront is a documented AWS-native alternative, not bui
+         +lt.)                                                           
+      19     - Tests present (Testcontainers)? Migrations?
+      20  
+      21  3. **Map each phase (0–10) to a status:** done / in-progress / 
+          not-started, with one line of evidence each (what exists or is 
+          missing).
+
+⏺ Bash(echo "=== any stale S3/CloudFront refs in tracked files? ===" && git grep
+      -niE "cloudfront|s3 site|s3\+cloudfront|s3 bucket" 2>/dev/null || echo
+      "NONE ✓"
+      echo "…)
+  ⎿  === any stale S3/CloudFront refs in tracked files? ===
+     .claude/skills/phase-status/SKILL.md:18:   - Dashboard present (static
+      HTML/JS + Chart.js in the API module's `src/main/resources/static/`)?
+     … +38 lines (ctrl+o to expand)
+
+⏺ The remaining S3+CloudFront mentions are intentional (now correctly framed as
+  "documented AWS-native alternative, not built"). Vercel + CORS are in, no
+  stale "CDK carries S3 site bucket" claim remains, no employer-name leak.
+  Committing:
+
+⏺ Bash(git commit -q -m "Plan v2 update: prod SPA hosts on Vercel (not
+      S3+CloudFront); add CORS allow-list note; CDK has no SPA hosting
+      resources" && git log --oneline…)
+  ⎿  d5bc4c8 Plan v2 update: prod SPA hosts on Vercel (not S3+CloudFront);
+     add CORS allow-list note; CDK has no SPA hosting resources
+
+⏺ Done (committed d5bc4c8). I diffed both updated private docs against what my
+  tracked files claimed and found one substantive change rippling through:
+  production UI hosting flipped from S3+CloudFront → Vercel.
+
+  What I changed in CLAUDE.md:
+  - UI bullet — the prod React SPA now deploys to Vercel (git-push deploys +
+  preview URLs via web/vercel.json), still designed-only/optional; S3+CloudFront
+  reframed as the documented AWS-native alternative, not built. Also captured
+  that the live demo runs the local Spring-Boot-served dashboard (no internet
+  dependency).
+  - New CORS bullet — since Vercel is cross-origin/outside AWS, the API must
+  allow-list the UI origin (localhost + Vercel domain). This is a real gotcha
+  that didn't exist under the same-origin S3+CloudFront story.
+  - Infra bullet — removed the old claim that the CDK Application/Storage stacks
+  carry an S3 site bucket + CloudFront; the SPA now hosts outside AWS, so the
+  CDK has no SPA hosting resources.
+
+  phase-status skill — updated the web/ note to reflect Vercel hosting.
+
+  Not changed: the implementation-plan docs under claude-sessions/ don't
+  reference hosting yet, so nothing to fix there — Vercel + CORS will get baked
+  into the Phase 7 doc when we write it (its acceptance now reads "cdk synth
+  green + asserted; images build; UI hosting path defined / SPA on Vercel").
+
+  Verified: no stale CloudFront/S3-hosting claims remain (the two S3+CloudFront
+  mentions left are the intentional "alternative, not built" framing), and no
+  employer name leaked into tracked files.
+
+  Want to proceed with executing Phase 0 now, or keep refining plans?
+
+✻ Crunched for 1m 51s
+
+❯ Yes go ahead with Phase 0. Give me a detailed plan on the implementation of   
+  it.                                                                           
+⏺ I already have deep context on this repo (greenfield — empty service/, git
+  initialized, .gitignore complete, no LICENSE/poms yet) and a detailed Phase 0
+  draft. Rather than re-explore an essentially empty codebase, let me pin down
+  the one genuinely open technical detail — the current Spring Boot version —
+  and confirm a couple of decisions with you.
+
+⏺ Web Search("latest stable Spring Boot 3 GA version June 2026 release")
+  ⎿  Did 1 search in 5s
+
+⏺ Key finding: as of June 2026, Spring Boot 4.1.0 is the current GA (supported
+  to 2027), and Spring Boot 3.5 reaches end-of-life on June 30, 2026 —
+  essentially now. So my earlier "pin latest 3.x" recommendation is stale;
+  starting a new portfolio repo on a just-EOL'd version would be a bad look. Let
+  me confirm two decisions before finalizing the plan.
+
+⏺ User answered Claude's questions:
+  ⎿  · Which Spring Boot version should Phase 0 pin in the parent pom? → Spring 
+     Boot 4.1.x
+     · How should we handle the GitHub repo + CI for Phase 0? (CI only runs once
+     pushed to GitHub.) → Private repo, push now. Use Github org heminjoshi. 
+
+⏺ Decisions locked: Spring Boot 4.1.x / Java 21, and a private GitHub repo under
+  heminjoshi, pushed now (public in Phase 10). Let me run a few read-only
+  environment checks so the plan is grounded in what's actually
+  installed/authenticated.
+
+⏺ Bash(echo "=== gh auth ===" && gh auth status 2>&1 | head -5
+      echo "=== gh user ===" && gh api user --jq '.login' 2>&1…)
+  ⎿  === gh auth ===
+     github.com
+       ✓ Logged in to github.com account heminjoshi (keyring)
+     … +18 lines (ctrl+o to expand)
+
+⏺ Two things stand out from the environment: gh is authed as heminjoshi (ssh)
+  and the repo doesn't exist yet (good), but the installed JDK is 26 (Temurin
+  26.0.1) — not 21. That's a real wrinkle: running Spring Boot 4.1 on a
+  brand-new non-LTS JDK 26 may be unsupported. Let me confirm Boot 4.1's
+  supported Java range before recommending a toolchain approach.
+
+⏺ Web Search("Spring Boot 4.1 supported Java versions baseline Java 17 25
+            compatibility")
+  ⎿  Did 1 search in 5s
+
+⏺ Confirmed: Spring Boot 4.1.x supports Java 17 through Java 26 (Spring system 
+  requirements, BSWEN). So your installed JDK 26 will run Boot 4.1 fine — no JDK
+  downgrade needed. The clean approach: target Java 21 bytecode via
+  <java.version>21</java.version> (so --release 21 prevents using any post-21
+  APIs), build/run locally on JDK 26, and pin CI to Temurin 21 for a
+  reproducible target.
+
+  I have everything I need. Writing the detailed Phase 0 plan.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ The plan is written. Here's the summary before you approve:
+
+  Phase 0 execution plan — scaffold a runnable repo skeleton + private GitHub
+  repo, so Phase 2 can start immediately.
+
+  Locked decisions (from your answers + research):
+  - Maven multi-module, base pkg com.topsales, 5 topsales-* modules.
+  - Spring Boot 4.1.x, Java 21 target — your JDK 26 runs Boot 4.1 fine (supports
+  ≤ Java 26), and --release 21 keeps the bytecode at the LTS target; CI pins
+  Temurin 21.
+  - Private GitHub repo heminjoshi/sales-forecasting-platform, pushed now;
+  public in Phase 10.
+
+  What gets built: LICENSE + README skeleton · full dir tree (infra/ web/ docs/ 
+  local/ data/ postman/ presentation/ .github/workflows/) · Maven parent + 5
+  module poms (4 libraries + one bootable topsales-api so make run actually
+  starts a server) · local/docker-compose.yml (Postgres 16 + Redis 7,
+  healthchecked) · Makefile (thin wrappers) · GitHub Actions CI (ci.yml
+  builds/tests; infra.yml green placeholder until the CDK lands in Phase 7) ·
+  then create/push the private repo and confirm a green badge.
+
+  Verification: mvn verify green · make up → healthy Postgres+Redis · make run →
+  "Started TopSalesApplication" on :8080 · CI green after push · hygiene check
+  (no employer name, private dirs untracked, repo visibility private).
+
+  A couple of small things I decided rather than asked (flagged in the plan): a
+  minimal bootable API now (domain/endpoints still Phase 2), MIT copyright as
+  "Hemin Joshi", and Postgres 16 / Redis 7. Adjust if you'd prefer otherwise.
+
+⏺ User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/validated-launching-garden.md · /plan to 
+     edit
+     Phase 0 — Foundations & Logistics — Execution Plan
+
+     Context
+
+     The sales-forecasting-platform repo is greenfield: git is initialized,
+     .gitignore and the Claude tooling (CLAUDE.md, skills) are in place, but
+     there is no build tooling, no modules, no local env, and no remote. Phase 0
+     of private/Build-Delivery-Plan-v2.md is the gate everything else depends
+     on — it produces a repo skeleton where every later phase just fills in
+     modules that already compile and run. Goal of this plan: scaffold the Maven
+     multi-module project, local Docker stack, Makefile, CI, and a private
+     GitHub repo so the "walking skeleton" (Phase 2) can start immediately.
+
+     This is the execution of the already-drafted
+     claude-sessions/implementation-plan/phase-0-foundations.md, updated with
+     locked decisions.
+
+     Locked decisions
+
+     - Build: Maven multi-module. Base package com.topsales. Modules:
+     topsales-common, topsales-ingestion, topsales-forecast, topsales-insight,
+     topsales-api.
+     - Spring Boot 4.1.x (current GA, supported to 2027). Pin the exact latest
+     4.1.x patch from Maven Central at execution (known GA: 4.1.0).
+     - Java target 21 via <java.version>21</java.version>. Local JDK is 26
+     (Temurin) — Boot 4.1 supports through Java 26, and --release 21 blocks
+     post-21 APIs. CI pins Temurin 21 for a reproducible target.
+     - GitHub: create private repo heminjoshi/sales-forecasting-platform, push
+     now (gh is authed as heminjoshi, ssh). Flip to public in Phase 10 after
+     history tidy + secret scan.
+     - CI: GitHub Actions. ci.yml builds/tests the Maven reactor; infra.yml is a
+     green placeholder until the CDK lands (Phase 7).
+     - Minimal bootable API: topsales-api gets a real @SpringBootApplication +
+     spring-boot-starter-web so make run starts an (empty) server. Domain model,
+     endpoints, migrations stay in Phase 2.
+
+     Environment (verified, read-only)
+
+     - gh: logged in as heminjoshi (ssh); repo does not exist yet.
+     - Toolchain present: JDK 26, Maven 3.9.16, Docker 29 + Compose v5, Node 24.
+
+     ---
+     Steps
+
+     1. LICENSE + README skeleton
+
+     - LICENSE — MIT, 2026, copyright "Hemin Joshi" (personal portfolio; no
+     employer reference).
+     - README.md — generic skeleton with placeholder sections to fill in Phase
+     10: one-line pitch · architecture diagram · "run in 2 commands" ·
+     screenshots · design-doc links · tech stack · "built vs designed" note. CI
+     badge added after the first green run (step 8). No employer/interview 
+     framing.
+
+     2. Directory scaffold
+
+     Create the public-repo tree from the plan, using .gitkeep in
+     otherwise-empty dirs:
+     infra/  web/  docker/  local/  data/generator/  data/seed/  postman/
+     presentation/
+     docs/  docs/adr/  docs/api/  docs/diagrams/  .github/workflows/
+     (service/ exists but is empty; claude-sessions/, private/, interview-prep/
+     are already gitignored.)
+
+     3. Maven multi-module skeleton (the core of Phase 0)
+
+     service/pom.xml (parent / aggregator):
+     - <packaging>pom</packaging>; parent =
+     org.springframework.boot:spring-boot-starter-parent:4.1.0.
+     - <properties>: <java.version>21</java.version>, UTF-8 encoding.
+     - <modules>: the five topsales-*.
+     - Keep <dependencyManagement> minimal now; add Testcontainers/AWS BOMs in
+     the phases that need them (8 / 5–7).
+
+     Library modules topsales-common, topsales-ingestion, topsales-forecast,
+     topsales-insight:
+     - Each pom.xml: <parent> → aggregator, <artifactId> set,
+     <packaging>jar</packaging>, no app deps yet (ingestion/forecast/insight may
+     depend on topsales-common later — not required to compile now).
+     - One src/main/java/com/topsales/<module>/package-info.java per module so
+     it's non-empty and compiles.
+     - No spring-boot-maven-plugin here (libraries must not repackage).
+
+     topsales-api (the only bootable module):
+     - pom.xml: depends on topsales-common + spring-boot-starter-web; declares
+     spring-boot-maven-plugin in <build>.
+     - src/main/java/com/topsales/api/TopSalesApplication.java — minimal
+     @SpringBootApplication with main.
+     - src/main/resources/application.yml — app name, server.port: 8080, default
+     profile local (datasource/redis config added in Phase 2).
+     - src/main/resources/static/.gitkeep — placeholder for the demo dashboard
+     (Phase 2).
+
+     4. Local Docker stack — local/docker-compose.yml
+
+     - postgres:16 — env POSTGRES_DB/USER/PASSWORD, port 5432, named volume,
+     healthcheck: pg_isready. Mounts local/init.sql (empty placeholder; Flyway
+     owns schema from Phase 2).
+     - redis:7 — port 6379, healthcheck: redis-cli ping.
+     - Comment placeholder for an optional localstack profile (Phase 7).
+     - local/init.sql — empty placeholder with a header comment.
+
+     5. Makefile (thin wrappers)
+
+     up    : docker compose -f local/docker-compose.yml up -d
+     down  : docker compose -f local/docker-compose.yml down
+     run   : mvn -f service/pom.xml -pl topsales-api -am spring-boot:run
+     test  : mvn -f service/pom.xml test
+     seed  : @echo "seed: wired in Phase 8 (data/seed)"
+     demo  : @echo "demo: Postman/newman run, wired in Phase 8"
+     synth : @echo "synth: CDK added in Phase 7"   # becomes: cd infra && npm ci
+     && npx cdk synth
+
+     6. CI — .github/workflows/
+
+     - ci.yml: trigger on push + PR to main; actions/checkout@v4;
+     actions/setup-java@v4 (temurin, 21, maven cache); run mvn -B -f 
+     service/pom.xml verify.
+     - infra.yml: green placeholder job (echo "CDK validation added in Phase
+     7"). Swapped to real cdk synth in Phase 7. Keeps the badge green now.
+
+     7. .gitignore touch-up
+
+     Add build/ (Gradle-leftover guard) and HELP.md (Spring Initializr noise).
+     Everything else already covered.
+
+     8. Repo creation, push, green badge
+
+     - Stage + commit all scaffold on main.
+     - gh repo create heminjoshi/sales-forecasting-platform --private --source=.
+     --remote=origin --push --description "<generic one-liner>".
+     - Watch CI: gh run watch (or gh run list) until ci.yml + infra.yml are
+     green.
+     - Add the CI badge to README.md; commit + push.
+
+     9. Sync planning docs (private, gitignored)
+
+     - Update claude-sessions/implementation-plan/phase-0-foundations.md to
+     reflect locked decisions (Boot 4.1, JDK-26-runs-21, Vercel already noted,
+     private-repo-now).
+     - Flip Phase 0 status to ✅ in
+     claude-sessions/implementation-plan/README.md.
+
+     ---
+     Verification (end-to-end)
+
+     1. Compile: cd service && mvn -q -B compile → exit 0 (all 5 modules).
+     2. Reactor build/test: mvn -q -B -f service/pom.xml verify → green (empty
+     reactor passes).
+     3. Local stack: make up → docker compose ps healthy; pg_isready -h 
+     localhost -p 5432 and redis-cli -h localhost ping succeed; make down clean.
+     4. App boots: make run → log shows Started TopSalesApplication on :8080;
+     Ctrl-C.
+     5. CI: after push, gh run list --limit 2 shows both workflows
+     completed/success; badge renders in README.
+     6. Hygiene: git grep -i intuit → nothing; git ls-files private/ 
+     claude-sessions/ interview-prep/ → nothing; repo visibility is private (gh 
+     repo view --json visibility).
+
+     Acceptance checklist (Phase 0 done)
+
+     - [ ] mvn verify green (5 modules compile; reactor builds).
+     - [ ] make up brings up healthy Postgres + Redis; make down clean.
+     - [ ] make run boots the empty API on :8080.
+     - [ ] Private GitHub repo exists under heminjoshi; pushed; CI green; badge
+     in README.
+     - [ ] LICENSE (MIT) + README skeleton + full dir tree committed.
+     - [ ] Planning docs synced; Phase 0 marked ✅.
+
+     Out of scope (later phases)
+
+     - Domain model, controllers, TenantScopeFilter, Flyway migrations,
+     datasource/redis wiring → Phase 2.
+     - Real CDK + cdk synth in infra.yml → Phase 7 (pull earlier if the prep CDK
+     is ready).
+     - Seed data, Postman collection → Phase 8.
+     - Flip repo to public + tidy history → Phase 10.
+
+     Risks / notes
+
+     - Boot 4.1 patch version: verify the latest 4.1.x on Maven Central before
+     pinning; 4.1.0 is the known GA.
+     - Local JDK 26 vs target 21: supported (Boot 4.1 ≤ Java 26); --release 21
+     guarantees no post-21 APIs leak in; CI on Temurin 21 is the source of
+     truth.
+     - infra.yml placeholder: intentional so the badge is green before the CDK
+     exists; do not point it at an empty infra/.
+     - Recruiter reply (WS-G): off-repo logistics item in the plan's Phase 0 —
+     yours to action; not part of this execution.
+
+⏺ Plan approved. Let me set up task tracking and verify the exact Spring Boot
+  4.1.x patch before scaffolding.
+⏺ Fetch(https://repo1.maven.org/maven2/org/springframework/boot/spring-boot-star
+       ter-parent/maven-metadata.xml)
+  ⎿  Received 0 bytes (403 Forbidden)
+
+⏺ Bash(curl -s https://repo1.maven.org/maven2/org/springframework/boot/spring-bo
+      ot-starter-parent/maven-metadata.xml 2>/dev/null | grep -Eo
+      '<(latest|release|version)>…)
+  ⎿  version>3.4.10
+     version>3.4.11
+     version>3.4.12
+     … +37 lines (ctrl+o to expand)
+
+⏺ 4.1.0 is the latest GA 4.1.x (4.0.7 is the highest 4.0.x). Pinning 4.1.0.
+
+⏺ Now scaffolding. LICENSE, README, and directory tree:
+
+⏺ Write(LICENSE)
+  ⎿  Wrote 21 lines to LICENSE
+       2 MIT License
+       3 Copyright (c) 2026 Hemin Joshi
+       5 Permission is hereby granted, free of charge, to any person obta
+         ining a copy
+         re"), to dealare and associated documentation files (the "Softwa
+       7 in the Software without restriction, including without limitatio
+       8 to use, copy, modify, merge, publish, distribute, sublicense, an
+         d/or sell
+         re iss of the Software, and to permit persons to whom the Softwa
+      10 furnished to do so, subject to the following conditions:
+     … +23 lines (ctrl+o to expand)
+
+⏺ Write(README.md)
+  ⎿  Wrote 46 lines to README.md
+       2 # Sales-Forecasting Platform
+       3 > Multi-tenant "top sales by category" platform — ingests sale e
+       4 > category aggregates, forecasts each category forward, ranks to
+          a top-k, surfaces a grounded
+          / Spring Boot, runnable locallypresents it in a dashboard. Java
+       6 > with one `docker compose up`; AWS path designed in CDK behind 
+       7 the same interfaces.
+       8 <!-- CI badge added after the first green run -->
+      10 > **Status:** 🚧 Early scaffolding (Phase 0). The walking skelet
+         on, forecasting, GenAI insight,
+     … +48 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      for d in infra web docker local data/generator data/seed postman
+      presentation docs docs/adr docs/api docs/d…)
+  ⎿  === tree ===
+     .github
+     .github/workflows
+     … +13 lines (ctrl+o to expand)
+
+⏺ Now the Maven multi-module skeleton. Parent pom first:
+
+⏺ Write(service/pom.xml)
+  ⎿  Wrote 34 lines to service/pom.xml
+       2 <project xmlns="http://maven.apache.org/POM/4.0.0"
+       3          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       4          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 h
+         ttps://maven.apache.org/xsd/maven-4.0.0.xsd">
+       5     <modelVersion>4.0.0</modelVersion>
+       6 
+       7     <parent>
+       8         <groupId>org.springframework.boot</groupId>
+       9         <artifactId>spring-boot-starter-parent</artifactId>
+      10         <version>4.1.0</version>
+     … +27 lines (ctrl+o to expand)
+
+⏺ Now the four library modules (pom + package-info each):
+
+⏺ Write(service/topsales-common/pom.xml)
+  ⎿  Wrote 18 lines to service/topsales-common/pom.xml
+       2 <project xmlns="http://maven.apache.org/POM/4.0.0"
+       3          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       4          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 h
+         ttps://maven.apache.org/xsd/maven-4.0.0.xsd">
+       5     <modelVersion>4.0.0</modelVersion>
+       6 
+       7     <parent>
+       8         <groupId>com.topsales</groupId>
+       9         <artifactId>topsales-parent</artifactId>
+      10         <version>0.1.0-SNAPSHOT</version>
+     … +11 lines (ctrl+o to expand)
+
+⏺ Write(service/topsales-common/src/main/java/com/topsales/common/package-info.j
+       ava)
+  ⎿  Wrote 8 lines to service/topsales-common/src/main/java/com/topsales/co
+     mmon/package-info.java
+      2  * Shared domain model, DTOs, configuration, and the interface se
+        ams
+      3  * ({@code Forecaster}, {@code ForecastProvider}, {@code InsightG
+        enerator}, repository ports)
+      4  * that let local and AWS implementations swap behind the same co
+        ntracts.
+      5  *
+      6  * <p>Populated in Phase 2 (domain model) and beyond.
+      7  */
+      8 package com.topsales.common;
+
+⏺ Write(service/topsales-ingestion/pom.xml)
+  ⎿  Wrote 18 lines to service/topsales-ingestion/pom.xml
+       2 <project xmlns="http://maven.apache.org/POM/4.0.0"
+       3          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       4          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 h
+         ttps://maven.apache.org/xsd/maven-4.0.0.xsd">
+       5     <modelVersion>4.0.0</modelVersion>
+       6 
+       7     <parent>
+       8         <groupId>com.topsales</groupId>
+       9         <artifactId>topsales-parent</artifactId>
+      10         <version>0.1.0-SNAPSHOT</version>
+     … +10 lines (ctrl+o to expand)
+
+⏺ Write(service/topsales-ingestion/src/main/java/com/topsales/ingestion/package-
+       info.java)
+  ⎿  Wrote 7 lines to service/topsales-ingestion/src/main/java/com/topsales
+     /ingestion/package-info.java
+      1 /**
+      2  * Event ingestion: the local {@code POST /events} path with idem
+        potent upserts into the
+      3  * aggregate store (the Kinesis/KCL consumer is the production pa
+        th, designed-only).
+      4  *
+      5  * <p>Populated in Phase 2.
+      6  */
+      7 package com.topsales.ingestion;
+
+⏺ Write(service/topsales-forecast/pom.xml)  ⎿  Wrote 18 lines to service/topsales-forecast/pom.xml
+       2 <project xmlns="http://maven.apache.org/POM/4.0.0"
+       3          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       4          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 h
+         ttps://maven.apache.org/xsd/maven-4.0.0.xsd">
+       5     <modelVersion>4.0.0</modelVersion>
+       6 
+       7     <parent>
+       8         <groupId>com.topsales</groupId>
+       9         <artifactId>topsales-parent</artifactId>
+      10         <version>0.1.0-SNAPSHOT</version>
+     … +10 lines (ctrl+o to expand)
+
+⏺ Write(service/topsales-forecast/src/main/java/com/topsales/forecast/package-in
+       fo.java)
+  ⎿  Wrote 7 lines to service/topsales-forecast/src/main/java/com/topsales/
+     forecast/package-info.java
+      1 /**
+      2  * Forecasting engine: {@code Forecaster} implementations (season
+        al-naive, Holt-Winters),
+      3  * the batch runner that writes versioned serving rows, and time-
+        series-CV evaluation (WAPE + bias).
+      4  *
+      5  * <p>Populated in Phase 3.
+      6  */
+      7 package com.topsales.forecast;
+
+⏺ Write(service/topsales-insight/pom.xml)
+  ⎿  Wrote 18 lines to service/topsales-insight/pom.xml
+       2 <project xmlns="http://maven.apache.org/POM/4.0.0"
+       3          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       4          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 h
+         ttps://maven.apache.org/xsd/maven-4.0.0.xsd">
+       5     <modelVersion>4.0.0</modelVersion>
+       6 
+       7     <parent>
+       8         <groupId>com.topsales</groupId>
+       9         <artifactId>topsales-parent</artifactId>
+      10         <version>0.1.0-SNAPSHOT</version>
+     … +10 lines (ctrl+o to expand)
+
+⏺ Write(service/topsales-insight/src/main/java/com/topsales/insight/package-info
+       .java)
+  ⎿  Wrote 8 lines to service/topsales-insight/src/main/java/com/topsales/i
+     nsight/package-info.java
+      2  * GenAI insight layer: {@code InsightGenerator} with a determini
+        stic {@code TemplateInsightGenerator}
+      3  * (local default) and a grounded {@code BedrockInsightGenerator}
+         (cloud). Insights verbalize only
+      4  * the computed numbers and are validated against them, with temp
+        late fallback.
+      5  *
+      6  * <p>Populated in Phase 5.
+      7  */
+      8 package com.topsales.insight;
+     … +1 line (ctrl+o to expand)
+
+⏺ Now the bootable topsales-api module — pom, application class, config, static
+  placeholder:
+
+⏺ Write(service/topsales-api/pom.xml)
+  ⎿  Wrote 45 lines to service/topsales-api/pom.xml
+       2 <project xmlns="http://maven.apache.org/POM/4.0.0"
+       3          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       4          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 h
+         ttps://maven.apache.org/xsd/maven-4.0.0.xsd">
+       5     <modelVersion>4.0.0</modelVersion>
+       6 
+       7     <parent>
+       8         <groupId>com.topsales</groupId>
+       9         <artifactId>topsales-parent</artifactId>
+      10         <version>0.1.0-SNAPSHOT</version>
+     … +38 lines (ctrl+o to expand)
+
+⏺ Write(service/topsales-api/src/main/java/com/topsales/api/TopSalesApplication.
+       java)
+  ⎿  Wrote 18 lines to service/topsales-api/src/main/java/com/topsales/api/
+     TopSalesApplication.java
+       2 package com.topsales.api;
+       3 import org.springframework.boot.SpringApplication;
+       4 import org.springframework.boot.autoconfigure.SpringBootApplicat
+       5 ion;
+       6 /**
+       7  * Entry point for the TopSales serving API.
+       9  * <p>Phase 0: boots an empty web server (no endpoints yet). Con
+         trollers, top-k assembly,
+      10  * caching, degradation, the tenant filter, and the served dashb
+         oard arrive in Phase 2+.
+     … +10 lines (ctrl+o to expand)
+
+⏺ Write(service/topsales-api/src/main/resources/application.yml)
+  ⎿  Wrote 10 lines to
+     service/topsales-api/src/main/resources/application.yml
+       2   application:
+       3     name: topsales-api
+       4   profiles:
+       5     default: local
+       6 
+       7 server:
+       8   port: 8080
+       9 
+      10 # Phase 2+ adds: datasource (Postgres), Redis, Flyway, profile-s
+         pecific (local|aws) wiring.
+     … +1 line (ctrl+o to expand)
+
+⏺ Bash(touch service/topsales-api/src/main/resources/static/.gitkeep && echo
+      "static placeholder created" && find service -type f | sort)
+  ⎿  Error: Exit code 1
+     touch: service/topsales-api/src/main/resources/static/.gitkeep: No such 
+     file or directory
+
+⏺ Bash(mkdir -p service/topsales-api/src/main/resources/static && touch
+      service/topsales-api/src/main/resources/static/.gitkeep && echo "ok" &&
+      find service -type f |…)
+  ⎿  ok
+     service/pom.xml
+     service/topsales-api/pom.xml
+     … +16 lines (ctrl+o to expand)
+
+⏺ Maven skeleton is in place. Let me compile early to validate the poms against
+  Boot 4.1 + JDK 26 before continuing (this also downloads dependencies):
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/service && mvn -q -B
+      -DskipTests compile 2>&1 | tail -30; echo "EXIT: ${PIPESTATUS[0]}")
+  ⎿  EXIT:
+
+⏺ The exit code didn't print (zsh vs bash PIPESTATUS). Let me re-verify the
+  build status cleanly:
+
+⏺ Bash(mvn -B -DskipTests compile > /tmp/mvn-compile.log 2>&1; echo "EXIT: $?";
+      echo "--- tail ---"; tail -25 /tmp/mvn-compile.log)
+  ⎿  EXIT: 0
+     --- tail ---
+     [INFO] Building topsales-api 0.1.0-SNAPSHOT
+     … +24 lines (ctrl+o to expand)
+
+⏺ All 6 modules compile under Boot 4.1 + JDK 26. Maven skeleton done.
+
+⏺ Now the local Docker stack, Makefile, and CI. First docker-compose.yml +
+  init.sql:
+
+⏺ Write(local/docker-compose.yml)
+  ⎿  Wrote 39 lines to local/docker-compose.yml
+       2 # Postgres stands in for Aurora aggregates + the serving table; 
+         Redis for ElastiCache.
+       3 # Start with `make up`, stop with `make down`.
+       4 
+       5 services:
+       6   postgres:
+       7     image: postgres:16
+       8     container_name: topsales-postgres
+       9     environment:
+      10       POSTGRES_DB: topsales
+     … +32 lines (ctrl+o to expand)
+
+⏺ Write(local/init.sql)
+  ⎿  Wrote 3 lines to local/init.sql
+      1 -- Postgres bootstrap for local development.
+      2 -- Intentionally empty: Flyway owns the schema (events, aggregate
+        s, serving) from Phase 2 onward.
+      3 -- This file exists so the docker-entrypoint init mount has somet
+        hing to run.
+
+⏺ Write(Makefile)
+  ⎿  Wrote 30 lines to Makefile
+         ites.n wrappers over the real commands. See README for prerequis
+       2 .PHONY: up down run test seed demo synth
+       3 
+       4 # Bring up the local stack (Postgres + Redis).
+       5 up:
+       6   docker compose -f local/docker-compose.yml up -d
+       7 
+       8 # Tear down the local stack.
+       9 down:
+      10   docker compose -f local/docker-compose.yml down
+     … +23 lines (ctrl+o to expand)
+⏺ CI workflows now, then I'll verify the Makefile used real tabs:
+
+⏺ Write(.github/workflows/ci.yml)
+  ⎿  Wrote 24 lines to .github/workflows/ci.yml
+       1 name: ci
+       2 
+       3 on:
+       4   push:
+       5     branches: [main]
+       6   pull_request:
+       7     branches: [main]
+       8 
+       9 jobs:
+      10   build:
+     … +14 lines (ctrl+o to expand)
+
+⏺ The ci.yml uses no untrusted input (only a static mvn command), so the
+  injection warning doesn't apply. Now the infra.yml placeholder:
+
+⏺ Write(.github/workflows/infra.yml)
+  ⎿  Wrote 19 lines to .github/workflows/infra.yml
+       2 name: infra
+       3 on:
+       4   push:
+       5     branches: [main]
+       6   pull_request:
+       8     branches: [main]
+       9 # Placeholder until the AWS CDK lands in Phase 7. Keeps the badg
+         e green without
+      10 # pointing at an empty infra/. In Phase 7 this becomes a real `c
+         dk synth` job:
+     … +11 lines (ctrl+o to expand)
+
+⏺ infra.yml is also static — no injection risk. Now .gitignore touch-up, remove
+  now-redundant .gitkeeps, and verify the Makefile used real tabs:
+
+⏺ Update(.gitignore)
+  ⎿  Added 2 lines
+      13  
+      14  # Java / Maven
+      15  target/
+      16 +build/                                                         
+      17  *.class
+      18 +HELP.md                                                        
+      19  
+      20  # Node / CDK
+      21  node_modules/
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      # remove now-redundant .gitkeep where real files exist…)
+  ⎿  === Makefile recipe lines start with TAB? (^I = tab) ===
+     6: docker compose -f local/docker-compose.yml up -d
+     10:        docker compose -f local/docker-compose.yml down
+     … +19 lines (ctrl+o to expand)
+
+⏺ Makefile has real tabs, redundant .gitkeeps removed. Task 4 done.
+
+⏺ Now full local verification. Start with mvn verify (includes tests):
+
+⏺ Bash(mvn -B -f service/pom.xml verify > /tmp/mvn-verify.log 2>&1; echo "EXIT:
+      $?"; echo "--- reactor summary ---"; grep -A12 "Reactor Summary"
+      /tmp/mvn-verify.log |…)
+  ⎿  EXIT: 0
+     --- reactor summary ---
+     [INFO] Reactor Summary for topsales-parent 0.1.0-SNAPSHOT:
+     … +20 lines (ctrl+o to expand)
+
+⏺ mvn verify green. Now the Docker stack — make up and health checks:
+
+⏺ Bash(make up 2>&1 | tail -8; echo "EXIT: $?")
+  ⎿   Container topsales-redis Creating
+      Container topsales-postgres Creating
+      Container topsales-redis Created
+     … +6 lines (ctrl+o to expand)
+
+⏺ Containers are up. Let me verify reachability directly (and check healthcheck
+  status):
+
+⏺ Bash(echo "=== compose ps ===" && docker compose -f local/docker-compose.yml
+      ps
+      echo "=== postgres ===" && docker exec topsales-postgres pg_isready -U
+      topsales -d to…)
+  ⎿  === compose ps ===
+     NAME                IMAGE         COMMAND                  SERVICE
+     CREATED          STATUS                    PORTS
+     … +10 lines (ctrl+o to expand)
+
+⏺ Both healthy and reachable. Now verify make run actually boots the API — I'll
+  start it in the background, watch for startup, then stop it:
+
+⏺ Bash(mvn -B -f service/pom.xml -pl topsales-api -am spring-boot:run >
+      /tmp/topsales-run.log 2>&1)
+  ⎿  Running in the background (↓ to manage)
+
+⏺ Background command "Start API server in background" failed with exit code 1
+
+⏺ The background make run exited 1 — let me read the log to see why:
+
+  Read 1 file (ctrl+o to expand)
+⏺ The spring-boot:run goal ran against the parent module (which has no main
+  class) because -am pulls parent+common into the reactor and the goal executes
+  on each. The fix: build deps to the local repo first, then run the goal scoped
+  to just topsales-api. Let me verify that works, then fix the Makefile.
+
+⏺ Bash(mvn -B -f service/pom.xml -pl topsales-api -am -DskipTests install >
+      /tmp/mvn-install.log 2>&1; echo "INSTALL EXIT: $?"; tail -3
+      /tmp/mvn-install.log | head -3)
+  ⎿  INSTALL EXIT: 0
+     [INFO] Total time:  0.740 s
+     [INFO] Finished at: 2026-06-28T14:45:13-07:00
+     … +2 lines (ctrl+o to expand)
+
+⏺ Bash(mvn -B -f service/pom.xml -pl topsales-api spring-boot:run >
+      /tmp/topsales-run.log 2>&1)
+  ⎿  Running in the background (↓ to manage)
+
+⏺ I'll watch the log for either successful startup or failure:
+
+⏺ Monitor(topsales-api startup result)
+  ⎿  Monitor started · task bbru34leu · timeout 120s
+
+⏺ Waiting for the startup result from the monitor.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Monitor event: "topsales-api startup result"
+
+⏺ Monitor "topsales-api startup result" stream ended
+
+⏺ API booted cleanly — Tomcat on :8080, "Started TopSalesApplication". Let me
+  confirm it responds, then stop the server and update the Makefile run target
+  to the working two-step invocation:
+
+⏺ Bash(echo "=== HTTP check (404 = server up, no endpoints yet) ===" && curl -s
+      -o /dev/null -w "HTTP %{http_code}\n" http://localhost:8080/)
+  ⎿  === HTTP check (404 = server up, no endpoints yet) ===
+     HTTP 404
+
+⏺ HTTP 404 confirms the server is up (no endpoints yet, as expected). Stopping
+  the background server:
+
+⏺ Stop Task
+  ⎿  mvn -B -f service/pom.xml -pl topsales-api spring-boot:run >
+     /tmp/topsales-run.log 2>&1 · stopped
+
+⏺ Now fix the Makefile run target to the working two-step invocation:
+
+⏺ Update(Makefile)
+  ⎿  Added 4 lines, removed 1 line
+      10    docker compose -f local/docker-compose.yml down
+      11  
+      12  # Run the API locally (boots an empty server until Phase 2 adds
+           endpoints).
+      13 +# Install deps to the local repo first, then run the goal scope
+         +d to topsales-api only                                         
+      14 +# (running spring-boot:run across the reactor fails on the pare
+         +nt/library modules).                                           
+      15  run:
+      14 -  mvn -f service/pom.xml -pl topsales-api -am spring-boot:run  
+      16 +  mvn -f service/pom.xml -pl topsales-api -am -DskipTests insta
+         +ll                                                             
+      17 +  mvn -f service/pom.xml -pl topsales-api spring-boot:run      
+      18  
+      19  # Build + test the Maven reactor.
+      20  test:
+
+⏺ Let me verify make down works (completing the stack lifecycle check) and clean
+  up:
+
+⏺ Bash(make down 2>&1 | tail -5; echo "EXIT: $?"; echo "=== remaining topsales
+      containers? ===" && (docker ps --filter name=topsales --format
+      '{{.Names}}' | grep . ||…)
+  ⎿   Container topsales-redis Stopped
+      Container topsales-redis Removing
+      Container topsales-redis Removed
+     … +5 lines (ctrl+o to expand)
+
+⏺ All local verification passed: mvn verify green · Postgres+Redis healthy · API
+  boots on :8080 · make down clean.
+
+⏺ Now stage and review what will be committed (confirming no target/, no
+  private/gitignored content leaks):
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git add -A…)
+  ⎿  === staged files ===
+     A  .github/workflows/ci.yml
+     A  .github/workflows/infra.yml
+     … +34 lines (ctrl+o to expand)
+
+⏺ Clean staging — no target/, no private content, no employer name. Committing
+  and creating the private repo:
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git commit -q -m "Phase 0: scaffold Maven multi-module skeleton, local
+      Docker stack, Makefile, CI…)  ⎿  --- committed ---
+     259151e Phase 0: scaffold Maven multi-module skeleton, local Docker st
+     ack, Makefile, CI
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      gh repo create heminjoshi/sales-forecasting-platform \…)
+  ⎿  https://github.com/heminjoshi/sales-forecasting-platform
+     To github.com:heminjoshi/sales-forecasting-platform.git
+      * [new branch]      HEAD -> main
+     … +2 lines (ctrl+o to expand)
+
+⏺ Repo created and pushed. Let me confirm it's private and watch the CI runs:
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== visibility ===" && gh repo view --json visibility,nameWithOwner
+      --jq '.nameWithOwner + " → " + .v…)
+  ⎿  === visibility ===
+     heminjoshi/sales-forecasting-platform → PRIVATE
+     === workflow runs ===
+     … +4 lines (ctrl+o to expand)
+
+⏺ Private ✓, both workflows running. Let me watch them to completion:
+
+⏺ Monitor(CI workflow conclusions (ci + infra))
+  ⎿  Monitor started · task b93tobill · timeout 300s
+
+⏺ While CI runs, let me prepare the README CI badge and sync the planning docs
+  (Phase 0 → done).
+
+⏺ Update(README.md)
+  ⎿  Added 2 lines
+      1  # Sales-Forecasting Platform
+      2  
+      3 +[![ci](https://github.com/heminjoshi/sales-forecasting-platform/
+        +actions/workflows/ci.yml/badge.svg)](https://github.com/heminjos
+        +hi/sales-forecasting-platform/actions/workflows/ci.yml)         
+      4 +                                                                
+      5  > Multi-tenant "top sales by category" platform — ingests sale e
+         vents, maintains per-tenant
+      6  > category aggregates, forecasts each category forward, ranks to
+          a top-k, surfaces a grounded
+      7  > natural-language insight, and presents it in a dashboard. Java
+          / Spring Boot, runnable locally
+
+⏺ Monitor event: "CI workflow conclusions (ci + infra)"
+
+⏺ infra succeeded; waiting on ci. Let me sync the planning docs meanwhile — mark
+  Phase 0 done in the index:
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 1 line, removed 1 line
+      20  
+      21  | Phase | Title | Milestone | Doc | Status |
+      22  |---|---|---|---|---|
+      23 -| 0 | Foundations & logistics | — | [phase-0-foundations.md](ph
+         -ase-0-foundations.md) | ✍️ drafted |                           
+      23 +| 0 | Foundations & logistics | — | [phase-0-foundations.md](ph
+         +ase-0-foundations.md) | ✅ done |                              
+      24  | 1 | Design artifacts (LLD, ADRs, OpenAPI, diagrams) | — | _to
+          do_ | |
+      25  | 2 | Walking skeleton (vertical slice + minimal UI) | ⭐ DEMO 
+          | _todo_ | |
+      26  | 3 | Forecasting engine | — | _todo_ | |
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 2 lines, removed 1 line
+      37  ## Cross-phase conventions (locked once, applied everywhere)
+      38  
+      39  These are decided in Phase 0 and referenced by later phases:
+      40 -- **Language/build:** Java 21, Maven multi-module, base package
+         - `com.topsales`.                                               
+      40 +- **Language/build:** Java 21 target (local JDK 26 runs it; CI 
+         +on Temurin 21), **Spring Boot 4.1.0**, Maven multi-module, base
+         + package `com.topsales`.                                       
+      41 +- **Repo:** private GitHub repo `heminjoshi/sales-forecasting-p
+         +latform` (created Phase 0); flips public in Phase 10.          
+      42  - **Module names:** `topsales-common`, `topsales-ingestion`, `t
+          opsales-forecast`, `topsales-insight`, `topsales-api`.
+      43  - **Profiles:** Spring `local` (default) vs `aws` select impls 
+          behind interfaces.
+      44  - **Local stack:** Postgres 16 + Redis 7 via `local/docker-comp
+          ose.yml`.
+
+⏺ Monitor event: "CI workflow conclusions (ci + infra)"
+
+⏺ Monitor "CI workflow conclusions (ci + infra)" stream ended
+
+⏺ Both CI workflows are green (ci: success, infra: success). Let me record the
+  Phase 0 outcome in the private doc, then commit the badge + doc syncs and
+  push:
+
+⏺ Update(claude-sessions/implementation-plan/phase-0-foundations.md)
+  ⎿  Added 7 lines
+       3  > Source: `private/Build-Delivery-Plan-v2.md` §Phase 0 · Workst
+          reams WS-D (infra/tooling), WS-G (logistics).
+       4  > Effort: S–M. No milestone, but it's the gate everything else 
+          depends on.
+       5  
+       6 +## ✅ Outcome (executed 2026-06-28)                            
+       7 +Done and verified. Locked decisions: **Spring Boot 4.1.0**, **J
+         +ava 21 target** (local JDK 26 runs Boot 4.1; CI pins Temurin 21
+         +), Maven multi-module, base pkg `com.topsales`, **private** rep
+         +o `heminjoshi/sales-forecasting-platform` (public deferred to P
+         +hase 10).                                                      
+       8 +- Scaffolded: parent pom + 5 modules (bootable `topsales-api` +
+         + 4 libraries), `local/docker-compose.yml` (Postgres 16 + Redis 
+         +7, healthchecks), `Makefile`, `.github/workflows/{ci,infra}.yml
+         +`, MIT `LICENSE`, README skeleton, full dir tree.              
+       9 +- Verified: `mvn verify` green (6 modules); `make up` → both he
+         +althy; `make run` → API boots on :8080 (HTTP 404, no endpoints 
+         +yet); `make down` clean; repo pushed; **CI green** (ci + infra)
+         +; badge in README.                                             
+      10 +- Fix applied: `make run` is a two-step (`install` deps, then `
+         +spring-boot:run -pl topsales-api`) — running the goal across th
+         +e reactor fails on the parent/library modules.                 
+      11 +- Still yours (off-repo, WS-G): reply to recruiter with onsite 
+         +blocks + prep-call times.                                      
+      12 +                                                               
+      13  ## Objective
+      14  Repo skeleton, tooling, local env, and the non-negotiable sched
+          uling actions — so that from here on, *implementing* a feature 
+          is just filling in modules that already compile and run.
+      15  
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git add README.md…)
+  ⎿  pushed
+     === final run statuses ===
+     ci: success
+     … +7 lines (ctrl+o to expand)
+
+⏺ Phase 0 complete ✅
+
+  All acceptance criteria met and verified end-to-end.
+
+  Repo: heminjoshi/sales-forecasting-platform — private, pushed, CI green (ci +
+  infra), badge in README. (The badge commit kicked off one more CI run — it's a
+  no-op change and will pass.)
+
+  What was built & verified:
+
+  ┌────────────────┬────────────────────────────────────────────────────────┐
+  │      Area      │                         Result                         │
+  ├────────────────┼────────────────────────────────────────────────────────┤
+  │ Maven          │ Parent + 5 modules (bootable topsales-api +            │
+  │ multi-module   │ -common/-ingestion/-forecast/-insight), Spring Boot    │
+  │ (service/)     │ 4.1.0, Java 21 — mvn verify green (6 modules)          │
+  ├────────────────┼────────────────────────────────────────────────────────┤
+  │ Local stack    │ make up → Postgres 16 + Redis 7 both healthy; make     │
+  │ (local/)       │ down clean                                             │
+  ├────────────────┼────────────────────────────────────────────────────────┤
+  │                │ make run → Tomcat on :8080, "Started                   │
+  │ App boots      │ TopSalesApplication" (HTTP 404 — no endpoints yet, as  │
+  │                │ expected)                                              │
+  ├────────────────┼────────────────────────────────────────────────────────┤
+  │ Tooling        │ Makefile, MIT LICENSE, README skeleton, full           │
+  │                │ public-repo dir tree                                   │
+  ├────────────────┼────────────────────────────────────────────────────────┤
+  │ CI             │ GitHub Actions ci.yml (Temurin 21 build+test) +        │
+  │                │ infra.yml (green placeholder until Phase 7)            │
+  └────────────────┴────────────────────────────────────────────────────────┘
+
+  Two things worth flagging:
+  - make run fix: running spring-boot:run across the reactor failed on the
+  parent (no main class). Fixed to a two-step — install deps, then run scoped to
+  topsales-api. Updated in the Makefile.
+  - Java: target is 21 (--release 21), but your local JDK is 26 — Boot 4.1
+  supports it, so it runs locally; CI pins Temurin 21 as the source of truth.
+
+  Planning docs synced (private, gitignored): Phase 0 marked ✅ in the
+  implementation-plan index, with an outcome note recording the locked
+  decisions.
+
+  Still yours (off-repo): reply to the recruiter with onsite blocks + prep-call
+  times — the one WS-G item in the plan's Phase 0 that isn't code.
+
+  Decisions I made during execution (flag if you'd change any): MIT copyright
+  "Hemin Joshi", Postgres 16 / Redis 7, and a minimal bootable API now
+  (endpoints come in Phase 2).
+
+  Ready to plan Phase 1 (Design artifacts — LLD, ADRs, OpenAPI, diagrams) or
+  Phase 2 (walking skeleton) whenever you want — per your phase-by-phase flow,
+  I'll draft the plan doc first.
+
+✻ Churned for 15m 17s

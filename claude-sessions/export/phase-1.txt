@@ -1,0 +1,1588 @@
+ ▐▛███▜▌   Claude Code v2.1.195
+▝▜█████▛▘  Opus 4.8 · Claude Max
+  ▘▘ ▝▝    ~/code/sales-forecasting-platform
+
+
+❯ Take a look at the documents in private/ and claude-sessions/. Once done,     
+  come up with the plan of action for the next phase.                           
+
+⏺ I'll start by exploring the source-of-truth docs and current state. Let me
+  launch parallel Explore agents.
+
+⏺ 3 Explore agents finished (ctrl+o to expand)
+   ├ Read delivery plan phases · 1 tool use · 10.6k tokens
+   │ ⎿  Done
+   ├ Read design doc v3 · 1 tool use · 10.7k tokens
+   │ ⎿  Done
+   └ Inspect repo state and sessions · 23 tool uses · 21.8k tokens
+     ⎿  Done
+
+⏺ I have a complete picture. Let me capture the key state before deciding the
+  plan:
+
+  - Phase 0 is complete and verified — Maven reactor compiles, Docker (Postgres
+  16 + Redis 7) healthy, CI green, bootable but empty API.
+  - PR #1 (docs/sync-design-v3 → main) is open and green; current branch is that
+  PR's branch.
+  - Next per the plan is Phase 1 — Design Artifacts (WS-A): docs/lld.md,
+  docs/adr/0001..0008, docs/api/openapi.yaml, docs/diagrams/, docs/runbook.md.
+  Exit: "a stranger could implement the API + UI from the LLD; OpenAPI 
+  validates; ADRs cover every major choice."
+
+  The design source material (Design Doc v3) is already rich — Phase 1 is mostly
+  distilling it into public, implementation-grade artifacts. Before I write the
+  final plan, two decisions are genuinely yours and change what I produce.
+
+⏺ User answered Claude's questions:
+  ⎿  · How do you want to scope Phase 1 (Design Artifacts)? The plan notes Phase
+     1 overlaps Phase 2, and offers a tight-on-time path. → Full suite, but 
+     staged
+     · How should I handle the in-flight git state and branch strategy going 
+     forward? → I reviewed and merged the PR
+
+⏺ The user merged PR #1 and wants the full Phase 1 suite delivered in staged,
+  reviewable PRs (LLD → OpenAPI → ADRs/diagrams/runbook). Let me verify the
+  current git state post-merge before finalizing.
+
+⏺ Bash(git fetch --quiet 2>/dev/null; git branch --show-current; echo
+      "---status---"; git status -sb | head -20; echo "---log---"; git log
+      --oneline -5 origin/main 2>/…)
+  ⎿  docs/sync-design-v3
+     ---status---
+     ## docs/sync-design-v3...origin/docs/sync-design-v3 [gone]
+     … +9 lines (ctrl+o to expand)
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ Bash(git ls-files docs/ ; echo "=== untracked in docs ==="; ls -la docs/*.md
+      2>/dev/null || echo "(no top-level docs/*.md files)")
+  ⎿  docs/.gitkeep
+     docs/adr/.gitkeep
+     docs/api/.gitkeep
+     … +4 lines (ctrl+o to expand)
+
+⏺ Key finding: the public docs/ tree is empty scaffolding (only .gitkeep files).
+  There is no public docs/hld.md — the "✅ HLD complete" in the plan refers to
+  the private Design-Doc-v3-Consolidated.md, which has not yet been distilled
+  into public artifacts. So Phase 1 starts from zero public design docs. The
+  merged PR also left a stale local branch (docs/sync-design-v3, remote gone)
+  that I'll clean up.
+
+  Let me write the plan.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ The plan is written. Summary of what I found and propose:
+
+  Where we are: Phase 0 done and verified; PR #1 merged to main; the public
+  docs/ tree is empty scaffolding (no docs/hld.md exists yet — the "complete
+  HLD" lives only in the private design doc).
+
+  Phase 1 — Design Artifacts, delivered as the full suite but staged into 3 
+  reviewable PRs (per your choices):
+  1. HLD + LLD — concise public architecture overview + the implementation-grade
+  LLD (DDL, API contract, the Forecaster/ForecastProvider/InsightGenerator
+  seams, cache design, idempotency, degradation state machine, UI contract).
+  This is the stranger-test target.
+  2. OpenAPI — docs/api/openapi.yaml, validated with a real linter (npx 
+  @redocly/cli lint).
+  3. ADRs + diagrams + runbook — 8 ADRs mapped from DR-1…DR-8, Mermaid diagrams
+  (GitHub-native), runbook.
+
+  I folded a public docs/hld.md into Stage 1 since the LLD references it and the
+  repo currently has zero public architecture docs. Pre-work cleans up the
+  stale docs/sync-design-v3 branch and lands the merge locally. Verification
+  ties directly to the phase's exit criteria, plus a /public-repo-check hygiene
+  gate.
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ Phase 1 — Design Artifacts (WS-A)                                       │
+     │                                                                         │
+     │ Context                                                                 │
+     │                                                                         │
+     │ Phase 0 (Foundations) is complete and verified: the Maven reactor       │
+     │ compiles, the local                                                     │
+     │ Docker stack (Postgres 16 + Redis 7) is healthy, CI is green, and the   │
+     │ API boots empty. PR #1                                                  │
+     │ (the docs-sync PR) has been reviewed and merged to main (commit         │
+     │ 4962210).                                                               │
+     │                                                                         │
+     │ The next phase per private/Build-Delivery-Plan-v2.md is Phase 1 —       │
+     │ Design Artifacts.                                                       │
+     │ Its exit criteria (verbatim):                                           │
+     │                                                                         │
+     │ ▎ "a stranger could implement the API + UI from the LLD; OpenAPI        │
+     │ ▎ validates; ADRs cover every major choice."                            │
+     │                                                                         │
+     │ Why now: Phase 2 (the walking skeleton) builds the first end-to-end     │
+     │ code, and the plan's                                                    │
+     │ principle is design before code. The architecture already exists in the │
+     │ private                                                                 │
+     │ Design-Doc-v3-Consolidated.md; Phase 1's job is to distill it into      │
+     │ public, generic,                                                        │
+     │ implementation-grade artifacts so the code (and a stranger) can derive  │
+     │ from them.                                                              │
+     │                                                                         │
+     │ Key finding from exploration: the public docs/ tree is currently empty  │
+     │ scaffolding                                                             │
+     │ (.gitkeep only) — there is no public docs/hld.md yet. The plan's "✅    │
+     │ HLD complete"                                                           │
+     │ refers to the private design doc, not a tracked public file. So Phase 1 │
+     │ must also produce a                                                     │
+     │ concise public HLD as the foundation the LLD references.                │
+     │                                                                         │
+     │ Decisions captured from the user:                                       │
+     │ - Deliver the full Phase 1 suite, but staged into reviewable PRs (LLD   │
+     │ first, then                                                             │
+     │ OpenAPI, then ADRs + diagrams + runbook) — each PR steerable.           │
+     │ - PR #1 is already merged; going forward use branch-per-stage off main. │
+     │                                                                         │
+     │ Source of truth (read before each stage)                                │
+     │                                                                         │
+     │ - private/Design-Doc-v3-Consolidated.md — architecture, interface       │
+     │ seams, decision records                                                 │
+     │ (DR-1…DR-7), per-component deep-dive, data shapes (SaleEvent →          │
+     │ AggregateRow →                                                          │
+     │ ForecastRow/serving row → TopKResponse).                                │
+     │ - private/Build-Delivery-Plan-v2.md — Phase 1 task list, target         │
+     │ directory layout, exit criteria.                                        │
+     │                                                                         │
+     │ Hygiene (every stage): all public docs must be generic — no             │
+     │ employer/recruiter/company                                              │
+     │ name, no verbatim problem statement, no interview material. private/,   │
+     │ claude-sessions/,                                                       │
+     │ interview-prep/ stay gitignored. Run /public-repo-check before the      │
+     │ final stage.                                                            │
+     │                                                                         │
+     │ Pre-work (housekeeping)                                                 │
+     │                                                                         │
+     │ 1. git checkout main && git pull to land the merged PR locally.         │
+     │ 2. Delete the stale local branch docs/sync-design-v3 (its remote is     │
+     │ gone).                                                                  │
+     │ 3. (Optional, separate trivial commit — not part of design work) decide │
+     │ whether to commit the                                                   │
+     │ untracked .claude/skills/handoff/ skill. Leave out of the design PRs.   │
+     │                                                                         │
+     │ ---                                                                     │
+     │ Stage 1 — HLD + LLD  → PR docs/phase1-lld                               │
+     │                                                                         │
+     │ The LLD is the centerpiece (the stranger-test target). Bundle a concise │
+     │ public HLD with it,                                                     │
+     │ because the LLD references the architecture and the public repo         │
+     │ currently has zero design docs.                                         │
+     │                                                                         │
+     │ Files:                                                                  │
+     │ - docs/hld.md — concise public architecture overview distilled from the │
+     │ private design doc:                                                     │
+     │ four tiers (presentation → serving → forecast batch → ingestion),       │
+     │ interface seams, degradation                                            │
+     │ chain, multi-tenant isolation, local-runnable-vs-cloud-designed,        │
+     │ profile selection. Generic framing.                                     │
+     │ - docs/lld.md — the implementation-grade detail. Sections, each derived │
+     │ from the design doc:                                                    │
+     │   - Data model & DDL (local Postgres): aggregates table — PK            │
+     │ (tenant_id, category_id, bucket_date), sum_amount, order_count,         │
+     │ currency; the serving/forecast table —                                  │
+     │ pk = tenant#window#mode, sk = rank, value, interval_low/high,           │
+     │ confidence,                                                             │
+     │ delta_vs_prior, version, as_of; idempotency/dedup table or key          │
+     │ strategy; filesystem raw                                                │
+     │ log as local stand-in for the S3 raw log (immutable replay source).     │
+     │   - API contract — endpoints for ingestion (POST /events, idempotent)   │
+     │ and read                                                                │
+     │ (top-k by tenant/window/mode/k), actuator/health. References the        │
+     │ OpenAPI in Stage 2.                                                     │
+     │   - Interfaces (the seams) — method signatures for Forecaster,          │
+     │ ForecastProvider, InsightGenerator, and the repository ports            │
+     │ (AggregateRepository, ServingTableRepository, EventStore); built vs     │
+     │ designed impl per seam.                                                 │
+     │   - Cache design — Redis key (tenant, window, mode, k), jittered TTL,   │
+     │ version-bump                                                            │
+     │ invalidation, single-flight on miss.                                    │
+     │   - Idempotency/retry — idempotencyKey dedup + additive ON CONFLICT …   │
+     │ DO UPDATE upsert;                                                       │
+     │ at-least-once + idempotency = exactly-once effect.                      │
+     │   - Degradation chain spec — the fresh | stale | pending | degraded     │
+     │ state machine and the                                                   │
+     │ last-good → seasonal-naive(JVM) → actuals(pending) fallback ladder;     │
+     │ reads always succeed (flagged).                                         │
+     │   - Profile wiring — how the local vs aws Spring profile selects impls  │
+     │ behind the seams.                                                       │
+     │   - Sizing math — back-of-envelope from the design doc.                 │
+     │   - UI contract — TopKResponse shape (status, asOf, insight, ranked     │
+     │ items with                                                              │
+     │ value/deltaVsPrior/confidence/interval) and the dashboard controls      │
+     │ (mode/window/k).                                                        │
+     │                                                                         │
+     │ Exit for stage: the LLD passes the stranger-test (an outside engineer   │
+     │ could implement the                                                     │
+     │ API + UI from it alone). Self-check against the Stage-1 checklist       │
+     │ below.                                                                  │
+     │                                                                         │
+     │ ---                                                                     │
+     │ Stage 2 — OpenAPI contract  → PR docs/phase1-openapi                    │
+     │                                                                         │
+     │ Files:                                                                  │
+     │ - docs/api/openapi.yaml — OpenAPI 3.1 REST contract:                    │
+     │   - Paths for ingestion (POST /events) and read (top-k), plus health.   │
+     │   - Schemas: SaleEvent, TopKResponse, the item shape, error model.      │
+     │   - Two read modes (forecast/actuals), status/asOf semantics, the       │
+     │ UI-consumed shape.                                                      │
+     │ - Replace docs/api/.gitkeep.                                            │
+     │                                                                         │
+     │ Validation gate (the exit criterion "OpenAPI validates"): lint with a   │
+     │ real validator —                                                        │
+     │ npx @redocly/cli lint docs/api/openapi.yaml (Node is already available  │
+     │ for CDK) or equivalent                                                  │
+     │ (spectral, or Python openapi-spec-validator). Must pass clean before    │
+     │ the PR.                                                                 │
+     │                                                                         │
+     │ Keep consistent: the schemas here must match the LLD's UI contract and  │
+     │ data shapes exactly.                                                    │
+     │                                                                         │
+     │ ---                                                                     │
+     │ Stage 3 — ADRs + diagrams + runbook  → PR                               │
+     │ docs/phase1-adr-diagrams-runbook                                        │
+     │                                                                         │
+     │ Files:                                                                  │
+     │ - docs/adr/0001…0008.md — one ADR per major decision. Map the design    │
+     │ doc's records:                                                          │
+     │ DR-1 (data-plane vs sync RPC), DR-2 (Aurora vs DynamoDB store split),   │
+     │ DR-3 (KV point-lookup                                                   │
+     │ serving shape), DR-4 (Java baseline vs SageMaker, behind Forecaster),   │
+     │ DR-5 (WAPE vs MAPE),                                                    │
+     │ DR-6 (lazy-cached GenAI insight), DR-7 (two read modes), DR-8 (UI       │
+     │ split: served static                                                    │
+     │ dashboard + Vercel React SPA, S3+CloudFront as documented alternative). │
+     │ Use a consistent ADR                                                    │
+     │ template (context / decision / consequences / alternatives). Replace    │
+     │ docs/adr/.gitkeep.                                                      │
+     │ - docs/diagrams/ — Mermaid (GitHub renders natively): architecture,     │
+     │ data-flow, erd,                                                         │
+     │ read-sequence, ui-flow. PNG exports are optional/deferred (would need   │
+     │ mermaid-cli);                                                           │
+     │ Mermaid-in-markdown satisfies the deliverable. Replace                  │
+     │ docs/diagrams/.gitkeep.                                                 │
+     │ - docs/runbook.md — alarms, degradation procedures, replay/recovery     │
+     │ from the raw log, SLOs.                                                 │
+     │                                                                         │
+     │ Exit for stage: every major decision in the design doc has a matching   │
+     │ ADR (coverage check);                                                   │
+     │ diagrams render on GitHub; runbook covers the degradation states from   │
+     │ the LLD.                                                                │
+     │                                                                         │
+     │ ---                                                                     │
+     │ Verification (Phase 1 exit criteria)                                    │
+     │                                                                         │
+     │ 1. Stranger-test (LLD): re-read docs/lld.md cold and confirm the API    │
+     │ endpoints, DDL,                                                         │
+     │ interfaces, cache, degradation, and UI contract are each concrete       │
+     │ enough to implement without                                             │
+     │ the private doc. Checklist: every data shape spelled out; every         │
+     │ endpoint has request/response;                                          │
+     │ every seam has a method signature.                                      │
+     │ 2. OpenAPI validates: npx @redocly/cli lint docs/api/openapi.yaml exits │
+     │ clean.                                                                  │
+     │ 3. ADR coverage: cross-walk DR-1…DR-8 from the design doc → each has an │
+     │ ADR file.                                                               │
+     │ 4. Diagrams render: open each docs/diagrams/*.md on GitHub (or a        │
+     │ Mermaid preview) and                                                    │
+     │ confirm it renders.                                                     │
+     │ 5. Consistency: OpenAPI schemas == LLD UI contract == design-doc data   │
+     │ shapes (no drift).                                                      │
+     │ 6. Hygiene: /public-repo-check passes — no employer/interview/private   │
+     │ framing leaked into                                                     │
+     │ any tracked docs/ file.                                                 │
+     │ 7. Write a Phase 1 handoff via the handoff skill into                   │
+     │ claude-sessions/handoff-docs/.                                          │
+     │                                                                         │
+     │ Out of scope / parked                                                   │
+     │                                                                         │
+     │ - Phase 2 walking-skeleton code — starts only after Stage 1 (LLD)       │
+     │ lands, per "design before code."                                        │
+     │ - Off-repo (WS-G): recruiter scheduling reply — user's action, not a    │
+     │ repo task.                                                              │
+     │ - /export skill leak-risk fix (writes to repo root) — open item from    │
+     │ Phase 0 handoff; address                                                │
+     │ separately, not in the design PRs.                                      │
+     ╰─────────────────────────────────────────────────────────────────────────╯
+
+⏺ The user has a new build-delivery-plan-v3 in private/. Let me read it and
+  reconcile my plan against it.
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+⏺ v3 changes my plan in three material ways:
+
+  1. docs/hld.md and docs/component-deep-dive.md are drop-ins (✅), not rewrites
+  — the private Design Doc v3 and Component Deep-Dive become the public design
+  docs (sanitized for hygiene), rather than authoring a "concise HLD" from
+  scratch.
+  2. 9 ADRs, not 8 — the §5 A/B/C architectural fork + DR-1…DR-8 — and they must
+  use a comparative format (options → pros/cons → recommendation → why →
+  if-assumption-changes). This is now a heavily-scored, first-class deliverable,
+  not a stage-3 afterthought.
+  3. CLAUDE.md still points at v2 as source-of-truth — a housekeeping pointer to
+  update.
+
+  Let me refine the plan file to account for all of this.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ Plan refined against Build-Delivery-Plan-v3.md. The key reconciliations:
+
+  - hld.md + component-deep-dive.md are now drop-ins (sanitized) from the
+  private Design Doc v3 / Component Deep-Dive — folded into Stage 1, replacing
+  my earlier "author a concise HLD" approach.
+  - 9 comparative ADRs (§5 A/B/C fork + DR-1…DR-8) with the explicit options → 
+  pros/cons → recommendation → why → if-changes template, flagged as
+  heavily-scored — Stage 3 now leads with this and gives it full care.
+  - Added CLAUDE.md pointer update (v2 → v3) to pre-work.
+  - Everything from my prior plan that v3 still covers (LLD sections, OpenAPI
+  validation gate, Mermaid diagrams, runbook, hygiene check, handoff) is
+  retained; PNG exports noted as optional per v3's "Mermaid + PNG".
+
+  One thing I kept as-is but want to flag: v3 elevates the ADRs to co-primary
+  with the LLD, yet your chosen PR staging puts them last. I left them in Stage
+  3 with full-care notes — say the word if you'd rather pull the ADRs into Stage
+  2 (ahead of OpenAPI).
+
+⏺ User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/take-a-look-at-groovy-hammock.md · /plan to 
+     edit
+     Phase 1 — Design Artifacts (WS-A)
+
+     Context
+
+     Phase 0 (Foundations) is complete and verified: the Maven reactor compiles,
+     the local
+     Docker stack (Postgres 16 + Redis 7) is healthy, CI is green, the API boots
+     empty. PR #1
+     (docs-sync) is merged to main (commit 4962210).
+
+     The next phase per the now-current private/Build-Delivery-Plan-v3.md is
+     Phase 1 —
+     Design Artifacts. Acceptance (verbatim):
+
+     ▎ "LLD lets a stranger implement API + UI; OpenAPI validates; all 9 ADRs 
+     ▎ use the comparative
+     ▎ format (this is heavily scored)."
+
+     What v3 changed vs my earlier read (v2):
+     - docs/hld.md and docs/component-deep-dive.md are drop-ins (✅) — the
+     private Design Doc
+     v3 and Component Deep-Dive become the public design docs, not
+     freshly-authored summaries.
+     - ADRs go from 8 → 9 (the §5 A/B/C architectural fork plus DR-1…DR-8) and
+     must each use a
+     comparative trade-off format. v3 elevates trade-offs to a first-class
+     scored deliverable
+     ("the recruiter's Architectural Choices & Trade-offs area") — co-primary
+     with the LLD, not a
+     tail-end item.
+
+     Key state finding: the public docs/ tree is empty scaffolding (.gitkeep
+     only) — zero
+     public design docs exist yet. The merged PR left a stale local branch
+     (docs/sync-design-v3,
+     remote gone) to clean up.
+
+     Decisions captured from the user:
+     - Deliver the full Phase 1 suite, staged into reviewable PRs (LLD first →
+     OpenAPI → ADRs +
+     diagrams + runbook), each steerable. (Given v3's emphasis on the ADRs, they
+     get full care in
+     their stage rather than being rushed; I can pull them earlier if you 
+     prefer.)
+     - PR #1 already merged; use branch-per-stage off main going forward.
+
+     Source of truth (read before each stage)
+
+     - private/Build-Delivery-Plan-v3.md — Phase 1 task list, the 9-ADR mapping,
+     target layout,
+     acceptance. Supersedes v2.
+     - private/Design-Doc-v3-Consolidated.md — architecture, the §5 A/B/C fork,
+     decision records
+     DR-1…DR-8, data shapes (SaleEvent → AggregateRow → ForecastRow/serving row
+     →
+     TopKResponse). Becomes public docs/hld.md.
+     - private/Component-Deep-Dive.md — per-component deep-dive. Becomes public
+     docs/component-deep-dive.md.
+
+     Hygiene (every stage, non-negotiable): the private docs reference the
+     employer/product
+     (Intuit / QuickBooks) and the verbatim problem statement. Every drop-in and
+     authored doc must be
+     sanitized to generic framing — no employer/product/recruiter names, no
+     verbatim prompt, no
+     interview material. private/, claude-sessions/, interview-prep/ stay
+     gitignored. Run
+     /public-repo-check before the final stage.
+
+     Pre-work (housekeeping)
+
+     1. git checkout main && git pull; delete the stale local branch
+     docs/sync-design-v3.
+     2. Update CLAUDE.md so the "source of truth" pointer references
+     Build-Delivery-Plan-v3.md
+     (currently still names v2). Small standalone commit.
+     3. (Optional) decide whether to commit the untracked
+     .claude/skills/handoff/ skill — keep out
+     of the design PRs.
+
+     ---
+     Stage 1 — Public design docs + LLD  → PR docs/phase1-lld
+
+     Files:
+     - docs/hld.md ← drop in Design-Doc-v3-Consolidated.md, sanitized for public
+     framing.
+     - docs/component-deep-dive.md ← drop in Component-Deep-Dive.md, sanitized.
+     - docs/lld.md — the implementation-grade deliverable (the stranger-test
+     target). Sections,
+     each derived from the design doc:
+       - Data model & DDL (local Postgres): events + aggregates (PK (tenant_id, 
+     category_id, bucket_date); sum_amount, order_count, currency) + the
+     serving/forecast table
+     (pk = tenant#window#mode, sk = rank, value, interval_low/high, confidence,
+     delta_vs_prior, version, as_of); idempotency/dedup strategy; filesystem raw
+     log as the
+     local stand-in for the S3 immutable replay source.
+       - API contract — ingestion (POST /events, idempotent) and read
+     (GET /tenants/{id}/top-categories?mode=&window=&k=), actuator/health.
+     References Stage-2 OpenAPI.
+       - Interface seams — method signatures for Forecaster, ForecastProvider,
+     InsightGenerator, and repository ports (AggregateRepository,
+     ServingTableRepository,
+     EventStore); built-vs-designed impl per seam.
+       - Cache design — Redis key (tenant, window, mode, k), jittered TTL,
+     per-tenant
+     version-bump invalidation, single-flight on miss.
+       - Idempotency/retry — idempotencyKey dedup + additive ON CONFLICT … DO 
+     UPDATE;
+     at-least-once + idempotency = exactly-once effect.
+       - Degradation chain spec — the fresh | stale | pending | degraded state
+     machine and the
+     last-good → JVM seasonal-naive(from actuals) → actuals(forecast_pending)
+     ladder; reads
+     always succeed (flagged).
+       - Profile wiring — how the local vs aws Spring profile selects impls
+     behind the seams.
+       - Sizing math — back-of-envelope from the design doc.
+       - UI contract — TopKResponse shape (status, asOf, insight, ranked items
+     with
+     value/deltaVsPrior/confidence/interval) + dashboard controls
+     (mode/window/k).
+
+     Exit: LLD passes the stranger-test (an outside engineer could implement API
+     + UI from it
+     alone); hld + deep-dive are clean of employer/product references.
+
+     ---
+     Stage 2 — OpenAPI contract  → PR docs/phase1-openapi
+
+     Files:
+     - docs/api/openapi.yaml — OpenAPI 3.1: paths for ingestion + read + health;
+     schemas
+     (SaleEvent, TopKResponse, item shape, error model); two read modes
+     (forecast/actuals),
+     status/asOf semantics, the UI-consumed shape. Replace docs/api/.gitkeep.
+
+     Validation gate ("OpenAPI validates"): npx @redocly/cli lint 
+     docs/api/openapi.yaml (Node is
+     already present for CDK) — must pass clean before the PR. Schemas must
+     match the LLD's UI contract
+     and data shapes exactly.
+
+     ---
+     Stage 3 — ADRs + diagrams + runbook  → PR docs/phase1-adr-diagrams-runbook
+
+     This stage carries the heavily-scored trade-off deliverable — give it full 
+     care.
+
+     Files:
+     - docs/adr/0001…0009-*.md — 9 ADRs, one per decision record, all in the
+     comparative
+     format: options → pros/cons → recommendation → why (requirement/assumption)
+     → if-assumption-
+     changes. Mapping:
+       - 0001 — the §5 A/B/C architectural fork (precompute data-plane vs
+     on-demand vs speed-layer).
+       - 0002…0009 — DR-1…DR-8: data-plane vs sync RPC; Aurora vs DynamoDB store
+     split; KV
+     point-lookup serving shape; Java baseline vs SageMaker (behind Forecaster);
+     WAPE vs MAPE;
+     lazy-cached GenAI insight; two read modes; UI split (served static
+     dashboard + Vercel
+     React SPA, S3+CloudFront as documented alternative).
+       - Source the options/rationale from the design doc's §5 + DR sections; do
+     not invent.
+       - Replace docs/adr/.gitkeep.
+     - docs/diagrams/ — Mermaid (GitHub renders natively): architecture,
+     data-flow, erd,
+     read-sequence, ui-flow. PNG exports are optional/nice-to-have (v3 lists
+     "Mermaid + PNG";
+     PNG needs mermaid-cli — defer unless wanted). Replace
+     docs/diagrams/.gitkeep.
+     - docs/runbook.md — alarms, degradation procedures, replay/recovery from
+     the raw log, SLOs.
+
+     Exit: all 9 ADRs use the comparative format and cover every major decision;
+     diagrams render on
+     GitHub; runbook covers the LLD's degradation states.
+
+     ---
+     Verification (Phase 1 acceptance)
+
+     1. Stranger-test (LLD): re-read docs/lld.md cold — every data shape spelled
+     out, every
+     endpoint has request/response, every seam has a method signature;
+     implementable without the
+     private docs.
+     2. OpenAPI validates: npx @redocly/cli lint docs/api/openapi.yaml exits
+     clean.
+     3. ADR coverage + format: 9 ADR files exist (§5 fork + DR-1…DR-8); each
+     uses the
+     comparative template (options/pros-cons/recommendation/why/if-changes).
+     4. Diagrams render: each docs/diagrams/*.md renders in a Mermaid preview /
+     on GitHub.
+     5. Consistency: OpenAPI schemas == LLD UI contract == design-doc data
+     shapes (no drift).
+     6. Hygiene: /public-repo-check passes — no employer/product/interview
+     framing in any tracked
+     docs/ file (the drop-ins are the highest leak risk).
+     7. Write a Phase 1 handoff via the handoff skill into
+     claude-sessions/handoff-docs/.
+
+     Out of scope / parked
+
+     - Phase 2 walking-skeleton code — starts only after Stage 1 (LLD) lands
+     ("design before code").
+     - Off-repo (WS-G): recruiter scheduling reply — user's action, not a repo
+     task.
+     - /export skill leak-risk fix (writes to repo root) — open item from Phase
+     0 handoff; handle
+     separately.
+     - Probe-bank / FAQ — explicitly deferred in v3 until the build is complete.
+
+⏺ Plan approved. Let me set up task tracking and start with pre-work.
+⏺ Now pre-work. Let me sync main, clean the stale branch, and inspect the
+  current CLAUDE.md pointer.
+
+⏺ Bash(git checkout main 2>&1 | tail -3 && git pull --ff-only 2>&1 | tail -3 &&
+      echo "--- delete stale branch ---" && git branch -D docs/sync-design-v3
+      2>&1 && echo "-…)
+  ⎿  Switched to branch 'main'
+     Your branch is behind 'origin/main' by 2 commits, and can be fast-forw
+     arded.
+     … +8 lines (ctrl+o to expand)
+
+⏺ Mark pre-work in progress and check the current CLAUDE.md pointer — the pull
+  modified CLAUDE.md, so it may already reference v3.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ CLAUDE.md and the phase-status skill both still name v2. Let me update both
+  pointers to v3.
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+       7  A **multi-tenant "top sales by category" platform** built as a 
+          public portfolio/interview project — designed to *read* like pr
+          oduction, not to be one. It is currently at the **planning stag
+          e**: only design/plan docs exist; there is no source code or bu
+          ild tooling yet.
+       8  
+       9  Two docs under `private/` (gitignored, never committed) are the
+           **source of truth** — read them before scaffolding or implemen
+          ting, and keep new work consistent with the structure and phase
+           they define:
+      10 -- the **delivery plan** (`private/Build-Delivery-Plan-v2.md`) —
+         - scope, phase sequencing (Phases 0–10, organized into workstrea
+         -ms WS-A…WS-G), target directory layout, built-vs-designed-only.
+         - This v2 supersedes the older `Build-Delivery-Plan-and-Repo-Str
+         -ucture.md` in the same folder.                                 
+      10 +- the **delivery plan** (`private/Build-Delivery-Plan-v3.md`) —
+         + scope, phase sequencing (Phases 0–10, organized into workstrea
+         +ms WS-A…WS-G), target directory layout, built-vs-designed-only.
+         + This v3 supersedes `Build-Delivery-Plan-v2.md` (and the older 
+         +`Build-Delivery-Plan-and-Repo-Structure.md`) in the same folder
+         +; v3 syncs ADRs to the 9 explicit decision records and elevates
+         + comparative trade-offs as a first-class, scored deliverable.  
+      11  - the **consolidated design doc** (`private/Design-Doc-v3-Conso
+          lidated.md`) — the architecture: four tiers (presentation → ser
+          ving → forecast batch → ingestion), interface seams, decision r
+          ecords, the per-component deep-dive, the connection/data-flow c
+          atalog, and the canonical data shapes (`SaleEvent` → `Aggregate
+          Row` → `ForecastRow`/serving row → `TopKResponse`). v3 supersed
+          es the earlier HLD v2 and the standalone component deep-dive.
+      12  
+      13  ## How to work in this repo
+
+⏺ Update(.claude/skills/phase-status/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+       9  
+      10  ## Steps
+      11  
+      12 -1. **Read the plan** (`private/Build-Delivery-Plan-v2.md` — the
+         - current plan; it has per-task `[ ]` checkboxes and workstreams
+         - WS-A…WS-G) for the phase list, acceptance criteria, and milest
+         -one map. Also read the **consolidated design doc** (`private/De
+         -sign-Doc-v3-Consolidated.md`, supersedes HLD v2) — the architec
+         -ture, per-component deep-dive, data-flow catalog, and canonical
+         - data shapes; the dashboard (presentation tier) is a built comp
+         -onent, so fold it into the relevant phase's expectations even w
+         -here the original plan text predates it.                       
+      12 +1. **Read the plan** (`private/Build-Delivery-Plan-v3.md` — the
+         + current plan; it has per-task `[ ]` checkboxes and workstreams
+         + WS-A…WS-G) for the phase list, acceptance criteria, and milest
+         +one map. Also read the **consolidated design doc** (`private/De
+         +sign-Doc-v3-Consolidated.md`, supersedes HLD v2) — the architec
+         +ture, per-component deep-dive, data-flow catalog, and canonical
+         + data shapes; the dashboard (presentation tier) is a built comp
+         +onent, so fold it into the relevant phase's expectations even w
+         +here the original plan text predates it.                       
+      13  
+      14  2. **Inspect the actual repo state** to judge each phase agains
+          t its exit criteria — don't trust the plan's status markers, ve
+          rify:
+      15     - Is it a git repo yet? CI present (`.github/workflows/`)?
+
+⏺ Pointers updated. Now I'll create the Stage 1 branch and land the v3-pointer
+  fix as its first commit, then build the design docs on the same branch.
+
+⏺ Bash(git checkout -b docs/phase1-lld && git add CLAUDE.md
+      .claude/skills/phase-status/SKILL.md && git commit -q -m "chore(docs):
+      point source-of-truth refs at Build-…)
+  ⎿  Switched to a new branch 'docs/phase1-lld'
+     08211eb chore(docs): point source-of-truth refs at Build-Delivery-Plan
+     -v3
+  ⎿  1 skill available
+
+⏺ Now Stage 1. Let me read the two private docs in full to produce sanitized
+  drop-ins and derive the LLD accurately.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Design Doc v3 reads already-generic. Let me read the Component Deep-Dive and
+  scan both private docs for any employer/product references before I drop them
+  in.
+  Read 1 file (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform/private && echo "===
+      sensitive term scan: Design-Doc-v3 ===" && grep -in -E
+      "intuit|quickbooks|qbo|mailchim…)
+  ⎿  === sensitive term scan: Design-Doc-v3 ===
+     281:- *Option A — WAPE (chosen):* Σ|actual−forecast| / Σ|actual|. **Pr
+     os:** scale-aware, robust to zero/near-zero periods. **Cons:** less in
+     … +6 lines (ctrl+o to expand)
+
+⏺ Both docs are essentially public-clean. The only employer-adjacent phrasing is
+  one allusion in the design doc ("the prompt's 'selectable time frames'"). Let
+  me copy both into docs/ and soften that one line.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform && cp
+      private/Design-Doc-v3-Consolidated.md docs/hld.md && cp
+      private/Component-Deep-Dive.md docs/component…)
+  ⎿  copied:
+     -rw-r--r--@ 1 heminjoshi  staff  18185 Jun 28 16:08 docs/component-dee
+     p-dive.md
+     -rw-r--r--@ 1 heminjoshi  staff  31985 Jun 28 16:08 docs/hld.md
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/hld.md)
+  ⎿  Added 1 line, removed 1 line
+      290  **DR-7 · Read modes — two modes vs forecast-only**
+      291  - *Option A — Two modes (chosen):* forecast + actuals behind o
+           ne API. **Pros:** actuals is pure aggregation → always availab
+           le; the durable floor; covers "last N units." **Cons:** two re
+           ad paths to maintain.
+      292  - *Option B — Forecast-only:* simpler API. **Cons:** no floor 
+           when forecasts aren't ready; can't answer "last N actual."
+      293 -- **Recommendation:** two modes. **Why:** availability (NFR1) 
+          -+ the prompt's "selectable time frames" implies both historica
+          -l and predicted.                                              
+      293 +- **Recommendation:** two modes. **Why:** availability (NFR1) 
+          ++ the requirement for selectable time frames implies both hist
+          +orical and predicted.                                         
+      294  
+      295  **DR-8 · UI hosting — Spring-served / Vercel / S3+CloudFront**
+      296  - *Option A — Static dashboard served by Spring Boot (demo run
+           ):* **Pros:** single deployable, no Node, runs offline. **Cons
+           :** not a production-grade SPA.
+
+⏺ The drop-ins are clean. Now the centerpiece — docs/lld.md. Let me author the
+  full implementation-grade LLD.
+
+⏺ Write(docs/lld.md)
+  ⎿  Wrote 415 lines to docs/lld.md
+       2 # Low-Level Design — Multi-Tenant Sales-Forecasting Platform
+       3 **Status:** v1 · **Derives from** `docs/hld.md` (Design Doc v3) 
+       4 **Scope:** the **local-runnable built system** (Java 21 + Spring
+          Boot, Postgres, Redis), with the
+          contract**: an engineer should becument is the **implementation
+       6 able to build the API + UI from it without the design doc.
+       8 **Conventions.** Profiles: `local` (built, default) vs `aws` (de
+         signed). Money: `numeric(18,2)`,
+         ing is tenant-local** (A6). IDs are` (UTC) on the wire; **bucket
+      10 opaque strings. Enums are lowercase on the wire unless noted.
+     … +570 lines (ctrl+o to expand)
+
+⏺ Stage 1 docs are written. Let me run a hygiene scan on the new public docs and
+  commit Stage 1.
+
+⏺ Bash(echo "=== hygiene scan of docs/ ===" && grep -rin -E
+      "intuit|quickbooks|qbo|turbotax|mailchimp|credit
+      karma|carlos|recruiter|builder craft|interview|onsite|prob…)
+  ⎿  === hygiene scan of docs/ ===
+     docs/hld.md:281:- *Option A — WAPE (chosen):* Σ|actual−forecast| / Σ|a
+     ctual|. **Pros:** scale-aware, robust to zero/near-zero periods. **Con
+     … +7 lines (ctrl+o to expand)
+
+⏺ Clean — the only match is "intuitive" (false positive). Let me commit Stage 1.
+
+⏺ Bash(git add docs/hld.md docs/component-deep-dive.md docs/lld.md docs/.gitkeep
+      && git commit -q -m "docs(phase1): add public HLD, component deep-dive,
+      and implementa…)
+  ⎿  cb6ad63 docs(phase1): add public HLD, component deep-dive, and impleme
+     ntation-grade LLD
+     08211eb chore(docs): point source-of-truth refs at Build-Delivery-Plan
+     -v3
+
+⏺ Stage 1 content is complete and committed. Let me push the branch and open the
+  Stage 1 PR for your review.
+
+⏺ Bash(git push -u origin docs/phase1-lld 2>&1 | tail -5)
+  ⎿  remote:      https://github.com/heminjoshi/sales-forecasting-platform/
+     pull/new/docs/phase1-lld
+     remote:
+     … +3 lines (ctrl+o to expand)
+
+⏺ Bash(cat > /private/tmp/claude-501/-Users-heminjoshi-code-sales-forecasting-pl
+      atform/85b11d3e-b0c1-4dcb-ae2b-b0b4643c3ab2/scratchpad/pr1-body.md <<'EOF'
+      ## Phase 1 ·…)
+  ⎿  https://github.com/heminjoshi/sales-forecasting-platform/pull/2
+
+⏺ Stage 1 is delivered as PR #2:
+  https://github.com/heminjoshi/sales-forecasting-platform/pull/2
+
+  What landed:
+  - docs/hld.md — consolidated design doc as the public HLD (sanitized; one
+  allusion softened)
+  - docs/component-deep-dive.md — per-component companion
+  - docs/lld.md — the implementation-grade LLD: Postgres DDL, /api/v1 contract,
+  the three seams with Java signatures, the 7-step read pipeline +
+  fresh|stale|pending|degraded chain, idempotency, cache, batch, profile wiring,
+  tenant scoping, sizing, UI contract, error model
+  - A chore commit repointing CLAUDE.md + the phase-status skill at
+  Build-Delivery-Plan-v3
+
+  Hygiene scan came back clean (only "intuitive" as a false positive).
+
+  Per your "steer each artifact" choice, this is a natural review point. How do 
+  you want to proceed?
+
+  - Review PR #2 first — you read/merge it, then I start Stage 2 (OpenAPI) off
+  the updated main. Cleanest history, but I pause here.
+  - Keep going now — I start Stage 2 immediately, branching off docs/phase1-lld
+  so the OpenAPI work stacks on the LLD (the two stay consistent) while PR #2 is
+  still open.
+
+  I'd lean toward keep going (the OpenAPI must match the LLD's shapes anyway, so
+  authoring them together avoids drift) — say the word and I'll proceed, or
+  review #2 first if you'd rather steer the LLD before I build on it.
+
+✻ Crunched for 11m 56s
+
+※ recap: Phase 1 design docs for the sales-forecasting platform: Stage 1 (HLD, component deep-dive, LLD) is done and opened as PR #2. Next: start Stage 2 (the OpenAPI contract) once you say go or after you review PR #2. (disable recaps in /config)
+
+❯ Just checked, looks good. Merged the PR. Go ahead with the next stage.        
+
+⏺ PR #2 merged. Moving to Stage 2 — the OpenAPI contract. Let me sync main and
+  branch.
+
+⏺ Bash(git checkout main -q && git pull --ff-only -q 2>&1 | tail -2; git branch
+      -D docs/phase1-lld 2>&1 | tail -1; git checkout -b docs/phase1-openapi -q
+      && echo "on:…)  ⎿  Deleted branch docs/phase1-lld (was cb6ad63).
+     on: docs/phase1-openapi
+  ⎿  1 skill available
+
+⏺ Write(docs/api/openapi.yaml)
+  ⎿  Wrote 248 lines to docs/api/openapi.yaml
+       2 info:pi: 3.1.0
+       3   title: Top Sales by Category API
+       4   version: 1.0.0
+       6     Multi-tenant sales-forecasting platform. Ingest sale/return/
+         adjustment events, then read
+       7     the **top-k categories** per tenant per window in **forecast
+       8 ** or **actuals** mode.
+       9     Reads never fail closed: every response carries a `status`
+      10     (`fresh | stale | pending | degraded`) and an `asOf` timesta
+         mp, so the dashboard always renders
+     … +279 lines (ctrl+o to expand)
+  ⎿  1 skill available
+
+⏺ Now validate it with redocly (the acceptance gate "OpenAPI validates").
+
+⏺ Bash(npx --yes @redocly/cli@latest lint docs/api/openapi.yaml 2>&1 | tail -40)
+  ⎿  No configurations were provided -- using built in recommended configur
+     ation by default.
+     … +22 lines (ctrl+o to expand)
+
+⏺ Valid — "Your API description is valid. 🎉" The single warning is the
+  intentional localhost server URL (correct for a local-first demo). Let me
+  confirm the exit code is clean, then commit and open the Stage 2 PR.
+
+⏺ Bash(npx --yes @redocly/cli@latest lint docs/api/openapi.yaml >/dev/null 2>&1;
+      echo "redocly exit code: $?"
+      git add docs/api/openapi.yaml docs/api/.gitkeep 2>/dev/nu…)
+  ⎿  redocly exit code: 0
+     e09d638 docs(phase1): add validated OpenAPI 3.1 contract (Stage 2/3)
+
+⏺ Bash(git push -u origin docs/phase1-openapi 2>&1 | tail -2
+      cat > "$TMPDIR/pr-openapi.md" <<'EOF'…)
+  ⎿   * [new branch]      docs/phase1-openapi -> docs/phase1-openapi
+     branch 'docs/phase1-openapi' set up to track 'origin/docs/phase1-opena
+     pi'.
+     https://github.com/heminjoshi/sales-forecasting-platform/pull/3
+
+⏺ Stage 2 is up as PR #3 (redocly exits 0). Now the final and largest slice —
+  Stage 3. The ADRs/diagrams/runbook only depend on the now-merged HLD/LLD, so
+  I'll branch off main (independent of PR #3). Let me set up and start.
+
+⏺ Bash(git checkout main -q && git checkout -b docs/phase1-adr-diagrams-runbook
+      -q && echo "on: $(git branch --show-current)"; ls docs/adr docs/diagrams)
+  ⎿  on: docs/phase1-adr-diagrams-runbook
+     docs/adr:
+
+     docs/diagrams:
+
+⏺ Now the 9 comparative ADRs. Let me write the index plus the first three.
+
+⏺ Write(docs/adr/README.md)
+  ⎿  Wrote 18 lines to docs/adr/README.md
+       2 # Architecture Decision Records
+         —ach ADR records one major decision in a **comparative** format 
+       4 *context → options (pros/cons) → decision → why (requirement/ass
+       5 → consequences* — so the trade-off, not just the outcome, is on 
+         the record. Full architecture in
+         .md).hld.md`](../hld.md); implementation in [`../lld.md`](../lld
+       8 | ADR | Decision | Chosen |
+       9 |---|---|---|
+         ts are computed (the top-level fork) | **A — Precompute / batch*
+         * |
+     … +20 lines (ctrl+o to expand)
+
+⏺ Write(docs/adr/0001-forecast-compute-strategy.md)
+  ⎿  Wrote 54 lines to docs/adr/0001-forecast-compute-strategy.md
+         vs hybrid1: Forecast compute strategy — precompute vs on-demand 
+       2 
+       4 - **Related:** `hld.md` §5 (the top-level architectural fork), §
+         14 (A→B→C code changes)
+       5 
+       7 The top-level architectural fork is **where and when forecasts a
+         re computed**. This choice drives
+         ther. Three approaches are viable.and complexity more than any o
+       9 
+      10 ## Options
+     … +66 lines (ctrl+o to expand)
+
+⏺ Write(docs/adr/0002-model-coupling-data-plane-vs-rpc.md)
+  ⎿  Wrote 36 lines to docs/adr/0002-model-coupling-data-plane-vs-rpc.md
+         C ADR-0002: Java ↔ model coupling — data plane vs synchronous RP
+       2 
+       3 - **Status:** Accepted
+       5 - **Related:** `hld.md` §12 DR-1; ADR-0001
+       6 ## Context
+       7 The serving service is Java; the forecaster may eventually be a 
+       8 couple — through data (the model writes a store the service read
+         s) or through a synchronous call?
+       9 
+      10 ## Options
+     … +35 lines (ctrl+o to expand)
+
+⏺ Write(docs/adr/0003-aggregate-store-postgres-vs-dynamodb.md)
+  ⎿  Wrote 35 lines to
+     docs/adr/0003-aggregate-store-postgres-vs-dynamodb.md
+       2 # ADR-0003: Aggregate store — Aurora Postgres vs DynamoDB
+       3 - **Status:** Accepted
+       4 - **Related:** `hld.md` §12 DR-2; ADR-0004 (serving store)
+       5 
+       6 ## Context
+         st support additive idempotentegory, day)` rollups live? They mu
+       8 upserts on the write path and range/group-by scans for actuals r
+         eads and forecaster history.
+       9 
+      10 ## Options
+     … +36 lines (ctrl+o to expand)
+
+⏺ Write(docs/adr/0004-serving-store-kv-point-lookup.md)
+  ⎿  Wrote 34 lines to docs/adr/0004-serving-store-kv-point-lookup.md
+         oint-lookup Serving store shape — relational rows vs key-value p
+       2 
+       3 - **Status:** Accepted
+       4 - **Related:** `hld.md` §12 DR-3; ADR-0003
+       5 
+       7 The read path needs the whole top-k for a `(tenant, window, mode
+         )` in one cheap, cacheable operation
+       8 at p99 < ~150 ms (NFR3) under a read-heavy load (A4).
+       9 
+      10 ## Options
+     … +36 lines (ctrl+o to expand)
+
+⏺ Write(docs/adr/0005-forecasting-model-baseline-vs-ml.md)
+  ⎿  Wrote 36 lines to docs/adr/0005-forecasting-model-baseline-vs-ml.md
+         MLDR-0005: Forecasting model — Java baseline vs Python/SageMaker
+      2 
+      3 - **Status:** Accepted
+      4 - **Related:** `hld.md` §12 DR-4, §13; ADR-0002
+      5 
+      6 ## Context
+      7 What computes the forecasts for v1 — an in-house Java baseline, o
+        r a Python/SageMaker global ML model?
+      8 
+      9 ## Options
+     … +37 lines (ctrl+o to expand)
+
+⏺ Write(docs/adr/0006-accuracy-metric-wape-vs-mape.md)
+  ⎿  Wrote 34 lines to docs/adr/0006-accuracy-metric-wape-vs-mape.md
+       2 # ADR-0006: Accuracy metric — WAPE vs MAPE
+       3 - **Status:** Accepted
+       4 - **Related:** `hld.md` §12 DR-5, §13 (eval/drift)
+       5 
+       6 ## Context
+         ift detection, and champion/ry accuracy metric for backtests, dr
+       8 challenger gating. Long-tail categories have many near-zero-sale
+         s periods.
+       9 
+      10 ## Options
+     … +32 lines (ctrl+o to expand)
+
+⏺ Write(docs/adr/0007-genai-insight-lazy-cached.md)  ⎿  Wrote 35 lines to docs/adr/0007-genai-insight-lazy-cached.md
+         -allR-0007: GenAI insight generation — lazy-cached vs precompute
+       2 
+       3 - **Status:** Accepted
+         urity)lated:** `hld.md` §12 DR-6, §13 (AI integration), §17 (sec
+       5 
+       6 ## Context
+          is it generated — lazily on firstline grounded NL insight. When
+       8 view, or precomputed for every series in the batch?
+       9 
+      10 ## Options
+     … +35 lines (ctrl+o to expand)
+
+⏺ Write(docs/adr/0008-read-modes-forecast-and-actuals.md)
+  ⎿  Wrote 36 lines to docs/adr/0008-read-modes-forecast-and-actuals.md
+       2 # ADR-0008: Read modes — two modes vs forecast-only
+       3 - **Status:** Accepted
+       4 - **Related:** `hld.md` §12 DR-7; `lld.md` §5 (degradation chain
+         )
+       5 
+       7 Should the API expose both **forecast** (predicted) and **actual
+         s** (historical) modes, or only
+       8 forecasts?
+       9 
+      10 ## Options
+     … +34 lines (ctrl+o to expand)
+
+⏺ Write(docs/adr/0009-ui-hosting-spring-vercel-cloudfront.md)
+  ⎿  Wrote 40 lines to docs/adr/0009-ui-hosting-spring-vercel-cloudfront.md
+         t ADR-0009: UI hosting — Spring-served vs Vercel vs S3+CloudFron
+       2 
+       3 - **Status:** Accepted
+       4 - **Related:** `hld.md` §7, §12 DR-8, §17 (CORS)
+       5 
+       7 The presentation tier is a thin, read-only dashboard. How is it 
+         hosted for the **live demo** and for
+       8 **production**?
+       9 
+      10 ## Options
+     … +41 lines (ctrl+o to expand)
+
+⏺ All 9 ADRs written. Now the 5 Mermaid diagrams.
+
+⏺ Write(docs/diagrams/architecture.md)
+  ⎿  Wrote 34 lines to docs/diagrams/architecture.md
+       2 # Architecture — four tiers
+       3 Presentation → Serving → Forecast (batch) → Ingestion. Forecast 
+       4 the versioned Serving Table — no synchronous ML on the read path
+         . Full narrative in [`../hld.md`](../hld.md) §6.
+       5 
+       7 flowchart TB
+       8     subgraph Presentation
+         r/>prod: React SPA on Vercel<br/>(S3 + CloudFront = AWS-native a
+         lt)"]
+      10     end
+     … +34 lines (ctrl+o to expand)
+
+⏺ Write(docs/diagrams/data-flow.md)
+  ⎿  Wrote 39 lines to docs/diagrams/data-flow.md
+       2 # Data flow — write, forecast, read
+       3 The three end-to-end flows. Data shapes: `SaleEvent` → `Aggregat
+         eRow` → `ForecastRow` →
+       4 `TopKResponse` (see [`../hld.md`](../hld.md) §11). Edge catalog 
+         in [`../component-deep-dive.md`](../component-deep-dive.md) §E.
+       6 ## Write (ingestion)
+       7 ```mermaid
+       8 flowchart LR
+       9     U["Upstream"] -->|SaleEvent| K["Stream / POST /events"]
+      10     K --> C["Consumer"]
+     … +33 lines (ctrl+o to expand)
+
+⏺ Write(docs/diagrams/erd.md)
+  ⎿  Wrote 58 lines to docs/diagrams/erd.md
+       2 # ERD — local Postgres schema
+       3 The built (`local`) schema. DDL in [`../lld.md`](../lld.md) §2. 
+         `serving_active_version` is the
+       4 pointer that makes a batch refresh an atomic swap (and a rollbac
+         k a flip).
+       6 ```mermaid
+       7 erDiagram
+       8     TENANT_CONFIG ||--o{ EVENTS : "scopes"
+       9     TENANT_CONFIG ||--o{ AGGREGATES : "scopes"
+      10     EVENTS }o--|| AGGREGATES : "additively rolls up into"
+     … +51 lines (ctrl+o to expand)
+
+⏺ Write(docs/diagrams/read-sequence.md)
+  ⎿  Wrote 45 lines to docs/diagrams/read-sequence.md
+       2 # Read sequence — pipeline + degradation chain
+       3 The 7-step read pipeline ([`../lld.md`](../lld.md) §5). The `alt
+         ` block is the forecast-path
+       4 degradation chain; `actuals` mode skips it (always `fresh`).
+       5 
+       6 ```mermaid
+       7 sequenceDiagram
+       8     participant UI
+       9     participant Svc as Service
+      10     participant Cache as Redis
+     … +36 lines (ctrl+o to expand)
+
+⏺ Write(docs/diagrams/ui-flow.md)
+  ⎿  Wrote 30 lines to docs/diagrams/ui-flow.md
+       2 # UI flow — dashboard states
+       3 The dashboard is a thin, read-only view: control change → fetch 
+         → render, with explicit
+       4 loading/empty/error/degraded states. It renders whatever `status
+         ` the API returns — never crashes on
+       6 partial data. Contract in [`../lld.md`](../lld.md) §13.
+       7 ```mermaid
+       8 stateDiagram-v2
+       9     [*] --> Idle
+      10     Idle --> Loading: change mode / window / k
+     … +24 lines (ctrl+o to expand)
+
+⏺ Now the runbook.
+
+⏺ Write(docs/runbook.md)
+  ⎿  Wrote 81 lines to docs/runbook.md
+       2 # Runbook — operations, alarms, degradation, recovery
+       3 Operational guide for the serving + batch planes. Architecture i
+         n [`hld.md`](hld.md); component
+          degradation spec in [`lld.md`](lld.md) §5.ponent-deep-dive.md);
+       5 
+       6 > Built locally on Micrometer + actuator; in `aws` the same metr
+       7 ic names back CloudWatch alarms → SNS.
+       8 ## 1. SLOs
+       9 
+      10 | SLO | Target | Source metric |
+     … +107 lines (ctrl+o to expand)
+
+⏺ Stage 3 content is complete. Let me run a hygiene scan and verify the file set
+  before committing.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== hygiene scan (adr/diagrams/runbook) ==="…)
+  ⎿  === hygiene scan (adr/diagrams/runbook) ===
+     docs/adr/0006-accuracy-metric-wape-vs-mape.md:15:- **Cons:** less intu
+     itive than a per-point percentage.
+     … +26 lines (ctrl+o to expand)
+
+⏺ Hygiene clean (only "intuitive"), Mermaid fences balanced, all 16 files
+  present. Let me commit Stage 3, then run the /public-repo-check gate before
+  pushing.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      rm -f docs/adr/.gitkeep docs/diagrams/.gitkeep…)
+  ⎿  58acf43 docs(phase1): add 9 comparative ADRs, Mermaid diagrams, and ru
+     nbook (Stage 3/3)
+     --- tree ---
+     … +19 lines (ctrl+o to expand)
+
+⏺ Stage 3 committed. Now the plan's hygiene gate before pushing.
+
+⏺ Skill(public-repo-check)
+  ⎿  Successfully loaded skill
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== 1. tracked private files (must be empty) ==="…)
+  ⎿  === 1. tracked private files (must be empty) ===
+     (end)
+     === .gitignore coverage ===
+     … +9 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== 3. employer / recruiter / interview framing across ALL tracked
+      files ==="…)
+  ⎿  === 3. employer / recruiter / interview framing across ALL tracked fil
+     es ===
+     CLAUDE.md:41:This is a **public** repo. Never commit secrets, `.env`,
+     … +10 lines (ctrl+o to expand)
+
+⏺ Hygiene gate: GO. The only matches are CLAUDE.md's own policy text (generic
+  words, no real names) and "intuitive". Summary:
+
+  - ✅ Nothing tracked under private/, claude-sessions/, interview-prep/; no
+  CLAUDE.local.md/.env tracked
+  - ✅ .gitignore covers all private paths
+  - ✅ No secrets (only the check skill's own pattern definitions)
+  - ✅ No employer/recruiter/interview framing in any tracked file
+  - ✅ docs/ reads as a generic sales-forecasting platform
+
+  Pushing Stage 3 and opening the PR.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git push -u origin docs/phase1-adr-diagrams-runbook 2>&1 | tail -2…)  ⎿   * [new branch]      docs/phase1-adr-diagrams-runbook -> docs/phase1-a
+     dr-diagrams-runbook
+     branch 'docs/phase1-adr-diagrams-runbook' set up to track 'origin/docs
+     … +2 lines (ctrl+o to expand)
+
+⏺ Stage 3 is up as PR #4. Phase 1 content is complete (PRs #3 and #4 open for
+  your review). Final step — write the Phase 1 handoff.
+
+⏺ Skill(handoff)
+  ⎿  Successfully loaded skill
+
+⏺ Let me gather the inputs the handoff skill requires — prior handoffs, the
+  implementation-plan index, and current git/PR state.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== handoff-docs ===" && ls claude-sessions/handoff-docs/
+      2>/dev/null…)
+  ⎿  === handoff-docs ===
+     phase-0-handoff.md
+     === implementation-plan ===
+     … +19 lines (ctrl+o to expand)
+
+⏺ PR #3 (OpenAPI) is now merged too — only PR #4 (Stage 3) remains open. Let me
+  read the prior handoff and plan index to build on them and reconcile open
+  items.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Now I'll write the Phase 1 handoff, a phase-1 plan stub, and update the plan
+  index.
+
+⏺ Write(claude-sessions/handoff-docs/phase-1-handoff.md)
+  ⎿  Wrote 127 lines to claude-sessions/handoff-docs/phase-1-handoff.md
+       2 # Phase 1 — Handoff
+          for review). Hand-off for whoever picks up **Phase 2**. #4 open
+       4 > **Date:** 2026-06-28 · **Private/gitignored** — may reference 
+       5 employer/interview specifics.
+       6 ## TL;DR
+         ll, generic design suite — HLD,one. The public repo now has a fu
+         d **OpenAPI 3.1** contract, **9ntation-grade **LLD**, a validate
+       9 comparative ADRs**, 5 Mermaid diagrams, and a runbook. Delivered
+      10 dive+LLD) and #3 (OpenAPI) are **merged**; #4 (ADRs+diagrams+run
+         book) is **open**. The next engineer
+     … +199 lines (ctrl+o to expand)
+
+⏺ Write(claude-sessions/implementation-plan/phase-1-design.md)
+  ⎿  Wrote 27 lines to
+     claude-sessions/implementation-plan/phase-1-design.md
+      2 # Phase 1 — Design Artifacts (WS-A)
+      3 > **Objective (from `private/Build-Delivery-Plan-v3.md`):** the d
+        esign is fully written so code + deck
+        nt API + UI; OpenAPI validates;** the LLD lets a stranger impleme
+      5 > **all 9 ADRs use the comparative format** (heavily scored).
+      6 
+      8 `~/.claude/plans/take-a-look-at-groovy-hammock.md` (drop-in HLD +
+         deep-dive, author LLD, OpenAPI, 9
+      9 comparative ADRs, diagrams, runbook — delivered as three staged P
+        Rs).
+     … +27 lines (ctrl+o to expand)
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 1 line, removed 1 line
+      21  | Phase | Title | Milestone | Plan doc | Handoff | Status |
+      22  |---|---|---|---|---|---|
+      23  | 0 | Foundations & logistics | — | [phase-0-foundations.md](ph
+          ase-0-foundations.md) | [phase-0-handoff](../handoff-docs/phase
+          -0-handoff.md) | ✅ done |
+      24 -| 1 | Design artifacts (LLD, ADRs, OpenAPI, diagrams) | — | _to
+         -do_ | | |                                                      
+      24 +| 1 | Design artifacts (LLD, ADRs, OpenAPI, diagrams) | — | [ph
+         +ase-1-design.md](phase-1-design.md) | [phase-1-handoff](../hand
+         +off-docs/phase-1-handoff.md) | ✅ done |                       
+      25  | 2 | Walking skeleton (vertical slice + minimal UI) | ⭐ DEMO 
+          | _todo_ | | |
+      26  | 3 | Forecasting engine | — | _todo_ | | |
+      27  | 4 | Forecast serving + resilience | FORECAST-READY | _todo_ |
+           | |
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 1 line, removed 1 line
+      1  # Implementation Plan — Multi-Tenant Sales-Forecasting Platform
+      2  
+      3 -Working docs that turn **`private/Build-Delivery-Plan-v2.md`** (
+        -what to build, in what order) and the **consolidated design doc*
+        -* (`private/Design-Doc-v3-Consolidated.md`, supersedes HLD v2) (
+        -the architecture) into a concrete, step-by-step build approach —
+        - one doc per phase.                                             
+      3 +Working docs that turn **`private/Build-Delivery-Plan-v3.md`** (
+        +what to build, in what order) and the **consolidated design doc*
+        +* (`private/Design-Doc-v3-Consolidated.md`, supersedes HLD v2) (
+        +the architecture) into a concrete, step-by-step build approach —
+        + one doc per phase.                                             
+      4  
+      5  > **Private & gitignored.** This whole tree lives under `claude-
+         sessions/` and never goes to GitHub. It may reference employer/i
+         nterview specifics freely. The *public* repo artifacts (code, `d
+         ocs/`, README) stay generic — see `/public-repo-check`.
+      6  
+
+⏺ Now verify the private docs are gitignored/untracked (handoff skill step 5).
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git check-ignore claude-sessions/handoff-docs/phase-1-handoff.md
+      claude-sessions/implementation-plan/phase-…)
+  ⎿  claude-sessions/handoff-docs/phase-1-handoff.md
+     claude-sessions/implementation-plan/phase-1-design.md
+     --- ignored OK ---
+     … +3 lines (ctrl+o to expand)
+
+⏺ Phase 1 — Design Artifacts is complete. The handoff docs are
+  private/gitignored (verified) and not committed.
+
+  Phase 1 delivered
+
+  ┌────────────────────────────────────────┬─────┬──────────────────────────┐
+  │                 Stage                  │ PR  │          Status          │
+  ├────────────────────────────────────────┼─────┼──────────────────────────┤
+  │ 1 — HLD + component deep-dive + LLD    │ #2  │ ✅ merged                │
+  ├────────────────────────────────────────┼─────┼──────────────────────────┤
+  │ 2 — validated OpenAPI 3.1              │ #3  │ ✅ merged                │
+  ├────────────────────────────────────────┼─────┼──────────────────────────┤
+  │ 3 — 9 comparative ADRs + diagrams +    │ #4  │ 🟡 open — merge to       │
+  │ runbook                                │     │ finalize                 │
+  └────────────────────────────────────────┴─────┴──────────────────────────┘
+
+  Acceptance (per Build-Delivery-Plan v3):
+  - ✅ LLD is stranger-implementable — DDL, /api/v1 contract, seam signatures,
+  read pipeline + degradation chain, idempotency, cache, profiles, UI contract,
+  errors
+  - ✅ OpenAPI validates — redocly lint exits 0 (one intentional localhost
+  warning)
+  - ✅ All 9 ADRs in the comparative format (the A/B/C fork + DR-1…DR-8) — the
+  heavily-scored deliverable
+  - ✅ /public-repo-check → GO (no secrets, no employer/interview framing)
+
+  Also done: repointed CLAUDE.md + the phase-status skill at
+  Build-Delivery-Plan-v3; adopted branch-per-stage (resolving Phase 0's
+  git-workflow open item); wrote the Phase 1 handoff and updated the plan index.
+
+  What's left / next
+
+  - Merge PR #4 to close out Phase 1.
+  - Carried-forward open items (from Phase 0, still open): rename the /export
+  skill (repo-root leak risk); off-repo recruiter scheduling reply (WS-G).
+  - Next phase — Phase 2: Walking Skeleton ⭐ (first end-to-end code → dashboard
+  shows actuals top-k). First step: Flyway migrations straight from docs/lld.md
+  §2, plus POST /events + the read endpoint. Full details in the handoff
+  (claude-sessions/handoff-docs/phase-1-handoff.md).
+
+  One decision worth surfacing when convenient: whether to commit the untracked
+  .claude/skills/handoff/ skill — it's generic tooling and skills are public, so
+  it's safe to track if you want it versioned. Say the word and I'll start
+  Phase 2.
+
+✻ Crunched for 9m 0s
+
+❯ LGTM. Merged the PR. Yeah we can commit the handoff skill as well as the      
+  save-session skill.                                                           
+
+⏺ The PR is merged. Let me check what skills exist untracked before committing.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git checkout main -q && git pull --ff-only -q 2>&1 | tail -1…)
+  ⎿  Deleted branch docs/phase1-adr-diagrams-runbook (was 58acf43).
+     === all skills on disk ===
+     export
+     … +9 lines (ctrl+o to expand)
+
+⏺ No save-session skill exists yet — but the Phase 0 handoff flagged renaming
+  the export skill to /save-session (it currently collides with the built-in
+  /export and writes to the repo root). Let me read both skills to confirm
+  intent and check they're public-clean.
+
+  Read 2 files (ctrl+o to expand)
+⏺ Got it — there's no save-session skill yet; the Phase 0 handoff flagged
+  renaming the export skill to /save-session (it collides with the built-in
+  /export and writes to the repo root). So I'll rename export → save-session
+  (resolving that open item) and commit it alongside handoff. Let me check for
+  any tracked references to the old skill name first, then do the rename.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== tracked refs to the export skill (not the export/ data dir)
+      ==="…)
+  ⎿  === tracked refs to the export skill (not the export/ data dir) ===
+     .claude/skills/export/SKILL.md:3:description: Copy this project's Clau
+     de Code session transcript(s) into claude-sessions/export/ (gitignored
+     … +13 lines (ctrl+o to expand)
+
+⏺ Confirmed — only the skill's own file references it. Renaming export →
+  save-session and updating both skills.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git mv .claude/skills/export .claude/skills/save-session && echo
+      "renamed:" && ls .claude/skills/)
+  ⎿  renamed:
+     handoff
+     phase-status
+     … +2 lines (ctrl+o to expand)
+
+⏺ Update(.claude/skills/save-session/SKILL.md)
+  ⎿  Added 2 lines, removed 2 lines
+      1  ---
+      2 -name: export                                                    
+      3 -description: Copy this project's Claude Code session transcript(
+        -s) into claude-sessions/export/ (gitignored). User-triggered via
+        - /export. Shadows the built-in /export.                         
+      2 +name: save-session                                              
+      3 +description: Copy this project's Claude Code session transcript(
+        +s) into claude-sessions/export/ (gitignored). User-triggered via
+        + /save-session. Named to avoid colliding with the built-in /expo
+        +rt.                                                             
+      4  disable-model-invocation: true
+      5  ---
+      6  
+
+⏺ Update(.claude/skills/save-session/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+      29  
+      30  ## Notes
+      31  - Transcripts can contain employer/interview material. `claude-
+          sessions/` is gitignored and must **never** be committed — `/pu
+          blic-repo-check` verifies this.
+      32 -- This skill shadows the built-in `/export` (which exports a hu
+         -man-readable rendering of the conversation). This one copies th
+         -e raw `.jsonl` session data instead.                           
+      32 +- This is named `/save-session` (not `/export`) so it doesn't c
+         +ollide with the built-in `/export`, which exports a human-reada
+         +ble rendering of the conversation. This one copies the raw `.js
+         +onl` session data instead.                                     
+
+⏺ Update(.claude/skills/handoff/SKILL.md)
+  ⎿  Added 1 line, removed 1 line
+      21  - **All previous phase plans:** read prior `claude-sessions/imp
+          lementation-plan/phase-*.md` and the index
+      22    `README.md` so the through-line across phases is consistent.
+      23  - **The plan for this phase:** `claude-sessions/implementation-
+          plan/phase-<N>-*.md`.
+      24 -- **The driving docs:** `private/Build-Delivery-Plan-v2.md` and
+         - `private/Design-Doc-v3-Consolidated.md`.                      
+      24 +- **The driving docs:** `private/Build-Delivery-Plan-v3.md` and
+         + `private/Design-Doc-v3-Consolidated.md`.                      
+      25  - **The approved execution plan** (if any): `~/.claude/plans/*.
+          md`.
+      26  - **Actual repo/git state:** `git log --oneline`, branch, `git 
+          status`, and PR state via `gh pr list` / `gh pr view`.
+      27  - **Verify build/run claims** before asserting them green (e.g.
+           `mvn verify`, `make up`) — report real results.
+
+⏺ Now commit both skills. I'll use a chore branch + PR to match the established
+  workflow.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git checkout -b chore/track-skills -q…)
+  ⎿  === staged ===
+     RM .claude/skills/export/SKILL.md -> .claude/skills/save-session/SKILL
+     .md
+     … +3 lines (ctrl+o to expand)
+
+⏺ Let me verify the commit actually captured the handoff skill and the edits —
+  the status showed handoff/ still untracked before commit.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== commit contents ===" && git show --stat --oneline HEAD…)
+  ⎿  === commit contents ===
+     58abe68 chore(skills): add handoff skill; rename export -> save-sessio
+     n
+     … +8 lines (ctrl+o to expand)
+  ⎿  1 skill available
+
+⏺ The previous git add aborted on the now-nonexistent export pathspec, so only
+  the bare rename landed — the handoff skill and my edits weren't staged. Let me
+  fix it by staging correctly and amending.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git add .claude/skills/handoff .claude/skills/save-session…)
+  ⎿  === staged now ===
+     A  .claude/skills/handoff/SKILL.md
+     M  .claude/skills/save-session/SKILL.md
+     … +12 lines (ctrl+o to expand)
+
+⏺ Fixed — the amended commit now has the handoff skill (70 lines), the rename,
+  and the edits (name: save-session), and the working tree is clean. Pushing and
+  opening the PR.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git push -u origin chore/track-skills 2>&1 | tail -2…)
+  ⎿   * [new branch]      chore/track-skills -> chore/track-skills
+     branch 'chore/track-skills' set up to track 'origin/chore/track-skills
+     '.
+     https://github.com/heminjoshi/sales-forecasting-platform/pull/5
+
+⏺ PR #5 is up. Let me update the private Phase 1 handoff's open-items so they
+  reflect this resolution for the next session.
+
+⏺ Update(claude-sessions/handoff-docs/phase-1-handoff.md)
+  ⎿  Added 5 lines, removed 5 lines
+      109  Flyway migrations from `docs/lld.md` §2.
+      110  
+      111  ## Open items / decisions pending
+      112 -- [ ] Merge **PR #4** to finalize Phase 1.                    
+      113 -- [ ] (carried) Rename `/export` skill so it reliably targets 
+          -`claude-sessions/export/`.                                    
+      114 -- [ ] (carried, off-repo WS-G) Reply to recruiter with onsite 
+          -blocks + prep-call times.                                     
+      115 -- [ ] Decide whether to commit the untracked `.claude/skills/h
+          -andoff/` skill (it's the generator of                         
+      116 -      these handoffs — tracked skills are public; it's generic
+          -, so committing is fine if wanted).                           
+      112 +- [x] Merge **PR #4** to finalize Phase 1. — merged.          
+      113 +- [x] (carried) Rename `/export` skill — done: renamed to **`/
+          +save-session`** (no longer collides with                      
+      114 +      the built-in `/export`); committed in **PR #5** (`chore/
+          +track-skills`).                                               
+      115 +- [x] Commit the `.claude/skills/handoff/` skill — done in **P
+          +R #5** (now tracked).                                         
+      116 +- [ ] (carried, off-repo WS-G) Reply to recruiter with onsite 
+          +blocks + prep-call times. — still open.                       
+      117  - [ ] Phase 2: confirm the dev tenant-auth stand-in (`X-Tenant
+           -Id` header) is acceptable for the demo.
+      118  
+      119  ## ⭐ Work done outside the plan / repo
+
+⏺ Done. Both skills are committed and up for review in PR #5:
+  https://github.com/heminjoshi/sales-forecasting-platform/pull/5
+
+  What's in it:
+  - /handoff — the phase-handoff generator is now tracked (it wrote the Phase
+  0/1 handoffs); driving-doc reference repointed to v3.
+  - /export → /save-session — renamed so it no longer collides with the built-in
+  /export that was shadowing it. This resolves the long-standing Phase 0 open 
+  item. Still user-triggered, still copies raw .jsonl into the gitignored
+  claude-sessions/export/.
+
+  One snag worth flagging: my first git add silently aborted (it referenced the
+  now-renamed export/ path), so the initial commit captured only a no-op rename.
+  I caught it on verification and amended — the commit now correctly contains
+  the handoff skill, the rename, and the edits, with a clean working tree.
+
+  I also ticked off the resolved items in the private Phase 1 handoff.
+
+  Remaining open: the off-repo recruiter reply (WS-G, yours), and confirming the
+  X-Tenant-Id dev-auth stand-in when Phase 2 starts. Whenever you're ready, the
+  next step is Phase 2 — Walking Skeleton (Flyway migrations from docs/lld.md
+  §2 → POST /events + the read endpoint → dashboard shows actuals top-k).
+
+✻ Brewed for 3m 9s
+
+❯ don't track this - the off-repo recruiter reply (WS-G, yours) and confirming  
+  the X-Tenant-Id dev-auth stand-in                                             
+
+⏺ Update(claude-sessions/handoff-docs/phase-1-handoff.md)  ⎿  Removed 2 lines
+      113  - [x] (carried) Rename `/export` skill — done: renamed to **`/
+           save-session`** (no longer collides with
+      114        the built-in `/export`); committed in **PR #5** (`chore/
+           track-skills`).
+      115  - [x] Commit the `.claude/skills/handoff/` skill — done in **P
+           R #5** (now tracked).
+      116 -- [ ] (carried, off-repo WS-G) Reply to recruiter with onsite 
+          -blocks + prep-call times. — still open.                       
+      117 -- [ ] Phase 2: confirm the dev tenant-auth stand-in (`X-Tenant
+          --Id` header) is acceptable for the demo.                      
+      116  
+      117  ## ⭐ Work done outside the plan / repo
+      118  - **Delivery plan bumped to v3 mid-session** (by the user): AD
+           Rs 8→9, comparative trade-offs elevated,
+
+⏺ I'll also drop the recruiter item from the "Carried forward" section so it
+  isn't tracked there either.
+
+⏺ Update(claude-sessions/handoff-docs/phase-1-handoff.md)
+  ⎿  Added 2 lines, removed 4 lines
+      85    stage** (one PR per artifact group) for the rest of the proje
+          ct.
+      86  - ✅ **Lock a PR-body template** — effectively done: PRs #2–#4 
+          use a consistent body (What's here ·
+      87    Acceptance · Next). Not formalized into a doc; treat the PR b
+          odies as the de-facto template.
+      88 -- ⏳ **Rename `/export` skill** (writes a readable `.txt` to re
+         -po root, leak risk) — **still open**;                          
+      89 -  not touched this phase. Carry forward.                       
+      90 -- ⏳ **Off-repo (WS-G): reply to recruiter** with onsite blocks
+         - + prep-call times — **still open**;                           
+      91 -  the user's action, outside the repo.                         
+      88 +- ✅ **Rename `/export` skill** (writes a readable `.txt` to re
+         +po root, leak risk) — RESOLVED:                                
+      89 +  renamed to `/save-session` and committed in PR #5.           
+      90  - **Earlier acceptance re-checked:** Phase 1 changed only `docs
+          /` + two skill/CLAUDE pointers; no
+      91    `service/`, CI, or Docker files touched → Phase 0's "modules 
+          compile / CI green / `make run` boots"
+      92    guarantees stand (no regression introduced; not re-run).
+
+⏺ Done — dropped both the off-repo recruiter reply and the X-Tenant-Id dev-auth
+  note from the Phase 1 handoff (both the open-items list and the
+  carried-forward section). The handoff now only tracks repo-scoped items, all
+  of which are resolved.
+
+  Net state: PR #5 (skills) is open for your review; Phase 1 is fully closed
+  out. Ready for Phase 2 whenever you are.
+
+✻ Brewed for 25s
+
+❯ /save-session                                                                 
+
+⏺ I'll run the save-session steps — resolve the transcript dir, copy the .jsonl
+  files, refresh the manifest.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      SRC="$HOME/.claude/projects/$(pwd | tr '/' '-')"…)
+  ⎿  SRC=/Users/heminjoshi/.claude/projects/-Users-heminjoshi-code-sales-fo
+     recasting-platform
+     exists; jsonl files:
+     8
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      SRC="$HOME/.claude/projects/$(pwd | tr '/' '-')"…)
+  ⎿  === copied 8 transcript(s) into claude-sessions/export/ ===
+     total 7368
+     -rw-------@ 1 heminjoshi  staff   1.9M Jun 28 17:26 1dfb14bd-59dc-4ee4
+     … +16 lines (ctrl+o to expand)
+
+⏺ Let me confirm the export is gitignored and untracked (the skill's safety
+  requirement).
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git check-ignore claude-sessions/export/MANIFEST.md >/dev/null && echo
+      "gitignored: OK"…)
+  ⎿  gitignored: OK
+     tracked under claude-sessions/export (must be empty):
+     working tree status (skill files only expected, no export):
+
+⏺ Exported 8 transcripts into claude-sessions/export/ and refreshed MANIFEST.md.
+
+  - Source: ~/.claude/projects/-Users-heminjoshi-code-sales-forecasting-platform
+  - Files: 8 .jsonl (largest ~1.9M, the active session) + MANIFEST.md
+  - ✅ Verified gitignored and untracked — nothing under claude-sessions/export/
+  is staged, so no private data will be committed.
+
+  Note: an older phase-0.txt (from a prior built-in /export, Jun 28) already
+  sits in that same gitignored folder — harmless where it is. The /save-session
+  rename means future runs land raw .jsonl here, not a .txt at the repo root.
+
+✻ Cogitated for 30s

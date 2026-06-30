@@ -1,0 +1,1646 @@
+ ▐▛███▜▌   Claude Code v2.1.195
+▝▜█████▛▘  Opus 4.8 · Claude Max
+  ▘▘ ▝▝    ~/code/sales-forecasting-platform
+
+
+❯ /implement-phase 9                                                            
+
+⏺ I'll drive Phase 9 from the source of truth. Let me start by orienting on the
+  plan docs and launching the parallel audit.
+
+  Let me first locate the Phase 9 sections in the private docs.
+
+  Searched for 1 pattern, read 1 file, listed 1 directory (ctrl+o to expand)
+
+⏺ Phase 9 is presentation & rehearsal — a docs/deck phase, not a code phase,
+  with a sharp public-repo hygiene angle (generic presentation/ committed vs.
+  interview-specific notes kept private). Let me audit current state before
+  planning.
+
+⏺ Bash(echo "=== presentation/ ===" && ls -la presentation/ 2>/dev/null || echo
+      "(no presentation dir)"; echo "=== git ===" && git status --short && git
+      log --oneline…)
+  ⎿  Error: Exit code 1
+     === presentation/ ===
+     total 0
+     drwxr-xr-x@  3 heminjoshi  staff   96 Jun 28 14:37 .
+     drwxr-xr-x  25 heminjoshi  staff  800 Jun 29 11:41 ..
+     -rw-r--r--@  1 heminjoshi  staff    0 Jun 28 14:37 .gitkeep
+     === git ===
+     916c726 docs(phase8): the P8 full-stack ITs run on CI service containers, 
+     not Testcontainers
+     b594f99 fix(phase8): run full-stack ITs against CI service containers, not 
+     Testcontainers Redis
+     925df73 fix(phase8): wire Redis IT via DynamicPropertySource; correct 
+     injection probe; Node 24
+     … +4 lines (ctrl+o to expand)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Phase 9 is the presentation phase: presentation/ holds only a .gitkeep. This
+  is a docs/deck phase (no Maven, no Workflow races), with a hard public-repo
+  hygiene split — generic presentation/ committed vs. interview-specific
+  material kept private. Let me run the two-agent audit per the skill.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Context is clear. Now the two-agent parallel audit per the skill — Agent A
+  extracts the Phase 9 content contract from the private design docs (the
+  substance the deck pulls from); Agent B audits demo-readiness and the public
+  docs/ the deck cites.
+
+⏺ 2 background agents launched (↓ to manage)
+   ├ Phase 9 content contract
+   └ Demo-readiness + public docs audit
+
+⏺ Both audit agents are running in the background. While they work, let me read
+  the public design docs the deck will cite to confirm what's available
+  firsthand.
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ Public docs are rich (all 10 ADRs, 5 mermaid diagrams, hld/lld/deep-dive) —
+  solid raw material for the deck. Let me wait for the two audit agents to
+  finish before planning.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Mermaid diagrams — directly embeddable in a markdown deck. Waiting on the two
+  audit agents to return before I plan.
+
+✻ Brewed for 1m 37s
+
+⏺ Agent "Demo-readiness + public docs audit" finished · 1m 42s
+
+⏺ Thorough demo audit — cold-start works; three smoothing gaps surfaced (no
+  screenshots, Chart.js CDN breaks offline, degradation demo is manual SQL with
+  no make helper). Waiting on Agent A's content contract.
+
+⏺ Bash(sleep 1; echo waiting)
+  ⎿  waiting
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ ADRs are rich and deck-ready (comparative format with chosen/rejected/"not
+  built"). Waiting on Agent A's full content extraction to complete before
+  planning.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Got the quantified eval numbers (HoltWinters WAPE 6.9% vs SeasonalNaive 7.6%,
+  24 segments/2016 points). Let me check on Agent A.
+
+⏺ Bash(sleep 20; echo done)
+  ⎿  done
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ I have enough firsthand context. Let me get Agent A's report now.
+  ⎿  Invalid tool parameters
+
+⏺ Agent "Phase 9 content contract" finished · 2m 39s
+
+⏺ Both audits are in. Critical fact: docs/hld.md is identical to the private
+  design doc, so all deck content can be sourced from public files — the deck
+  stays generic and public-safe. The interview-specific framing (why-employer,
+  STAR) stays out of the tracked presentation/ dir.
+
+  Before I finalize the plan, two genuine scoping forks:
+
+⏺ User declined to answer questions
+  ⎿  · What format should the presentation deck (`presentation/deck`) take? This
+     is the ~58-slide artifact pulling from hld.md + the 10 ADRs. (Marp 
+     markdown / GitHub markdown deck / reveal.js single HTML)
+     · The demo audit flagged friction for the live cold-start demo (acceptance 
+     gate). Which demo-smoothing changes should Phase 9 include beyond the 
+     deck/scripts? (make degrade helper / Vendor Chart.js offline / Capture 
+     screenshots)
+
+⏺ What would you like to clarify about either question — the deck format
+  options, or the demo-smoothing scope? Happy to add context or reframe.
+
+✻ Cogitated for 5m 42s
+
+❯ Let's do two and three.                                                       
+
+⏺ Quick disambiguation — "two and three" could map two ways:
+
+  - Per question: deck format = option 2 (GitHub markdown deck), demo polish =
+  option 3 (screenshots only), or
+  - Both for demo polish: deck format still open, demo polish = options 2 + 3
+  (vendor Chart.js + capture screenshots)
+
+  Which did you mean? And if the deck format is still open, which of the three —
+  Marp markdown / GitHub markdown / reveal.js?
+
+✻ Churned for 17s
+
+❯ Both for demo polish: deck format still open, demo polish = options 2 + 3     
+  (vendor Chart.js + capture screenshots)                                       
+
+⏺ Got it: demo polish = vendor Chart.js + capture screenshots (skipping make 
+  degrade — the degradation steps will be documented in demo-script.md instead).
+  Now just the deck format:
+
+⏺ User answered Claude's questions:
+  ⎿  · What format for the presentation deck (`presentation/deck`) — the 
+     ~58-slide artifact built from hld.md + the 10 ADRs? → Give me all three 
+     options. 
+
+⏺ All three formats — and there's a clean way to get them from one source:
+  author the slide content once as a Marp-compatible deck.md (which already
+  renders as the GitHub-markdown deck), then a small reveal.js index.html loads
+  that same deck.md via its markdown plugin for offline clickable slides. One
+  content file, three renderings — no triplicate maintenance.
+
+  Let me load the plan-mode tools and present the plan for sign-off.
+
+⏺ Entered plan mode
+  Claude is now exploring and designing an implementation approach.
+
+⏺ I have everything I need — the two audits gave me the full content contract
+  and demo-readiness picture, and the scoping decisions are locked. Let me write
+  the plan file.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/hazy-spinning-quilt.md · /plan to edit
+     Phase 9 — Presentation & rehearsal 🎤 [WS-F]
+
+     Context
+
+     Phase 9 closes the 🎤 PRESENTATION-READY milestone (Build-Plan v3
+     §154–160). It is a
+     docs/deck + rehearsal phase, not a code phase — no Maven, no Workflow
+     reactor races. Deliverables:
+     a slide deck to the exact budget, the trade-offs slides (the highest-scored
+     beat), the
+     intro/achievements/demo-script/speaker-notes companions, and a verified
+     cold-start live demo.
+
+     Audit findings (2 parallel Explore agents):
+     - presentation/ holds only a .gitkeep; no Phase-9 plan doc exists yet.
+     - docs/hld.md is a verbatim copy of private/Design-Doc-v3-Consolidated.md —
+     so every deck fact
+     can be sourced from a public file. The deck stays generic and public-safe;
+     no employer/interview
+     framing goes in tracked presentation/.
+     - Deck raw material is all present: hld.md (§5 A/B/C table @74–81, NFR
+     table @55–67, 4 data shapes
+     @231–252, capacity math @385, local↔cloud swap @357–366), the 10 ADRs
+     (docs/adr/0001–0010,
+     comparative chosen/rejected/"didn't-build" format), 5 mermaid diagrams
+     (docs/diagrams/*), and the
+     WAPE eval (docs/forecast-eval-report.md: HoltWinters pooled WAPE 0.0686 vs
+     SeasonalNaive
+     0.0755 over 24 segments / 2016 points).
+     - Cold-start demo sequence verified: make up → seed → run → forecast → open
+     :8080 (+ optional
+     make trickle). Degradation is triggered manually (TRUNCATE serving_rows, 
+     serving_active_version;
+       - redis-cli INCR tenantver:t_demo → forecast read still 200
+     degraded/pending) — documented in
+     the Postman folder + runbook; the live ForecastDegradationIT matches it
+     exactly.
+
+     Locked decisions (user):
+     - Deck = all three renderings from one source. Author canonical content
+     once as a Marp-compatible
+     deck.md (--- separators) — this also IS the GitHub-markdown deck (renders
+     inline, mermaid and
+     all). A thin reveal.js index.html loads that same deck.md via its markdown
+     plugin → offline
+     clickable slides. One content file, three renderings, no triplicate
+     maintenance.
+     - Demo polish = vendor Chart.js offline + capture screenshots. (User
+     declined a make degrade
+     target — degradation steps stay documented in demo-script.md.)
+
+     Slide budget (Build-Plan §155, ~58 slides)
+
+     Problem+Assumptions (2) · Requirements (5) · HLD (10) · Component Deep-Dive
+     (20) · AI Integration
+     (10) · Scale & Perf (5) · Q&A (8). Plus the Architectural Choices & 
+     Trade-offs slides (§5 A/B/C +
+     the 10 ADRs, rejected-alternative + what-I-didn't-build beats — Build-Plan
+     §156, "highest-scored")
+     folded into the HLD/Deep-Dive sections.
+
+     Approach
+
+     1. Deck content — presentation/deck/deck.md (the canonical artifact)
+
+     Marp frontmatter + --- slide separators. Section-by-section, sourced from
+     the public docs (cite by
+     anchor, paste real tables). Mermaid code-blocks inline (GitHub + reveal
+     render them; Marp shows the
+     code / I note "see docs/diagrams/*"). Sections map 1:1 to the budget above.
+     Trade-offs slides paste
+     the §5 A/B/C scoring table verbatim + one slide per ADR (decision · chosen
+     · rejected · "didn't
+     build"). Achievements cite the real numbers: WAPE 6.9% vs 7.6% naive,
+     403/404 tenant isolation,
+     58/58 api unit tests + the 4 full-stack ITs, p99<150ms design SLO, S3
+     11-nines durability.
+
+     2. reveal.js wrapper — presentation/deck/index.html
+
+     Self-contained-ish: reveal.js + markdown + mermaid plugins (CDN, with a
+     note to vendor for a fully
+     offline run if needed). <section data-markdown="deck.md" 
+     data-separator="^---"> loads the canonical
+     content. Arrow-key navigation, speaker view, ?print-pdf export. Marp export
+     path documented in the
+     deck README.
+
+     3. Companion docs (generic, committed)
+
+     - presentation/intro-achievements.md — Intro (5) + Achievements (10): the 2
+     quantified stories
+     (WAPE backtest accuracy; multi-tenant isolation correctness) + an HLD
+     diagram link. Generic framing.
+     - presentation/demo-script.md — the live sequence: cold-start (make 
+     up/seed/run/forecast), the
+     dashboard walk (mode/window/channel/k, status badge, insight, interval
+     table), and the degradation
+     beat (the manual TRUNCATE + Redis-bump steps, expected degraded/pending,
+     recovery via
+     make forecast). Timings per beat.
+     - presentation/speaker-notes.md — per-section talking points, the
+     rejected-alternative / "didn't
+     build" beats, anticipated Q&A.
+     - presentation/README.md — what's here, how to render each format (Marp /
+     GitHub / reveal.js),
+     how to re-capture screenshots.
+
+     4. Demo polish (code — small, demo-supporting)
+
+     - Vendor Chart.js: download chart.umd.min.js into
+     service/topsales-api/src/main/resources/static/vendor/, switch index.html's
+     <script src> from
+     the jsDelivr CDN to the local path. Removes the demo's only network
+     dependency. (Mirror in web/
+     SPA? No — web/ uses Recharts via npm, unaffected.)
+     - Screenshots: with Docker available, run the cold-start, capture the
+     dashboard fresh and
+     degraded states → presentation/screenshots/ (+ referenced from the deck
+     hero slide). If Docker
+     isn't runnable in-session, document the exact capture steps and leave a
+     placeholder (Phase-10 README
+     hero can reuse them).
+
+     5. Test-plan + tracked-doc sync (skill §3 + §6)
+
+     - test-plan/manual-qa-test.md / canary-tests.md — add [P9] cases for the
+     cold-start demo
+     run-through and the live degradation beat (the demo IS the acceptance
+     spec). Add Phase 9 to the
+     README phase-gating list. Keep generic.
+     - CLAUDE.md status line → "Built through Phase 9"; README.md Architecture
+     section (currently
+     "to be added") gets the architecture mermaid + a screenshot;
+     built-vs-designed note unchanged.
+
+     Critical files (reuse — do not rebuild)
+
+     - Source of truth (read, cite): docs/hld.md, docs/component-deep-dive.md,
+     docs/adr/0001–0010,
+     docs/diagrams/*.md, docs/forecast-eval-report.md, docs/api/openapi.yaml.
+     - Dashboard (edit one line):
+     service/topsales-api/src/main/resources/static/index.html (CDN→vendor).
+     - Demo machinery (reference, unchanged): Makefile,
+     local/docker-compose.yml, postman/ folder
+     11 (isolation), ForecastDegradationIT (the degradation contract the script
+     mirrors).
+     - New, all under presentation/: deck/deck.md, deck/index.html,
+     intro-achievements.md,
+     demo-script.md, speaker-notes.md, README.md, screenshots/.
+
+     Orchestration
+
+     Implement solo (no Workflow): authoring needs one coherent voice and the
+     content contract is
+     already extracted. The bulky Component-Deep-Dive (20 slides) and Q&A
+     sections may be drafted by
+     parallel sub-agents against the contract, then I stitch + line-edit for
+     voice. The Chart.js vendor +
+     screenshots are sequential, Docker-gated steps I run in the main loop.
+
+     Verification (acceptance: full run-through to time; demo runs clean from 
+     cold)
+
+     - make test — full reactor unit gate stays green (no main-path prod code
+     changed; only static
+     index.html script src). Capture real output.
+     - Cold-start live demo (Docker): make up && make seed && make run && make 
+     forecast → open
+     http://localhost:8080, walk the dashboard, run the degradation beat
+     (TRUNCATE + Redis-bump →
+     degraded, then make forecast → fresh). This maps to the [P9] manual-qa
+     cases.
+     - Render the deck in ≥1 format (open index.html in a browser / Marp
+     preview) — slides advance,
+     diagrams/screenshots show.
+     - Rehearsal (Build-Plan §158) is the user's off-tool step; the deck +
+     scripts + speaker-notes are the
+     artifacts that enable it.
+
+     Out of scope / deferred
+
+     - The private interview narrative (why-employer, STAR, recruiter) — stays
+     in private interview-prep/,
+     never in tracked presentation/.
+     - make degrade helper (user declined) — manual steps documented instead.
+     - README hero polish, v1.0 tag, secret-scan-and-publish → Phase 10.
+     - Real Vercel SPA deploy → still open (external, from prior phases).
+
+     Close-out
+
+     handoff skill → claude-sessions/handoff-docs/phase-9-handoff.md; flip the
+     implementation-plan index
+     row 9 from _todo_ to the persisted plan doc + ✅; public-repo-check before
+     push; commit in
+     feat(phase9): …/docs(phase9): … slices; PR to main.
+
+⏺ Plan approved. Let me set up the work — first check git state to branch Phase
+  9 correctly (Phase 8's PR #16 may still be open).
+
+⏺ Bash(git branch --show-current && echo "---" && git log main --oneline -3
+      2>/dev/null && echo "---PR16 state---" && gh pr view 16 --json
+      state,mergedAt,headRefName 2…)
+  ⎿  feat/phase8-tests-postman
+     ---
+     0fa79c5 Merge pull request #15 from heminjoshi/docs/phase7-status
+     … +8 lines (ctrl+o to expand)
+
+⏺ PR #16 (Phase 8) is merged on remote, but local main is behind. Let me sync
+  main and branch Phase 9 off it.
+⏺ Bash(git fetch origin --quiet && git checkout main --quiet && git merge
+      --ff-only origin/main --quiet && git log --oneline -2 && echo "---creating
+      branch---" && git…)
+  ⎿  55f05e7 Merge pull request #16 from heminjoshi/feat/phase8-tests-postm
+     an
+     916c726 docs(phase8): the P8 full-stack ITs run on CI service containe
+     … +4 lines (ctrl+o to expand)
+
+⏺ On feat/phase9-presentation off updated main. Now per skill §3, persist the
+  durable plan doc and author the [P9] test cases before building. Let me read
+  the existing plan-doc shape and the test-plan files I'll extend.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Let me read the rest of manual-qa (degradation + cold-clone sections) and
+  canary-tests format so my [P9] cases extend cleanly.
+
+⏺ Bash(echo "=== manual-qa from line 50 ===" && sed -n '50,140p'
+      test-plan/manual-qa-test.md)
+  ⎿  === manual-qa from line 50 ===
+     ## 4. Multi-tenant isolation (manual)
+     | ID | Step | Expected |
+     … +68 lines (ctrl+o to expand)
+
+⏺ I have the full picture. Now per skill §3, I'll persist the durable plan doc,
+  flip the index, and author the [P9] test cases before building. Starting with
+  the plan doc.
+
+⏺ Write(claude-sessions/implementation-plan/phase-9-presentation.md)
+  ⎿  Wrote 90 lines to
+     claude-sessions/implementation-plan/phase-9-presentation.md
+         -READYe 9 — Presentation & rehearsal  `[WS-F]` → 🎤 PRESENTATION
+       3 > Approved exec plan (driven via `/implement-phase 9`). A **docs
+         /deck + rehearsal** phase — no Maven,
+         vered as one PReactor (authoring needs one coherent voice). Deli
+       5 > (`feat/phase9-presentation`), sliced `feat(phase9)`/`docs(phas
+       6 e9)`.
+       8 ## Objective & acceptance
+       9 Produce the interview presentation artifacts and a verified cold
+      10 **Acceptance (verbatim, Build-Plan §160):** "full run-through to
+          time; demo (incl. dashboard) runs
+     … +135 lines (ctrl+o to expand)
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 1 line, removed 1 line
+      30  | 6 | Hardening: resilience & observability | — | [phase-6-hard
+          ening.md](phase-6-hardening.md) | [phase-6-handoff](../handoff-
+          docs/phase-6-handoff.md) | ✅ done |
+      31  | 7 | UI production path & infra validation | — | [phase-7-ui-a
+          nd-infra.md](phase-7-ui-and-infra.md) | [phase-7-handoff](../ha
+          ndoff-docs/phase-7-handoff.md) | ✅ done (PRs #13 + #14 merged)
+           |
+      32  | 8 | Data, tests, Postman | PROD-SHAPED | [phase-8-data-tests-
+          postman.md](phase-8-data-tests-postman.md) | [phase-8-handoff](
+          ../handoff-docs/phase-8-handoff.md) | ✅ done (PR open) |
+      33 -| 9 | Presentation & rehearsal | 🎤 PRESENTATION | _todo_ | | |
+      33 +| 9 | Presentation & rehearsal | 🎤 PRESENTATION | [phase-9-pre
+         +sentation.md](phase-9-presentation.md) | _in progress_ | 🛠 in p
+         +rogress |                                                      
+      34  | 10 | Public-repo polish & final dry run | PUBLIC | _todo_ | |
+           |
+      35  
+      36  > **Handoff docs** live in [`../handoff-docs/`](../handoff-docs
+          /) — one per completed phase, written for whoever picks up the 
+          next phase (state, decisions, how-to-run, gotchas, open items).
+
+⏺ Now the [P9] test cases. Adding a new §10 to manual-qa, updating the
+  Chart.js-CDN notes (MQ-60/63) for vendoring, and the README phase-gating
+  bullet.
+
+⏺ Update(test-plan/manual-qa-test.md)
+  ⎿  Added 2 lines, removed 2 lines
+      78  ## 7. Cross-browser / responsiveness / a11y (smoke)
+      79  | ID | Step | Expected |
+      80  |---|---|---|
+      81 -| MQ-60 | Load in Chrome, Firefox, Safari | Renders consistentl
+         -y; no console errors; Chart.js (CDN) loads |                   
+      81 +| MQ-60 | Load in Chrome, Firefox, Safari | Renders consistentl
+         +y; no console errors; Chart.js (P9: **vendored**, `static/vendo
+         +r/`) loads |                                                   
+      82  | MQ-61 | Narrow viewport / mobile width | Layout remains usabl
+          e (table scroll/stack); controls reachable |
+      83  | MQ-62 | Keyboard-only | Controls are tabbable and operable; f
+          ocus visible |
+      84 -| MQ-63 | Offline/no-internet **except** the page itself | Loca
+         -l-served dashboard works; only the Chart.js CDN needs network —
+         - note this dependency for the live demo |                      
+      84 +| MQ-63 | (P9) Fully offline — disconnect the network, then loa
+         +d + use the dashboard | Local-served dashboard works **end-to-e
+         +nd with no internet**: chart renders from the vendored `static/
+         +vendor/chart.umd.min.js` (no CDN call in the network tab) — the
+         + live demo has **zero** network dependency |                   
+      85  
+      86  ## 8. Cold-clone acceptance (the "stranger" test) [P10]
+      87  | ID | Step | Expected |
+
+⏺ Update(test-plan/manual-qa-test.md)
+  ⎿  Added 16 lines
+      100  > **Note:** §9 [P7] is **N/A until deployed** — like the other
+            unbuilt-phase cases, an N/A here is **not a fail**;
+      101  > the Vercel/cross-origin checks become runnable only once PR1
+            (CORS) ships and the SPA is deployed (PR2/infra).
+      102  
+      103 +## 10. Presentation & rehearsal [P9] — the demo-day gate      
+      104 +The Phase-9 acceptance is "full run-through to time; demo (inc
+          +l. dashboard) runs clean from cold." These                    
+      105 +cases are the rehearsal checklist — run them as the dry-run, n
+          +ot just at release.                                           
+      106 +| ID | Step | Expected |                                      
+      107 +|---|---|---|                                                 
+      108 +| MQ-90 | **Cold-start from scratch** (containers down, no pri
+          +or state): `make up` → `make seed` → `make run` → `make foreca
+          +st` → open `http://localhost:8080` | Comes up clean in the doc
+          +umented sequence; dashboard renders seeded `t_demo` with a `fr
+          +esh` forecast badge, intervals, and a grounded insight — **no 
+          +errors, no manual fix-ups** |                                 
+      109 +| MQ-91 | **Dashboard walk** (the demo beats): toggle mode act
+          +uals↔forecast, window week/month/year, channel all/online/offl
+          +ine, change k | Each control updates table + chart live; badge
+          + + `asOf` stay honest; per-channel views differ and `all` ≈ th
+          +eir sum (mirrors MQ-01..05, run as one fluid sequence) |      
+      110 +| MQ-92 | **Degradation beat (live):** `docker compose -f loca
+          +l/docker-compose.yml exec -T postgres psql -U topsales -d tops
+          +ales -c 'TRUNCATE serving_rows, serving_active_version;'` then
+          + `... exec -T redis redis-cli INCR tenantver:t_demo`, then ref
+          +resh forecast view | Forecast read still **200**; badge flips 
+          +to `degraded` (seasonal-naive) or `pending` (actuals floor); t
+          +he degradation banner shows; items still present — **never a 5
+          +xx, blank, or crash** (the signature resilience moment; matche
+          +s `ForecastDegradationIT`) |                                  
+      111 +| MQ-93 | **Recovery:** `make forecast` again, refresh | Badge
+          + returns to `fresh` with intervals; the wipe was fully recover
+          +able on stage |                                               
+      112 +| MQ-94 | **Fully-offline rehearsal:** repeat MQ-90→93 with th
+          +e machine's network **off** (after images are pulled) | Everyt
+          +hing works — no CDN, no AWS, no internet (Chart.js vendored in
+          + P9); proves the demo survives a dead venue wifi |            
+      113 +| MQ-95 | **Deck renders:** open `presentation/deck/index.html
+          +` in a browser (reveal.js) **and** preview `presentation/deck/
+          +deck.md` (Marp / GitHub) | Slides advance with arrow keys; dia
+          +grams + screenshots show; the three renderings are the same co
+          +ntent from one `deck.md` source |                             
+      114 +| MQ-96 | **Run to time:** present the full deck + live demo a
+          +gainst `presentation/demo-script.md` timings | Completes withi
+          +n the 60-min budget (Build-Plan §155 split); the demo + degrad
+          +ation beat land inside their allotted minutes |               
+      115 +                                                              
+      116 +> §10 [P9] is the rehearsal gate — runnable now (the system is
+          + built through P8). MQ-92's manual SQL/Redis                  
+      117 +> steps are intentional (no `make degrade` target by decision)
+          +; they live verbatim in `demo-script.md`.                     
+      118 +                                                              
+      119  ## Reporting
+      120  For each failed case record: ID, build/commit, steps, **actual
+           ** vs **expected**, screenshot (UI cases),
+      121  and the response body/status for API cases. File against the o
+           wning phase. Phases 0–6 are built, so
+
+⏺ Now the [P9] phase-gating bullet in the test-plan README, after the [P8] line.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(test-plan/README.md)
+  ⎿  Added 1 line
+      24  - **[P6]** — hardening: resilience & observability (health/read
+          iness, metrics, structured logs).
+      25  - **[P7]** — production path & infra: API **CORS allow-list** (
+          `localhost` + the Vercel origin) on `/api/**` and the `web/` Re
+          act SPA (Vite/Recharts) cross-origin **prod build** deployed to
+           Vercel (the static dashboard stays the local demo); plus the s
+          ynth-only **AWS CDK** 5-stack — ingress via **API Gateway → pri
+          vate ALB** (compute never internet-facing), least-privilege Bed
+          rock IAM, non-root containers, and the metric-name contract gat
+          e. Because CORS is **browser-enforced**, its header behavior is
+           realized via **Postman** (Origin/preflight probe) + **manual/c
+          anary** checks, **not** HTTP-slice ITs (the SB4.1/Jackson-3 run
+          ner caveat — no `@WebMvcTest`/`TestRestTemplate`); the one auto
+          mated JUnit case is a config-binding **unit** test over the all
+          ow-list property. Infra cases (`IT-IF`) are `aws-cdk-lib` asser
+          tion tests under `infra/test/` (run by `npm test` / `infra.yml`
+          ), not Maven.
+      26  - **[P8]** — test-hardening & Postman gate: promotes the prior 
+          deferred `⚠️/❌` rows to **real full-stack `*IT`s** (booted aga
+          inst CI-provided Postgres + Redis services — see `ci.yml`; loca
+          lly the `make up` compose stack) — `RedisCacheShellIT` (real-Re
+          dis miss→hit / event-driven invalidation / single-flight: `IT-C
+          A-01/03/05`, and the lazy+cached insight path `IT-AI-05`), `For
+          ecastDegradationIT` (HTTP `mode=forecast` fresh-after-batch + s
+          erving-wiped degradation: `IT-FC-02/07`), and `TenantIsolationI
+          T` (end-to-end cross-tenant 403 / unknown-tenant 404 RFC-7807: 
+          `IT-RD-30/31/32`). Adds the **Postman coverage gate** — the ful
+          l `postman/` collection (incl. a new **multi-tenant isolation**
+           folder) run by **Newman** against a live local stack via `make
+           demo`, enforced in CI by `.github/workflows/postman.yml` (Post
+          gres + Redis services → build → seed → boot → poll health → `ne
+          wman run`, non-zero fails the build). Carried forward (document
+          ed, not built): `IT-FC-06` WAPE-on-committed-seed in CI and `IT
+          -FC-03` concurrent mid-batch swap.
+      27 +- **[P9]** — presentation & rehearsal: no new automated tests (
+         +a docs/deck phase); adds the **rehearsal gate** as manual-QA §1
+         +0 (`MQ-90..96`) — cold-start run-through, the live degradation 
+         +beat, the now-**fully-offline** demo (Chart.js vendored into `s
+         +tatic/vendor/`, so MQ-63/94 drop the last CDN dependency), and 
+         +"run to time" against `demo-script.md`. The acceptance is a cle
+         +an cold demo + a 60-min run-through, exercised by these manual 
+         +cases.                                                         
+      28  
+      29  A `[P3+]` case is written now but **expected to be skipped/`@Di
+          sabled`** until that phase lands; the
+      30  plan is the spec the phase must satisfy. These plans are author
+          ed and kept current phase-by-phase by
+
+⏺ Test cases done. Now the deck — the largest deliverable. Let me read the two
+  key public docs in full so I paste exact tables/shapes, then draft.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ I now have the complete deck source verbatim. Writing the canonical deck
+  content — presentation/deck/deck.md to the slide budget, pasting the real
+  tables and the ADR trade-off slides.
+
+⏺ Write(presentation/deck/deck.md)
+  ⎿  Wrote 730 lines to presentation/deck/deck.md
+       2 marp: true
+       3 theme: default
+       4 paginate: true
+       5 title: Multi-Tenant Sales-Forecasting Platform
+       6 description: Top sales by category — forecasting engine → top-k 
+         read model → dashboard
+       7 ---
+       8 
+       9 <!--
+      10   CANONICAL DECK SOURCE — one file, three renderings:
+     … +1037 lines (ctrl+o to expand)
+
+⏺ Deck content is done (~62 slides, hitting the budget). Now the reveal.js
+  wrapper that loads deck.md and renders the mermaid blocks.
+
+⏺ Write(presentation/deck/index.html)
+  ⎿  Wrote 81 lines to presentation/deck/index.html
+       2 <html lang="en">
+       3 <head>
+       4   <meta charset="utf-8">
+         le=1.0">name="viewport" content="width=device-width, initial-sca
+       6   <title>Top Sales by Category — deck</title>
+       7 
+       9     reveal.js wrapper around the canonical deck.md (one content 
+         source, three renderings).
+      10     It fetches ../deck/deck.md, strips the Marp frontmatter, and
+          feeds the markdown to reveal's
+     … +94 lines (ctrl+o to expand)
+
+⏺ Noted on SRI — for this local interview artifact the documented vendoring path
+  (already in the file's OFFLINE NOTE) is the stronger mitigation than pinning
+  CDN hashes, since vendoring removes the CDN dependency entirely; I'll flag it
+  in the handoff. Continuing with the companion docs.
+
+⏺ Write(presentation/intro-achievements.md)
+  ⎿  Wrote 94 lines to presentation/intro-achievements.md
+       2 # Intro & Achievements
+       3 The opening (~5 min) and the achievements walk (~10 min) that pr
+         ecede the technical deck.
+         g (see `README.md`).used — no employer/interview-specific framin
+       5 
+       6 ---
+       8 ## Intro (5 min)
+       9 
+      10 **One-liner.** A multi-tenant "top sales by category" platform: 
+         ingest sale/return events →
+     … +130 lines (ctrl+o to expand)
+⏺ Write(presentation/demo-script.md)
+  ⎿  Wrote 126 lines to presentation/demo-script.md
+       2 # Live demo script
+       3 The cold-start demo sequence, the dashboard walk, and the **degr
+       4 Acceptance (Build-Plan §160): *demo (incl. dashboard) runs clean
+          from cold.* Mirrors the `[P9]`
+       6 rehearsal cases `MQ-90..96` in `test-plan/manual-qa-test.md`.
+       7 **Prereqs:** Docker Desktop, JDK 21+, Maven, a browser. **No Nod
+       8 (Chart.js is vendored). Two terminals (one holds the long-runnin
+         g `make run`).
+      10 **Total budget: ~6–7 min** inside the 60-min talk. Rehearse it c
+         old ≥3× (Build-Plan §158).
+     … +159 lines (ctrl+o to expand)
+
+⏺ Now the speaker notes and the presentation README.
+
+⏺ Write(presentation/speaker-notes.md)
+  ⎿  Wrote 103 lines to presentation/speaker-notes.md
+       2 # Speaker notes
+       3 Per-section talking points, the *rejected-alternative* / *what-I
+       4 highest-scored material — Build-Plan §156), and anticipated Q&A.
+          Keep to time; the deck is
+       5 `deck/deck.md`, the live demo is `demo-script.md`, the opener is
+       6  `intro-achievements.md`.
+       7 **The one through-line:** every choice is **availability-first**
+       8 only land one idea, land that.If you
+       9 
+      10 ---
+     … +142 lines (ctrl+o to expand)
+
+⏺ Write(presentation/README.md)
+  ⎿  Wrote 51 lines to presentation/README.md
+      2 # presentation/
+      3 Interview-presentation artifacts for the multi-tenant sales-forec
+        asting platform — the slide deck,
+        gn** (this is a public repo): allaker material. **Generic by desi
+      5 content is sourced from the public design docs (`docs/hld.md`, `d
+        ocs/adr/*`, `docs/diagrams/*`). No
+         stays in a private location. Runific framing belongs here — that
+      7 `/public-repo-check` before pushing.
+      8 
+      9 ## Contents
+     … +68 lines (ctrl+o to expand)
+
+⏺ Companion docs done. Now the demo polish — vendor Chart.js offline. Let me
+  find the CDN reference in the dashboard.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Bash(mkdir -p service/topsales-api/src/main/resources/static/vendor && curl
+      -fsSL "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
+      -o service/tops…)
+  ⎿  total 408
+     -rw-r--r--@ 1 heminjoshi  staff  205637 Jun 29 12:34 chart.umd.min.js
+     /**
+     … +3 lines (ctrl+o to expand)
+
+⏺ Chart.js vendored (pinned 4.4.3). Now repoint the dashboard script tag.
+
+⏺ Update(service/topsales-api/src/main/resources/static/index.html)
+  ⎿  Added 2 lines, removed 1 line
+      83      </section>
+      84    </main>
+      85  
+      86 -  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      86 +  <!-- Chart.js vendored (pinned 4.4.3) so the demo dashboard r
+         +enders with zero network dependency — see presentation/demo-scr
+         +ipt.md -->                                                     
+      87 +  <script src="vendor/chart.umd.min.js"></script>              
+      88    <script src="app.js"></script>
+      89  </body>
+      90  </html>
+
+⏺ Screenshots require a live browser render (Docker + a browser) — I'll document
+  the exact capture framing and leave the dir ready, since headless browser
+  capture isn't reliably available in-session (and the Docker caveat applies).
+  This matches the plan's fallback; capture happens during rehearsal and Phase
+  10 reuses them.
+
+⏺ Write(presentation/screenshots/README.md)
+  ⎿  Wrote 31 lines to presentation/screenshots/README.md
+       2 # screenshots/
+       3 Dashboard captures for the deck hero slide and the repo README. 
+         **Capture these during a rehearsal**
+       4 (they need a running stack + a browser — they're not produced in
+          CI). Phase 10's README hero reuses them.
+       6 ## How to capture
+       7 
+       8 Bring the stack up and get a fresh forecast:
+       9 
+      10 ```bash
+     … +32 lines (ctrl+o to expand)
+
+⏺ Now sync the tracked docs. Let me look at the README Architecture section and
+  the status lines.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Let me read the README around the Architecture section and status banner.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now I'll update the README Architecture section (add the diagram + screenshot
+  ref + presentation link), the status banner, and the CLAUDE.md status line.
+
+⏺ Update(README.md)
+  ⎿  Added 37 lines, removed 3 lines
+       73  
+       74  ## Architecture
+       75  
+       76 -_Diagram and overview — to be added._                         
+       76 +Four tiers — **presentation** (dashboard) → **serving** (REST 
+          +API) → **forecast** (batch) →                                 
+       77 +**ingestion**. The forecast and serving planes couple **only**
+          + through the versioned serving table —                        
+       78 +no synchronous ML on the read path — which is what lets reads 
+          +survive a total ML-plane outage. Local                        
+       79 +impls and AWS impls sit behind the same interfaces, selected b
+          +y Spring profile.                                             
+       80  
+       78 -Four tiers: **presentation** (dashboard) → **serving** (REST A
+          -PI) → **forecast** (batch) →                                  
+       79 -**ingestion**. Local impls and AWS impls sit behind the same i
+          -nterfaces, selected by Spring profile.                        
+       81 +```mermaid                                                    
+       82 +flowchart TB                                                  
+       83 +    subgraph Presentation                                     
+       84 +      UI["Dashboard UI<br/>demo: static on Spring Boot<br/>pro
+          +d: React SPA on Vercel"]                                      
+       85 +    end                                                       
+       86 +    subgraph Ingestion                                        
+       87 +      EV["Upstream events"] --> ST["Kinesis / MSK<br/>(local: 
+          +POST /events)"]                                               
+       88 +      ST --> CO["Consumer<br/>dedupe + additive upsert"]      
+       89 +      CO -->|idempotent upsert| AGG["Aurora Postgres<br/>(tena
+          +nt,category,channel,day)"]                                    
+       90 +      CO -->|append| RAW["S3 Raw Log (SoT)"]                  
+       91 +      CO -. malformed .-> DLQ["DLQ"]                          
+       92 +    end                                                       
+       93 +    subgraph Forecast[Forecast batch]                         
+       94 +      SCH["EventBridge cron<br/>(local: make forecast)"] --> F
+          +J["Forecaster Job<br/>Java baseline / SageMaker"]             
+       95 +      AGG --> FJ                                              
+       96 +      FJ -->|versioned swap| SRV["Serving Table<br/>precompute
+          +d top-k + intervals"]                                         
+       97 +      FJ --> EVAL["Eval / Drift (WAPE, bias)"]                
+       98 +    end                                                       
+       99 +    subgraph Serving                                          
+      100 +      UI --> API["Spring Boot Service (stateless)"]           
+      101 +      API --> CA["Redis cache"]                               
+      102 +      API --> SRV                                             
+      103 +      API --> AGG                                             
+      104 +      API -. lazy, cached .-> BR["Bedrock insight → template"]
+      105 +      API -. ML down .-> FB["JVM baseline fallback"]          
+      106 +    end                                                       
+      107 +```                                                           
+      108  
+      109 +Full narrative in [`docs/hld.md`](docs/hld.md) and the diagram
+          +s under [`docs/diagrams/`](docs/diagrams/).                   
+      110 +The interview deck + live-demo script live in [`presentation/`
+          +](presentation/).                                             
+      111 +                                                              
+      112 +<!-- Hero screenshot: capture during a rehearsal — see present
+          +ation/screenshots/README.md, then embed dashboard-fresh.png he
+          +re. -->                                                       
+      113 +> _Dashboard screenshots (fresh + degraded) — capture via `pre
+          +sentation/screenshots/README.md`._                            
+      114 +                                                              
+      115  ## Tech stack
+      116  
+      117  - **Service:** Java 21, Spring Boot 4.1, Maven multi-module (`
+           service/`).
+
+⏺ Update(README.md)
+  ⎿  Added 1 line, removed 1 line
+       7  > natural-language insight, and presents it in a dashboard. Jav
+          a / Spring Boot, runnable locally
+       8  > with one `docker compose up`; AWS path designed in CDK behind
+           the same interfaces.
+       9  
+      10 - > **Status:** 🟢 Built through **Phase 8** — PROD-SHAPED (loca
+         -lly runnable end-to-end). Ingest events → idempotent per-tenant
+         -, per-channel                                                  
+      10 + > **Status:** 🟢 Built through **Phase 9** — 🎤 PRESENTATION-R
+         +EADY (PROD-SHAPED + the interview deck, demo script, and a full
+         +y-offline live demo). Ingest events → idempotent per-tenant, pe
+         +r-channel                                                      
+      11  > category aggregates → ranked top-k over the REST API → served
+           dashboard. On top of that:
+      12  > the **channel** first-class dimension + a deterministic seaso
+          nal synthetic-data generator
+      13  > (Phase 2.5), a **central config** surface (`TopsalesPropertie
+          s`), the **forecasting engine**
+
+⏺ Update(README.md)
+  ⎿  Added 5 lines, removed 2 lines
+      30  > real full-stack ITs (booted against CI-provided Postgres+Redi
+          s) over a shared base for the Redis cache (miss→hit /
+      31  > version-bump invalidation / single-flight), HTTP forecast **d
+          egradation** (still 200, never fails
+      32  > closed), and **multi-tenant isolation** (cross-tenant 403 / u
+          nknown-tenant 404); plus a **Newman**
+      33 -> coverage gate — `make demo` runs the whole Postman collection
+         -, enforced in CI). Next: presentation                          
+      34 -> & rehearsal (Phase 9).                                       
+      33 +> coverage gate — `make demo` runs the whole Postman collection
+         +, enforced in CI), and the **presentation                      
+      34 +> layer** (Phase 9 — the interview deck (`presentation/deck/`, 
+         +one `deck.md` rendered via Marp / GitHub /                     
+      35 +> reveal.js), the `intro-achievements` + `demo-script` + `speak
+         +er-notes` companions, and a **fully-offline                    
+      36 +> live demo**: Chart.js is vendored into the dashboard so it re
+         +nders with zero network dependency). Next:                     
+      37 +> public-repo polish & final dry run (Phase 10).               
+      38  
+      39  ## Quick start
+      40  
+
+⏺ Now the CLAUDE.md status line — bump "Built through Phase 8" → "Phase 9" and
+  replace the closing "Next is Phase 9" sentence with the Phase 9 description.
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+       4  
+       5  ## What this repo is
+       6  
+       7 -A **multi-tenant "top sales by category" platform** built as a 
+         -public portfolio/interview project — designed to *read* like pr
+         -oduction, not to be one. **Built through Phase 8** (of Phases 0
+         -–10): the Maven multi-module service runs locally end-to-end — 
+         -ingestion → per-tenant/per-channel aggregates → read API + dash
+         -board (actuals), plus the channel dimension + synthetic-data ge
+         -nerator (Phase 2.5), a central config surface (`TopsalesPropert
+         -ies`), the forecasting engine (Phase 3: `Forecaster` impls, the
+         - batch writing versioned serving rows, the WAPE backtest), the 
+         -forecast **read path** (Phase 4: `ForecastProvider` over precom
+         -puted serving rows, a 4-tier degradation chain that never fails
+         - closed — `fresh`→`stale`→`degraded`→`pending` — a Redis cache-
+         -aside layer with per-tenant version-bump invalidation and full 
+         -fail-open, and dashboard status/interval surfacing), and the gr
+         -ounded **GenAI insight layer** (Phase 5: an always-on determini
+         -stic `TemplateInsightGenerator` floor + a designed `BedrockInsi
+         -ghtGenerator` behind the same `InsightGenerator` seam, `Groundi
+         -ngValidator` rejecting any non-derivable number, prompt-injecti
+         -on-safe handling of untrusted category names, lazy+cached insid
+         -e the Phase-4 Redis top-k key), and the **hardening** layer (Ph
+         -ase 6: a Resilience4j circuit-breaker + retry wrapping the sing
+         -le Bedrock `InvokeModel` call — confined to `topsales-insight`,
+         - still failing soft to the template; Actuator + Micrometer with
+         - a Prometheus registry scraped at `/actuator/prometheus` — RED 
+         -via `http.server.requests` plus custom ML-quality meters `topsa
+         -les.read.total{status,mode}` / `topsales.forecast.freshness.sec
+         -onds` / `topsales.forecast.provider.faults.total` / `topsales.i
+         -nsight.fallback.total`; and structured logging via SLF4J MDC `t
+         -enantId`+`requestId` set/cleared in `TenantScopeFilter` with an
+         - echoed `X-Request-Id`). Idempotency/dedupe/quarantine were alr
+         -eady built in Phase 2/2.5; Phase 6 made them observable. Phase 
+         -7 adds the **production path + infra** layer: an API **CORS** a
+         -llow-list on `/api/**` bound from `TopsalesProperties` (`localh
+         -ost` + the Vercel origin); a **React SPA** (Vite + Recharts) in
+         - `web/` as the cross-origin production UI that deploys to Verce
+         -l (the Spring-served static dashboard stays the live demo); and
+         - a **synth-only AWS CDK** 5-stack (Network/Storage/Intelligence
+         -/Application/Monitoring) validated by `cdk synth` + `aws-cdk-li
+         -b` `Template.fromStack` assertion tests — the public edge is an
+         - **API Gateway HTTP API → VPC Link → private internal ALB** (co
+         -mpute never internet-facing), with a least-privilege Bedrock in
+         -voke policy + L1 `CfnGuardrail` + SSM model config, non-root co
+         -ntainer images, and the Monitoring stack alarming on the exact 
+         -Phase-6 meter names. Nothing is deployed (synth + assertions + 
+         -`docker build` only). CloudWatch is the designed `aws`-profile 
+         -registry swap (not active locally). Phase 8 closes the **PROD-S
+         -HAPED** milestone with a test-hardening + Postman-gate pass: th
+         -e synthetic-data generator (`service/topsales-datagen`) + commi
+         -tted `data/seed/seed-config.json` were already in place (thread
+         -ed earlier in Phase 2.5), so Phase 8 promotes the deferred cove
+         -rage to real full-stack ITs over a shared base (`AbstractPostgr
+         -esRedisIT`, booted against CI-provided Postgres+Redis services 
+         -— the Redis side proved unreliable to wire via Testcontainers o
+         -n the runner; locally the `make up` compose stack) — `RedisCach
+         -eShellIT` (real-Redis cache miss→hit / version-bump invalidatio
+         -n / single-flight), `ForecastDegradationIT` (HTTP `mode=forecas
+         -t` fresh-after-batch + serving-wiped degradation still 200, nev
+         -er fails closed), `TenantIsolationIT` (cross-tenant 403 / unkno
+         -wn-tenant 404 with RFC-7807 body) — and adds the **Postman cove
+         -rage gate**: a multi-tenant isolation folder (`t_demo` vs `t_ac
+         -me`, no-leakage) + a Newman run wired to `make demo` and enforc
+         -ed in CI by `.github/workflows/postman.yml` (Postgres+Redis ser
+         -vices → build → seed → boot → health-poll → `newman run`). `mak
+         -e test` stays the local unit gate; the `*IT`s run in CI (`mvn v
+         -erify`) / against the local compose stack. Next is Phase 9 (pre
+         -sentation & rehearsal).                                        
+       7 +A **multi-tenant "top sales by category" platform** built as a 
+         +public portfolio/interview project — designed to *read* like pr
+         +oduction, not to be one. **Built through Phase 9** (of Phases 0
+         +–10): the Maven multi-module service runs locally end-to-end — 
+         +ingestion → per-tenant/per-channel aggregates → read API + dash
+         +board (actuals), plus the channel dimension + synthetic-data ge
+         +nerator (Phase 2.5), a central config surface (`TopsalesPropert
+         +ies`), the forecasting engine (Phase 3: `Forecaster` impls, the
+         + batch writing versioned serving rows, the WAPE backtest), the 
+         +forecast **read path** (Phase 4: `ForecastProvider` over precom
+         +puted serving rows, a 4-tier degradation chain that never fails
+         + closed — `fresh`→`stale`→`degraded`→`pending` — a Redis cache-
+         +aside layer with per-tenant version-bump invalidation and full 
+         +fail-open, and dashboard status/interval surfacing), and the gr
+         +ounded **GenAI insight layer** (Phase 5: an always-on determini
+         +stic `TemplateInsightGenerator` floor + a designed `BedrockInsi
+         +ghtGenerator` behind the same `InsightGenerator` seam, `Groundi
+         +ngValidator` rejecting any non-derivable number, prompt-injecti
+         +on-safe handling of untrusted category names, lazy+cached insid
+         +e the Phase-4 Redis top-k key), and the **hardening** layer (Ph
+         +ase 6: a Resilience4j circuit-breaker + retry wrapping the sing
+         +le Bedrock `InvokeModel` call — confined to `topsales-insight`,
+         + still failing soft to the template; Actuator + Micrometer with
+         + a Prometheus registry scraped at `/actuator/prometheus` — RED 
+         +via `http.server.requests` plus custom ML-quality meters `topsa
+         +les.read.total{status,mode}` / `topsales.forecast.freshness.sec
+         +onds` / `topsales.forecast.provider.faults.total` / `topsales.i
+         +nsight.fallback.total`; and structured logging via SLF4J MDC `t
+         +enantId`+`requestId` set/cleared in `TenantScopeFilter` with an
+         + echoed `X-Request-Id`). Idempotency/dedupe/quarantine were alr
+         +eady built in Phase 2/2.5; Phase 6 made them observable. Phase 
+         +7 adds the **production path + infra** layer: an API **CORS** a
+         +llow-list on `/api/**` bound from `TopsalesProperties` (`localh
+         +ost` + the Vercel origin); a **React SPA** (Vite + Recharts) in
+         + `web/` as the cross-origin production UI that deploys to Verce
+         +l (the Spring-served static dashboard stays the live demo); and
+         + a **synth-only AWS CDK** 5-stack (Network/Storage/Intelligence
+         +/Application/Monitoring) validated by `cdk synth` + `aws-cdk-li
+         +b` `Template.fromStack` assertion tests — the public edge is an
+         + **API Gateway HTTP API → VPC Link → private internal ALB** (co
+         +mpute never internet-facing), with a least-privilege Bedrock in
+         +voke policy + L1 `CfnGuardrail` + SSM model config, non-root co
+         +ntainer images, and the Monitoring stack alarming on the exact 
+         +Phase-6 meter names. Nothing is deployed (synth + assertions + 
+         +`docker build` only). CloudWatch is the designed `aws`-profile 
+         +registry swap (not active locally). Phase 8 closes the **PROD-S
+         +HAPED** milestone with a test-hardening + Postman-gate pass: th
+         +e synthetic-data generator (`service/topsales-datagen`) + commi
+         +tted `data/seed/seed-config.json` were already in place (thread
+         +ed earlier in Phase 2.5), so Phase 8 promotes the deferred cove
+         +rage to real full-stack ITs over a shared base (`AbstractPostgr
+         +esRedisIT`, booted against CI-provided Postgres+Redis services 
+         +— the Redis side proved unreliable to wire via Testcontainers o
+         +n the runner; locally the `make up` compose stack) — `RedisCach
+         +eShellIT` (real-Redis cache miss→hit / version-bump invalidatio
+         +n / single-flight), `ForecastDegradationIT` (HTTP `mode=forecas
+         +t` fresh-after-batch + serving-wiped degradation still 200, nev
+         +er fails closed), `TenantIsolationIT` (cross-tenant 403 / unkno
+         +wn-tenant 404 with RFC-7807 body) — and adds the **Postman cove
+         +rage gate**: a multi-tenant isolation folder (`t_demo` vs `t_ac
+         +me`, no-leakage) + a Newman run wired to `make demo` and enforc
+         +ed in CI by `.github/workflows/postman.yml` (Postgres+Redis ser
+         +vices → build → seed → boot → health-poll → `newman run`). `mak
+         +e test` stays the local unit gate; the `*IT`s run in CI (`mvn v
+         +erify`) / against the local compose stack. Next is Phase 9 (pre
+         +sentation & rehearsal).                                        
+       8  
+       9  Two docs under `private/` (gitignored, never committed) are the
+           **source of truth** — read them before scaffolding or implemen
+          ting, and keep new work consistent with the structure and phase
+           they define:
+      10  - the **delivery plan** (`private/Build-Delivery-Plan-v3.md`) —
+           scope, phase sequencing (Phases 0–10, organized into workstrea
+          ms WS-A…WS-G), target directory layout, built-vs-designed-only.
+           This v3 supersedes `Build-Delivery-Plan-v2.md` (and the older 
+          `Build-Delivery-Plan-and-Repo-Structure.md`) in the same folder
+          ; v3 syncs ADRs to the 9 explicit decision records and elevates
+           comparative trade-offs as a first-class, scored deliverable.
+
+⏺ Update(CLAUDE.md)  ⎿  Added 1 line, removed 1 line
+       4  
+       5  ## What this repo is
+       6  
+       7 -A **multi-tenant "top sales by category" platform** built as a 
+         -public portfolio/interview project — designed to *read* like pr
+         -oduction, not to be one. **Built through Phase 9** (of Phases 0
+         -–10): the Maven multi-module service runs locally end-to-end — 
+         -ingestion → per-tenant/per-channel aggregates → read API + dash
+         -board (actuals), plus the channel dimension + synthetic-data ge
+         -nerator (Phase 2.5), a central config surface (`TopsalesPropert
+         -ies`), the forecasting engine (Phase 3: `Forecaster` impls, the
+         - batch writing versioned serving rows, the WAPE backtest), the 
+         -forecast **read path** (Phase 4: `ForecastProvider` over precom
+         -puted serving rows, a 4-tier degradation chain that never fails
+         - closed — `fresh`→`stale`→`degraded`→`pending` — a Redis cache-
+         -aside layer with per-tenant version-bump invalidation and full 
+         -fail-open, and dashboard status/interval surfacing), and the gr
+         -ounded **GenAI insight layer** (Phase 5: an always-on determini
+         -stic `TemplateInsightGenerator` floor + a designed `BedrockInsi
+         -ghtGenerator` behind the same `InsightGenerator` seam, `Groundi
+         -ngValidator` rejecting any non-derivable number, prompt-injecti
+         -on-safe handling of untrusted category names, lazy+cached insid
+         -e the Phase-4 Redis top-k key), and the **hardening** layer (Ph
+         -ase 6: a Resilience4j circuit-breaker + retry wrapping the sing
+         -le Bedrock `InvokeModel` call — confined to `topsales-insight`,
+         - still failing soft to the template; Actuator + Micrometer with
+         - a Prometheus registry scraped at `/actuator/prometheus` — RED 
+         -via `http.server.requests` plus custom ML-quality meters `topsa
+         -les.read.total{status,mode}` / `topsales.forecast.freshness.sec
+         -onds` / `topsales.forecast.provider.faults.total` / `topsales.i
+         -nsight.fallback.total`; and structured logging via SLF4J MDC `t
+         -enantId`+`requestId` set/cleared in `TenantScopeFilter` with an
+         - echoed `X-Request-Id`). Idempotency/dedupe/quarantine were alr
+         -eady built in Phase 2/2.5; Phase 6 made them observable. Phase 
+         -7 adds the **production path + infra** layer: an API **CORS** a
+         -llow-list on `/api/**` bound from `TopsalesProperties` (`localh
+         -ost` + the Vercel origin); a **React SPA** (Vite + Recharts) in
+         - `web/` as the cross-origin production UI that deploys to Verce
+         -l (the Spring-served static dashboard stays the live demo); and
+         - a **synth-only AWS CDK** 5-stack (Network/Storage/Intelligence
+         -/Application/Monitoring) validated by `cdk synth` + `aws-cdk-li
+         -b` `Template.fromStack` assertion tests — the public edge is an
+         - **API Gateway HTTP API → VPC Link → private internal ALB** (co
+         -mpute never internet-facing), with a least-privilege Bedrock in
+         -voke policy + L1 `CfnGuardrail` + SSM model config, non-root co
+         -ntainer images, and the Monitoring stack alarming on the exact 
+         -Phase-6 meter names. Nothing is deployed (synth + assertions + 
+         -`docker build` only). CloudWatch is the designed `aws`-profile 
+         -registry swap (not active locally). Phase 8 closes the **PROD-S
+         -HAPED** milestone with a test-hardening + Postman-gate pass: th
+         -e synthetic-data generator (`service/topsales-datagen`) + commi
+         -tted `data/seed/seed-config.json` were already in place (thread
+         -ed earlier in Phase 2.5), so Phase 8 promotes the deferred cove
+         -rage to real full-stack ITs over a shared base (`AbstractPostgr
+         -esRedisIT`, booted against CI-provided Postgres+Redis services 
+         -— the Redis side proved unreliable to wire via Testcontainers o
+         -n the runner; locally the `make up` compose stack) — `RedisCach
+         -eShellIT` (real-Redis cache miss→hit / version-bump invalidatio
+         -n / single-flight), `ForecastDegradationIT` (HTTP `mode=forecas
+         -t` fresh-after-batch + serving-wiped degradation still 200, nev
+         -er fails closed), `TenantIsolationIT` (cross-tenant 403 / unkno
+         -wn-tenant 404 with RFC-7807 body) — and adds the **Postman cove
+         -rage gate**: a multi-tenant isolation folder (`t_demo` vs `t_ac
+         -me`, no-leakage) + a Newman run wired to `make demo` and enforc
+         -ed in CI by `.github/workflows/postman.yml` (Postgres+Redis ser
+         -vices → build → seed → boot → health-poll → `newman run`). `mak
+         -e test` stays the local unit gate; the `*IT`s run in CI (`mvn v
+         -erify`) / against the local compose stack. Next is Phase 9 (pre
+         -sentation & rehearsal).                                        
+       7 +A **multi-tenant "top sales by category" platform** built as a 
+         +public portfolio/interview project — designed to *read* like pr
+         +oduction, not to be one. **Built through Phase 9** (of Phases 0
+         +–10): the Maven multi-module service runs locally end-to-end — 
+         +ingestion → per-tenant/per-channel aggregates → read API + dash
+         +board (actuals), plus the channel dimension + synthetic-data ge
+         +nerator (Phase 2.5), a central config surface (`TopsalesPropert
+         +ies`), the forecasting engine (Phase 3: `Forecaster` impls, the
+         + batch writing versioned serving rows, the WAPE backtest), the 
+         +forecast **read path** (Phase 4: `ForecastProvider` over precom
+         +puted serving rows, a 4-tier degradation chain that never fails
+         + closed — `fresh`→`stale`→`degraded`→`pending` — a Redis cache-
+         +aside layer with per-tenant version-bump invalidation and full 
+         +fail-open, and dashboard status/interval surfacing), and the gr
+         +ounded **GenAI insight layer** (Phase 5: an always-on determini
+         +stic `TemplateInsightGenerator` floor + a designed `BedrockInsi
+         +ghtGenerator` behind the same `InsightGenerator` seam, `Groundi
+         +ngValidator` rejecting any non-derivable number, prompt-injecti
+         +on-safe handling of untrusted category names, lazy+cached insid
+         +e the Phase-4 Redis top-k key), and the **hardening** layer (Ph
+         +ase 6: a Resilience4j circuit-breaker + retry wrapping the sing
+         +le Bedrock `InvokeModel` call — confined to `topsales-insight`,
+         + still failing soft to the template; Actuator + Micrometer with
+         + a Prometheus registry scraped at `/actuator/prometheus` — RED 
+         +via `http.server.requests` plus custom ML-quality meters `topsa
+         +les.read.total{status,mode}` / `topsales.forecast.freshness.sec
+         +onds` / `topsales.forecast.provider.faults.total` / `topsales.i
+         +nsight.fallback.total`; and structured logging via SLF4J MDC `t
+         +enantId`+`requestId` set/cleared in `TenantScopeFilter` with an
+         + echoed `X-Request-Id`). Idempotency/dedupe/quarantine were alr
+         +eady built in Phase 2/2.5; Phase 6 made them observable. Phase 
+         +7 adds the **production path + infra** layer: an API **CORS** a
+         +llow-list on `/api/**` bound from `TopsalesProperties` (`localh
+         +ost` + the Vercel origin); a **React SPA** (Vite + Recharts) in
+         + `web/` as the cross-origin production UI that deploys to Verce
+         +l (the Spring-served static dashboard stays the live demo); and
+         + a **synth-only AWS CDK** 5-stack (Network/Storage/Intelligence
+         +/Application/Monitoring) validated by `cdk synth` + `aws-cdk-li
+         +b` `Template.fromStack` assertion tests — the public edge is an
+         + **API Gateway HTTP API → VPC Link → private internal ALB** (co
+         +mpute never internet-facing), with a least-privilege Bedrock in
+         +voke policy + L1 `CfnGuardrail` + SSM model config, non-root co
+         +ntainer images, and the Monitoring stack alarming on the exact 
+         +Phase-6 meter names. Nothing is deployed (synth + assertions + 
+         +`docker build` only). CloudWatch is the designed `aws`-profile 
+         +registry swap (not active locally). Phase 8 closes the **PROD-S
+         +HAPED** milestone with a test-hardening + Postman-gate pass: th
+         +e synthetic-data generator (`service/topsales-datagen`) + commi
+         +tted `data/seed/seed-config.json` were already in place (thread
+         +ed earlier in Phase 2.5), so Phase 8 promotes the deferred cove
+         +rage to real full-stack ITs over a shared base (`AbstractPostgr
+         +esRedisIT`, booted against CI-provided Postgres+Redis services 
+         +— the Redis side proved unreliable to wire via Testcontainers o
+         +n the runner; locally the `make up` compose stack) — `RedisCach
+         +eShellIT` (real-Redis cache miss→hit / version-bump invalidatio
+         +n / single-flight), `ForecastDegradationIT` (HTTP `mode=forecas
+         +t` fresh-after-batch + serving-wiped degradation still 200, nev
+         +er fails closed), `TenantIsolationIT` (cross-tenant 403 / unkno
+         +wn-tenant 404 with RFC-7807 body) — and adds the **Postman cove
+         +rage gate**: a multi-tenant isolation folder (`t_demo` vs `t_ac
+         +me`, no-leakage) + a Newman run wired to `make demo` and enforc
+         +ed in CI by `.github/workflows/postman.yml` (Postgres+Redis ser
+         +vices → build → seed → boot → health-poll → `newman run`). `mak
+         +e test` stays the local unit gate; the `*IT`s run in CI (`mvn v
+         +erify`) / against the local compose stack. Phase 9 adds the **p
+         +resentation layer** (a docs/deck phase, no production-code chan
+         +ge): the interview **deck** under `presentation/deck/` — one ca
+         +nonical `deck.md` (Marp frontmatter, sourced entirely from the 
+         +public `docs/hld.md` ≡ design doc + the 10 ADRs, so it stays ge
+         +neric/public-safe) rendered three ways (Marp PDF/PPTX · GitHub 
+         +inline · a reveal.js `index.html` that loads `deck.md`) to the 
+         +slide budget incl. the §5 A/B/C fork + the 10 ADRs as the trade
+         +-offs slides — plus `intro-achievements.md` (2 quantified stori
+         +es: WAPE 6.9% vs 7.6% naive, multi-tenant 403/404 isolation), `
+         +demo-script.md` (the cold-start sequence + the manual degradati
+         +on beat), `speaker-notes.md`, and `presentation/README.md`; the
+         + one code touch is **vendoring Chart.js** into `topsales-api/..
+         +./static/vendor/` (CDN→local) so the live demo has **zero netwo
+         +rk dependency**. `[P9]` rehearsal cases (`MQ-90..96`) land in `
+         +test-plan/manual-qa-test.md`. Next is Phase 10 (public-repo pol
+         +ish & final dry run).                                          
+       8  
+       9  Two docs under `private/` (gitignored, never committed) are the
+           **source of truth** — read them before scaffolding or implemen
+          ting, and keep new work consistent with the structure and phase
+           they define:
+      10  - the **delivery plan** (`private/Build-Delivery-Plan-v3.md`) —
+           scope, phase sequencing (Phases 0–10, organized into workstrea
+          ms WS-A…WS-G), target directory layout, built-vs-designed-only.
+           This v3 supersedes `Build-Delivery-Plan-v2.md` (and the older 
+          `Build-Delivery-Plan-and-Repo-Structure.md`) in the same folder
+          ; v3 syncs ADRs to the 9 explicit decision records and elevates
+           comparative trade-offs as a first-class, scored deliverable.
+
+⏺ Let me remove the now-redundant .gitkeep and run the verification gate — make 
+  test (no main-path code changed, only static index.html script src + docs).
+
+⏺ Bash(rm -f presentation/.gitkeep && git status --short && echo "=== running
+      make test (full reactor unit gate) ===" && make test 2>&1 | tail -25)
+  ⎿   M CLAUDE.md
+      M README.md
+      D presentation/.gitkeep
+     … +36 lines (ctrl+o to expand)
+
+⏺ make test green — 58/58 api, full reactor BUILD SUCCESS; the vendored-Chart.js
+  static change is a non-tested resource, so no regression. Now the acceptance
+  gate: a live cold-start demo. Let me check Docker is up, then bring the stack
+  up.
+
+⏺ Bash(docker info >/dev/null 2>&1 && echo "docker: UP" || echo "docker: NOT
+      available"; docker compose version 2>/dev/null | head -1)
+  ⎿  docker: UP
+     Docker Compose version v5.1.4
+
+⏺ Docker is up. Let me run the cold-start: bring up containers, seed, then boot
+  the API in the background.
+
+⏺ Bash(make down >/dev/null 2>&1; echo "=== make up ===" && make up 2>&1 | tail
+      -8)
+  ⎿  === make up ===
+      Container topsales-postgres Creating
+      Container topsales-redis Creating
+     … +6 lines (ctrl+o to expand)
+
+⏺ Bash(echo "=== make seed (build datagen + backfill; needs schema via Flyway on
+      boot) ===" && make seed 2>&1 | tail -20)
+  ⎿  === make seed (build datagen + backfill; needs schema via Flyway on bo
+     ot) ===
+     [INFO]
+     … +26 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+⏺ Seed loaded (t_demo 5594 rows, t_acme 5598). Now boot the API in the
+  background and poll for health.
+
+⏺ Bash(nohup make run > /private/tmp/claude-501/-Users-heminjoshi-code-sales-for
+      ecasting-platform/5b97ddc1-84aa-4f39-9a48-141ad4fc41fc/scratchpad/api.log
+      2>&1 &
+      echo "…)
+  ⎿  Running in the background (↓ to manage)
+
+⏺ Bash(for i in $(seq 1 60); do
+        s=$(curl -s -o /dev/null -w '%{http_code}'
+      http://localhost:8080/actuator/health 2>/dev/null)…)
+  ⎿  health UP after 10s-ish
+     {
+       "components": {
+     … +28 lines (ctrl+o to expand)
+
+⏺ Background command "Boot API in background" completed (exit code 0)
+
+⏺ Health is UP (db + redis both UP) — the API booted in ~10s and make run is
+  detached via nohup (the tracked wrapper shell exited; the server is alive).
+  Now walk the read-path states: forecast before the batch (expect
+  pending/degraded floor), then make forecast, then fresh.
+
+⏺ Bash(echo "=== A) forecast mode BEFORE batch (expect pending/degraded floor)
+      ==="
+      curl -s -H "X-Tenant-Id: t_demo"
+      "http://localhost:8080/api/v1/tenants/t_demo/top-…)
+  ⎿  === A) forecast mode BEFORE batch (expect pending/degraded floor) ===
+     status: fresh | asOf: 2026-06-29T15:12:26.010479Z | items: 5 | insight
+     : cat_electronics leads this month (~+0%); cat_grocery follows.
+     … +10 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ Note: make down keeps the named Postgres volume, so serving rows from an
+  earlier run persisted (hence fresh pre-batch with an older asOf). The fresh
+  batch just ran. Now the degradation beat — the acceptance gate's signature
+  moment: confirm fresh, wipe serving + bump cache, confirm still-200 degraded,
+  then recover.
+
+⏺ Bash(q() { curl -s -H "X-Tenant-Id: t_demo" "http://localhost:8080/api/v1/tena
+      nts/t_demo/top-categories?mode=forecast&window=month&channel=all&k=5"; }
+      show() { pytho…)
+  ⎿  === B) forecast AFTER batch (expect fresh + intervals) ===
+      HTTP 200
+      status: fresh | asOf: 2026-06-29T19:38:00.092631Z | items: 5 | top: c
+     … +16 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+⏺ Live acceptance passes end-to-end: fresh (HIGH conf) → wipe → HTTP 200 
+  degraded (LOW conf, 5 items, never 5xx) → recover → fresh. That's MQ-90/92/93
+  confirmed live, matching ForecastDegradationIT. Two quick corroborating checks
+  (vendored Chart.js served offline; live cross-tenant 403) then teardown.
+
+⏺ Bash(echo "=== vendored Chart.js served (offline dependency removed) ==="
+      echo -n " /vendor/chart.umd.min.js -> HTTP "; curl -s -o /dev/null -w
+      '%{http_code} (%{size…)
+  ⎿  === vendored Chart.js served (offline dependency removed) ===
+      /vendor/chart.umd.min.js -> HTTP 200 (205637 bytes)
+      index.html references vendor: vendor/chart.umd.min.js
+     … +7 lines (ctrl+o to expand)
+
+⏺ Everything verified live: vendored Chart.js served (205KB, zero jsdelivr refs
+  in the page → fully offline), cross-tenant 403 / unknown 404, and the degraded
+  read is an observable counter. Now tear down.
+
+⏺ Bash(# stop the detached spring-boot:run (port 8080) and any child java, then
+      containers
+      pid=$(lsof -ti tcp:8080 2>/dev/null); [ -n "$pid" ] && kill $pid
+      2>/dev/null…)
+  ⎿  killed API pid(s): 86794
+      Container topsales-redis Removing
+      Container topsales-redis Removed
+     … +3 lines (ctrl+o to expand)
+
+⏺ Stack down, port free. Let me sanity-check the deck — slide count and that the
+  frontmatter/separators are well-formed for the three renderers.
+
+⏺ Bash(cd presentation/deck
+      echo "slide separators (^---$ on own line, excluding frontmatter):"…)  ⎿  slide separators (^---$ on own line, excluding frontmatter):
+       '---' lines total: 60  (frontmatter uses 2 of these; slides ≈ total-
+     2+1)
+     … +11 lines (ctrl+o to expand)
+
+⏺ Deck is sound: 60 slides (1 title + 59 sections), 3 mermaid diagrams,
+  well-formed frontmatter — hits the budget. The reveal wrapper's
+  frontmatter-strip regex matches cleanly.
+
+  Now close-out. Since presentation/ is new public content, I'll run the hygiene
+  gate before committing.
+
+⏺ Skill(public-repo-check)
+  ⎿  Successfully loaded skill
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== 1. private dirs tracked? (must be empty) ==="…)
+  ⎿  === 1. private dirs tracked? (must be empty) ===
+     (eval):3: no matches found: .env.*
+     (end)
+     … +7 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== 2. employer/interview framing in TRACKED files (Intuit +
+      interview terms) ==="…)
+  ⎿  === 2. employer/interview framing in TRACKED files (Intuit + interview
+      terms) ===
+     CLAUDE.md:7:A **multi-tenant "top sales by category" platform** built
+     … +92 lines (ctrl+o to expand)
+
+⏺ No private dirs tracked, gitignore complete, no secrets, no employer/recruiter
+  names. The only intuit hits are the word "intuitive" (ADR/hld) and the
+  generic word "interview" describing the deck's purpose — no company named. Let
+  me confirm the presentation/ content is clean of anything employer-specific.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      echo "=== 'interview' usage in presentation/ (context) ==="…)
+  ⎿  === 'interview' usage in presentation/ (context) ===
+     presentation/speaker-notes.md:101:No employer name, no recruiter/inter
+     view specifics, no the-verbatim-problem-statement. The private
+     … +14 lines (ctrl+o to expand)
+
+⏺ All interview mentions in presentation/ are hygiene reminders ("no
+  employer/interview framing belongs here") — not actual interview-prep content.
+  No employer name, STAR, recruiter, salary, or verbatim problem statement
+  anywhere.
+
+  Public-repo check: ✅ GO.
+  - ✅ Private dirs (private/, claude-sessions/, interview-prep/) untracked;
+  .gitignore complete.
+  - ✅ No secrets/keys in tracked files.
+  - ✅ No employer/recruiter names; presentation/ is generic, sourced from
+  public docs/.
+  - ✅ intuit hits = "intuitive" + the generic word "interview"; no company
+  named.
+
+  Now committing the tracked work in slices (the plan/index docs live under
+  gitignored claude-sessions/, so they're private — not committed).
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git add service/topsales-api/src/main/resources/static/index.html
+      service/topsales-api/src/main/resources/s…)
+  ⎿  slice 1 done
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git add presentation/…)
+  ⎿  slice 2 done
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git add CLAUDE.md README.md test-plan/README.md
+      test-plan/manual-qa-test.md…)
+  ⎿  slice 3 done
+     === log ===
+     d6db42f docs(phase9): sync status, README architecture diagram, [P9] t
+     … +7 lines (ctrl+o to expand)
+
+⏺ Three clean slices committed. Let me confirm the working tree is clean (only
+  the gitignored plan/index remain), then write the handoff.
+
+⏺ Bash(echo "=== tracked status (should be clean) ===" && git status --short &&
+      echo "(end)" && echo "=== gitignored phase-9 docs present ===" && ls
+      claude-sessions/im…)
+  ⎿  === tracked status (should be clean) ===
+     (end)
+     === gitignored phase-9 docs present ===
+     … +2 lines (ctrl+o to expand)
+
+⏺ Working tree clean; the plan doc is correctly gitignored. Now the handoff doc.
+
+⏺ Skill(handoff)
+  ⎿  Successfully loaded skill
+
+⏺ Write(claude-sessions/handoff-docs/phase-9-handoff.md)
+  ⎿  Wrote 151 lines to claude-sessions/handoff-docs/phase-9-handoff.md
+       2 # Phase 9 handoff — Presentation & rehearsal 🎤 `[WS-F]`
+       3 **Status:** ✅ complete (committed on `feat/phase9-presentation`
+       4 _Private / gitignored — never commit._06-29 ·
+       5 
+       7 Phase 9 closes the **🎤 PRESENTATION-READY** milestone. It's a *
+         *docs/deck phase** — the only
+         d is fully offline. Shipped: theng Chart.js so the demo dashboar
+       9 interview **deck** (`presentation/deck/deck.md`, ~60 slides to t
+      10 from the **public** `docs/hld.md` ≡ design doc + the 10 ADRs, so
+          it's generic/public-safe) rendered three
+     … +249 lines (ctrl+o to expand)
+
+⏺ Now wire the handoff into the implementation-plan index and the plan doc's
+  outcome.
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 1 line, removed 1 line
+      30  | 6 | Hardening: resilience & observability | — | [phase-6-hard
+          ening.md](phase-6-hardening.md) | [phase-6-handoff](../handoff-
+          docs/phase-6-handoff.md) | ✅ done |
+      31  | 7 | UI production path & infra validation | — | [phase-7-ui-a
+          nd-infra.md](phase-7-ui-and-infra.md) | [phase-7-handoff](../ha
+          ndoff-docs/phase-7-handoff.md) | ✅ done (PRs #13 + #14 merged)
+           |
+      32  | 8 | Data, tests, Postman | PROD-SHAPED | [phase-8-data-tests-
+          postman.md](phase-8-data-tests-postman.md) | [phase-8-handoff](
+          ../handoff-docs/phase-8-handoff.md) | ✅ done (PR open) |
+      33 -| 9 | Presentation & rehearsal | 🎤 PRESENTATION | [phase-9-pre
+         -sentation.md](phase-9-presentation.md) | _in progress_ | 🛠 in p
+         -rogress |                                                      
+      33 +| 9 | Presentation & rehearsal | 🎤 PRESENTATION | [phase-9-pre
+         +sentation.md](phase-9-presentation.md) | [phase-9-handoff](../h
+         +andoff-docs/phase-9-handoff.md) | ✅ done (PR pending) |       
+      34  | 10 | Public-repo polish & final dry run | PUBLIC | _todo_ | |
+           |
+      35  
+      36  > **Handoff docs** live in [`../handoff-docs/`](../handoff-docs
+          /) — one per completed phase, written for whoever picks up the 
+          next phase (state, decisions, how-to-run, gotchas, open items).
+
+⏺ Update(claude-sessions/implementation-plan/phase-9-presentation.md)
+  ⎿  Added 6 lines
+      81  - [ ] `make test` green; cold-start demo + degradation beat ver
+          ified live (or documented as Docker-gated).
+      82  - [ ] `CLAUDE.md`/`README.md` synced; `public-repo-check` clean
+          .
+      83  
+      84 +## Outcome                                                     
+      85 +                                                               
+      86 +✅ **Done** — see the handoff: [`../handoff-docs/phase-9-handof
+         +f.md`](../handoff-docs/phase-9-handoff.md).                    
+      87 +Committed on `feat/phase9-presentation` (3 slices); `make test`
+         + green; the cold-start demo + degradation                      
+      88 +beat verified live (fresh→degraded→fresh). PR not yet opened.  
+      89 +                                                               
+      90  ## Out of scope / deferred
+      91  
+      92  - Private interview narrative (why-employer, STAR, recruiter) →
+           gitignored `interview-prep/`, never tracked.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git check-ignore claude-sessions/handoff-docs/phase-9-handoff.md
+      claude-sessions/implementation-plan/phase-…)
+  ⎿  claude-sessions/handoff-docs/phase-9-handoff.md
+     claude-sessions/implementation-plan/phase-9-presentation.md
+     claude-sessions/implementation-plan/README.md
+     … +3 lines (ctrl+o to expand)
+⏺ Phase 9 is complete. Handoff written and wired into the plan index (all under
+  gitignored claude-sessions/); tracked tree clean.
+
+  Phase 9 — Presentation & rehearsal 🎤 — done
+
+  What shipped (branch feat/phase9-presentation, 3 commits)
+
+  - Deck — presentation/deck/deck.md: 60 slides (1 title + 59) to the exact
+  Build-Plan budget, the §5 A/B/C fork pasted verbatim + one slide per ADR (the
+  trade-offs / "didn't-build" beats), 3 mermaid diagrams. Sourced entirely from
+  public docs/hld.md + the 10 ADRs → generic/public-safe.
+  - reveal.js wrapper — presentation/deck/index.html loads that same deck.md
+  (one source → Marp / GitHub-inline / clickable reveal slides).
+  - Companions — intro-achievements.md (2 quantified stories), demo-script.md
+  (cold-start + the live degradation beat), speaker-notes.md,
+  presentation/README.md, screenshots/ capture guide.
+  - Demo polish (1 code touch) — vendored Chart.js into static/vendor/
+  (CDN→local) → dashboard renders fully offline.
+  - Doc/test sync — CLAUDE.md/README.md status → Phase 9 + README architecture
+  diagram; [P9] cases MQ-90..96 in test-plan/.
+
+  Verification (real results)
+  - make test → BUILD SUCCESS, api 58/58, full reactor green.
+  - Live cold-start demo (Docker up): up → seed → run → forecast → mode=forecast
+  fresh (HIGH conf) → wipe serving + bump cache → HTTP 200 degraded (LOW conf,
+  5 items, never 5xx) → make forecast → fresh. Plus vendored Chart.js served 200
+  with 0 jsdelivr refs, cross-tenant 403 / unknown 404, and
+  topsales_read_total{status="degraded"} climbing. Stack torn down.
+  - public-repo-check → GO (no secrets, no employer/recruiter names;
+  presentation/ generic).
+
+  Git / PR state — 3 clean slices on feat/phase9-presentation (f0525ae, 89f4cde,
+  d6db42f) off updated main. PR not yet opened. Plan doc + handoff are
+  gitignored (private), correctly not committed.
+
+  Two things I'd flag: screenshots aren't captured (need a live browser render —
+  documented with exact framing in screenshots/README.md, capture during
+  rehearsal); and the actual 60-min rehearsal ≥3× is your off-tool step — the
+  artifacts are ready for it.
+
+  Next phase — Phase 10 (Public-repo polish & final dry run). First concrete
+  step: capture the two dashboard screenshots and embed the fresh one in the
+  README hero, then the README pitch/gif pass → secret scan → tag v1.0 →
+  clean-machine clone-and-run dry run.
+
+  Want me to push the branch and open the PR to main now, or leave it local for
+  you to review the deck first?
+
+✻ Churned for 17m 53s
+
+※ recap: Phase 9 (presentation deck and offline demo) is built, verified live, and committed on branch feat/phase9-presentation. Next action: push the branch and open the PR to main, pending your go-ahead. (disable recaps in /config)
+
+❯ Yes go ahead                                                                  
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git push -u origin feat/phase9-presentation 2>&1 | tail -5)
+  ⎿  remote:      https://github.com/heminjoshi/sales-forecasting-platform/
+     pull/new/feat/phase9-presentation
+     remote:
+     … +5 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      gh pr create --base main --head feat/phase9-presentation \…)
+  ⎿  https://github.com/heminjoshi/sales-forecasting-platform/pull/17
+
+⏺ PR opened: https://github.com/heminjoshi/sales-forecasting-platform/pull/17
+
+  Let me check the initial CI status.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      sleep 15…)
+  ⎿  build forecaster
+     image      pending 0       https://github.com/heminjoshi/sales-fore
+     casting-platform/actions/runs/28399248287/job/84145949991
+     Vercel Preview Comments    pass    0       https://vercel.com/github
+     … +24 lines (ctrl+o to expand)
+
+⏺ CI is running — 8 checks registered, Vercel already green, the rest pending
+  (build & test, API/newman gate, cdk synth, 3 docker images). Nothing in this
+  phase changed production logic (static resource + docs only), so they should
+  pass.
+
+  Phase 9 is shipped. Summary:
+
+  - PR #17 open → main:
+  https://github.com/heminjoshi/sales-forecasting-platform/pull/17
+  - Branch feat/phase9-presentation pushed, 3 clean commits.
+  - CI: Vercel ✅; build & test / newman / cdk synth / docker images pending.
+  - Handoff + plan docs written under gitignored claude-sessions/ (private, not
+  committed).
+
+  The deck, demo script, and speaker notes are ready for your rehearsal. Two
+  open follow-ups for Phase 10: capture the fresh + degraded dashboard
+  screenshots (guide in presentation/screenshots/README.md) for the README hero,
+  and the run-to-time rehearsal ≥3×.
+
+  I can watch the CI run to green if you'd like, or leave it here — your call.
+
+✻ Sautéed for 56s
+
+❯ Sure, merge with admin. I just reviewed the PR once the CI is green.          
+
+⏺ Will do — watching CI, then merging with admin once green. Let me watch the
+  run to completion.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      gh pr checks 17 --watch --interval 20 2>&1 | tail -20)
+  ⎿  Vercel     pass    0       https://vercel.com/heminjoshi/sales-forecasting-
+     platform/DD
+     rA3Mu4YoRaouKqCuECwmQGAbp4 Deployment has completed
+     build consumer
+     image      pass    1m15s   https://github.com/heminjoshi/sales-forec
+     … +64 lines (ctrl+o to expand)
+  ⎿  (timeout 10m)
+
+⏺ All 8 checks green (build & test, newman gate, cdk synth, 3 docker images,
+  Vercel ×2). Merging with admin.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      gh pr merge 17 --admin --merge --delete-branch 2>&1 | tail -5…)
+  ⎿   create mode 100644 presentation/demo-script.md
+      create mode 100644 presentation/intro-achievements.md
+      create mode 100644 presentation/screenshots/README.md
+     … +5 lines (ctrl+o to expand)
+
+⏺ Merged into main. Let me sync local main and update the (private) plan index
+  to reflect the merge.
+
+⏺ Bash(cd /Users/heminjoshi/code/sales-forecasting-platform
+      git checkout main --quiet && git pull --ff-only origin main --quiet 2>&1 |
+      tail -2…)
+  ⎿  === main HEAD ===
+     2865888 Merge pull request #17 from heminjoshi/feat/phase9-presentatio
+     n
+     … +2 lines (ctrl+o to expand)
+
+⏺ Update(claude-sessions/implementation-plan/README.md)
+  ⎿  Added 1 line, removed 1 line
+      30  | 6 | Hardening: resilience & observability | — | [phase-6-hard
+          ening.md](phase-6-hardening.md) | [phase-6-handoff](../handoff-
+          docs/phase-6-handoff.md) | ✅ done |
+      31  | 7 | UI production path & infra validation | — | [phase-7-ui-a
+          nd-infra.md](phase-7-ui-and-infra.md) | [phase-7-handoff](../ha
+          ndoff-docs/phase-7-handoff.md) | ✅ done (PRs #13 + #14 merged)
+           |
+      32  | 8 | Data, tests, Postman | PROD-SHAPED | [phase-8-data-tests-
+          postman.md](phase-8-data-tests-postman.md) | [phase-8-handoff](
+          ../handoff-docs/phase-8-handoff.md) | ✅ done (PR open) |
+      33 -| 9 | Presentation & rehearsal | 🎤 PRESENTATION | [phase-9-pre
+         -sentation.md](phase-9-presentation.md) | [phase-9-handoff](../h
+         -andoff-docs/phase-9-handoff.md) | ✅ done (PR pending) |       
+      33 +| 9 | Presentation & rehearsal | 🎤 PRESENTATION | [phase-9-pre
+         +sentation.md](phase-9-presentation.md) | [phase-9-handoff](../h
+         +andoff-docs/phase-9-handoff.md) | ✅ done (PR #17 merged) |    
+      34  | 10 | Public-repo polish & final dry run | PUBLIC | _todo_ | |
+           |
+      35  
+      36  > **Handoff docs** live in [`../handoff-docs/`](../handoff-docs
+          /) — one per completed phase, written for whoever picks up the 
+          next phase (state, decisions, how-to-run, gotchas, open items).
+
+⏺ Phase 9 merged and closed out. 🎤 PRESENTATION-READY.
+
+  - PR #17 merged into main (all 8 CI checks green: build & test, newman gate,
+  cdk synth, 3 docker images, Vercel ×2) — admin merge, branch deleted, local
+  main synced to 2865888.
+  - Plan index updated (private) → ✅ done (PR #17 merged).
+
+  What's now in main: the interview deck (presentation/deck/, one deck.md →
+  Marp/GitHub/reveal), intro-achievements, demo-script, speaker-notes; Chart.js
+  vendored (fully-offline demo); README architecture diagram; [P9] test cases.
+  The cold-start demo + degradation beat were verified live end-to-end before
+  merge.
+
+  Open follow-ups (Phase 10):
+  - Capture the fresh + degraded dashboard screenshots (guide in
+  presentation/screenshots/README.md) and embed the fresh one in the README
+  hero.
+  - Rehearse 60 min ≥3× cold — your off-tool step; the artifacts are ready.
+
+  Next phase — Phase 10 (Public-repo polish & final dry run): README pitch/gif
+  pass → final secret scan + /public-repo-check → tidy history → tag v1.0 →
+  clean-machine clone→run→demo. Run /implement-phase 10 when you're ready.
+
+✻ Cogitated for 1m 17s
