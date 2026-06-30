@@ -38,7 +38,7 @@ import org.mockito.ArgumentCaptor;
 /** Pure unit tests for the actuals ranking/window logic (repos mocked). */
 class ActualsServiceTest {
 
-    private static final String TENANT = "t_demo";
+    private static final String TENANT = "tenant_a";
     private static final ZoneId ZONE = ZoneId.of("America/Los_Angeles");
 
     private AggregateRepository aggregates;

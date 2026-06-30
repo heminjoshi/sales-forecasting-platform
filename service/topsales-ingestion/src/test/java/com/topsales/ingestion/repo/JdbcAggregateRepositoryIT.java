@@ -50,7 +50,7 @@ class JdbcAggregateRepositoryIT {
     }
 
     private AggregateDelta delta(String category, Channel channel, LocalDate day, String amount) {
-        return new AggregateDelta("t_demo", category, channel, day, new BigDecimal(amount), "USD");
+        return new AggregateDelta("tenant_a", category, channel, day, new BigDecimal(amount), "USD");
     }
 
     @Test
@@ -63,14 +63,14 @@ class JdbcAggregateRepositoryIT {
                 jdbc.queryForObject(
                         "SELECT sum_amount FROM aggregates WHERE tenant_id=? AND category_id=? AND bucket_date=?",
                         BigDecimal.class,
-                        "t_demo",
+                        "tenant_a",
                         "cat_office",
                         java.sql.Date.valueOf(day));
         Integer orderCount =
                 jdbc.queryForObject(
                         "SELECT order_count FROM aggregates WHERE tenant_id=? AND category_id=? AND bucket_date=?",
                         Integer.class,
-                        "t_demo",
+                        "tenant_a",
                         "cat_office",
                         java.sql.Date.valueOf(day));
 
@@ -87,7 +87,7 @@ class JdbcAggregateRepositoryIT {
         repo.upsertAdditive(
                 delta("cat_office", Channel.ONLINE, LocalDate.of(2026, 7, 1), "99.00")); // out of range
 
-        List<AggregateRow> rows = repo.rangeByCategory("t_demo", d19, d20, ChannelFilter.ALL);
+        List<AggregateRow> rows = repo.rangeByCategory("tenant_a", d19, d20, ChannelFilter.ALL);
 
         assertThat(rows).hasSize(2);
         assertThat(rows)
@@ -104,7 +104,7 @@ class JdbcAggregateRepositoryIT {
         repo.upsertAdditive(delta("cat_office", Channel.OFFLINE, day, "7.00"));
 
         // Same (tenant, category, day) but different channels → two distinct rows.
-        List<AggregateRow> all = repo.rangeByCategory("t_demo", day, day, ChannelFilter.ALL);
+        List<AggregateRow> all = repo.rangeByCategory("tenant_a", day, day, ChannelFilter.ALL);
         assertThat(all)
                 .extracting(AggregateRow::channel, AggregateRow::sumAmount)
                 .containsExactlyInAnyOrder(
@@ -112,7 +112,7 @@ class JdbcAggregateRepositoryIT {
                         org.assertj.core.groups.Tuple.tuple(Channel.OFFLINE, new BigDecimal("7.00")));
 
         // The filter narrows to one channel.
-        List<AggregateRow> online = repo.rangeByCategory("t_demo", day, day, ChannelFilter.ONLINE);
+        List<AggregateRow> online = repo.rangeByCategory("tenant_a", day, day, ChannelFilter.ONLINE);
         assertThat(online).singleElement().satisfies(r -> {
             assertThat(r.channel()).isEqualTo(Channel.ONLINE);
             assertThat(r.sumAmount()).isEqualByComparingTo("10.00");
@@ -124,12 +124,12 @@ class JdbcAggregateRepositoryIT {
         LocalDate day = LocalDate.of(2026, 6, 20);
         AggregateRow row =
                 new AggregateRow(
-                        "t_demo", "cat_office", Channel.ONLINE, day, new BigDecimal("100.00"), 5, "USD");
+                        "tenant_a", "cat_office", Channel.ONLINE, day, new BigDecimal("100.00"), 5, "USD");
 
         repo.bulkUpsert(List.of(row));
         repo.bulkUpsert(List.of(row)); // re-run: SET (not +=), so it converges, not accumulates
 
-        List<AggregateRow> rows = repo.rangeByCategory("t_demo", day, day, ChannelFilter.ALL);
+        List<AggregateRow> rows = repo.rangeByCategory("tenant_a", day, day, ChannelFilter.ALL);
         assertThat(rows).singleElement().satisfies(r -> {
             assertThat(r.sumAmount()).isEqualByComparingTo("100.00");
             assertThat(r.orderCount()).isEqualTo(5);

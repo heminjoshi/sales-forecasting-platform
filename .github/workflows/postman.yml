@@ -24,7 +24,7 @@ jobs:
     # Backing stores on localhost:5432 / :6379 so the app's application.yml defaults
     # (jdbc:postgresql://localhost:5432/topsales, redis localhost:6379) work unchanged.
     # local/init.sql is NOT mounted here — it's intentionally empty (Flyway owns the
-    # schema), so V1–V7 migrations create everything (incl. t_acme) on first boot.
+    # schema), so V1–V7 migrations create everything (incl. tenant_b) on first boot.
     services:
       postgres:
         image: postgres:16
@@ -69,7 +69,7 @@ jobs:
       - name: Build & install (topsales-api, topsales-datagen)
         run: mvn -B -f service/pom.xml -pl topsales-api,topsales-datagen -am -DskipTests install
 
-      # Backfill seasonal history for t_demo + t_acme straight into the rollup (Flyway has
+      # Backfill seasonal history for tenant_a + tenant_b straight into the rollup (Flyway has
       # already created the schema against the postgres service above).
       - name: Seed
         run: make seed

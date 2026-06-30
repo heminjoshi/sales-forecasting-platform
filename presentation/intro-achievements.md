@@ -47,11 +47,11 @@ sales on most days) and availability is the #1 NFR.
 
 | Forecaster | Segments | n | **WAPE** | bias |
 |---|---:|---:|---:|---:|
-| SeasonalNaive | 24 | 2016 | 0.0755 | −0.0146 |
-| **HoltWinters** | 24 | 2016 | **0.0686** | +0.0118 |
+| SeasonalNaive | 312 | 26208 | 0.0744 | −0.0157 |
+| **HoltWinters** | 312 | 26208 | **0.0690** | +0.0082 |
 
-Holt-Winters cut pooled WAPE from ~7.6% to ~6.9% (a ~9% relative improvement) across 24 segments /
-2,016 points — and the seasonal-naive it beat is *reused* as the in-process degradation fallback. One
+Holt-Winters cut pooled WAPE from ~7.4% to ~6.9% (a ~7% relative improvement) across 312 segments /
+26,208 points — and the seasonal-naive it beat is *reused* as the in-process degradation fallback. One
 body of arithmetic, two jobs: ship the better forecaster, keep the simpler one as the floor.
 
 **Why it matters.** The number is the point — the forecast is justified by a backtest, not asserted,
@@ -75,7 +75,7 @@ down when the ML plane does (NFR1 availability + NFR8 isolation, the two top cor
 **Quantified / concrete result.**
 - Cross-tenant read → **403** `tenant-mismatch`; unknown tenant → **404** `unknown-tenant`, both with
   RFC-7807 problem bodies — verified end-to-end by `TenantIsolationIT` and a Postman no-leakage folder
-  (`t_demo` vs `t_acme`, asserting the other tenant's category is **absent**).
+  (`tenant_a` vs `tenant_b`, asserting the other tenant's category is **absent**).
 - Wiping the entire serving table mid-demo still returns **200 `degraded`** (never a 5xx), proven by
   `ForecastDegradationIT` and reproducible live (see `demo-script.md`).
 - Coverage: 58/58 api unit tests green + 4 full-stack ITs (real Postgres + Redis) + a Newman/Postman

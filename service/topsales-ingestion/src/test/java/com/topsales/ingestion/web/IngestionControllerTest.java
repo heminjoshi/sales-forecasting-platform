@@ -46,11 +46,11 @@ class IngestionControllerTest {
 
     @Test
     void singleObjectBody_returns202WithCounts() throws Exception {
-        when(ingestionService.ingest(eq("t_demo"), any())).thenReturn(new IngestResult(1, 1, 0, 0));
+        when(ingestionService.ingest(eq("tenant_a"), any())).thenReturn(new IngestResult(1, 1, 0, 0));
 
         mvc.perform(
                         post("/api/v1/events")
-                                .header("X-Tenant-Id", "t_demo")
+                                .header("X-Tenant-Id", "tenant_a")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(EVENT_JSON))
                 .andExpect(status().isAccepted())
@@ -59,24 +59,24 @@ class IngestionControllerTest {
                 .andExpect(jsonPath("$.deduped").value(0))
                 .andExpect(jsonPath("$.quarantined").value(0));
 
-        verify(ingestionService).ingest(eq("t_demo"), any());
+        verify(ingestionService).ingest(eq("tenant_a"), any());
     }
 
     @Test
     void arrayBody_returns202() throws Exception {
-        when(ingestionService.ingestBatch(eq("t_demo"), anyList()))
+        when(ingestionService.ingestBatch(eq("tenant_a"), anyList()))
                 .thenReturn(new IngestResult(2, 2, 0, 0));
 
         mvc.perform(
                         post("/api/v1/events")
-                                .header("X-Tenant-Id", "t_demo")
+                                .header("X-Tenant-Id", "tenant_a")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("[" + EVENT_JSON + "," + EVENT_JSON + "]"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.received").value(2))
                 .andExpect(jsonPath("$.applied").value(2));
 
-        verify(ingestionService).ingestBatch(eq("t_demo"), anyList());
+        verify(ingestionService).ingestBatch(eq("tenant_a"), anyList());
     }
 
     @Test

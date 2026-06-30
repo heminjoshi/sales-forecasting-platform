@@ -20,11 +20,11 @@ class TenantScopeFilterTest {
     @Test
     void headerPresent_setsAttribute() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader(TenantScopeFilter.TENANT_HEADER, "t_demo");
+        request.addHeader(TenantScopeFilter.TENANT_HEADER, "tenant_a");
 
         filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
 
-        assertThat(request.getAttribute(TenantScopeFilter.AUTHED_TENANT_ATTR)).isEqualTo("t_demo");
+        assertThat(request.getAttribute(TenantScopeFilter.AUTHED_TENANT_ATTR)).isEqualTo("tenant_a");
     }
 
     @Test
@@ -49,7 +49,7 @@ class TenantScopeFilterTest {
     @Test
     void headerPresent_echoesRequestIdAndClearsMdc() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader(TenantScopeFilter.TENANT_HEADER, "t_demo");
+        request.addHeader(TenantScopeFilter.TENANT_HEADER, "tenant_a");
         request.addHeader(TenantScopeFilter.REQUEST_ID_HEADER, "req-123");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -76,7 +76,7 @@ class TenantScopeFilterTest {
     @Test
     void chainThrows_stillClearsMdc() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader(TenantScopeFilter.TENANT_HEADER, "t_demo");
+        request.addHeader(TenantScopeFilter.TENANT_HEADER, "tenant_a");
         FilterChain boom = (req, res) -> {
             throw new ServletException("boom");
         };

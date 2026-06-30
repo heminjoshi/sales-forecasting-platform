@@ -35,7 +35,7 @@ import tools.jackson.databind.json.JsonMapper;
 /** Unit tests for the ingestion pipeline; all ports mocked (no Docker, surefire). */
 class IngestionServiceTest {
 
-    private static final String AUTHED = "t_demo";
+    private static final String AUTHED = "tenant_a";
     private static final ZoneId LA = ZoneId.of("America/Los_Angeles");
 
     private BucketingEventLedger ledger;

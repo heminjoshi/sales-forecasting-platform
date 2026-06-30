@@ -31,18 +31,18 @@ import org.springframework.http.ResponseEntity;
  *
  * <p>The two cases deliberately use <em>disjoint</em> query keys — {@code window=month} for the
  * empty-serving (degraded/pending) case and {@code window=week} for the fresh case — so they cannot
- * collide on the per-tenant Redis cache key {@code topk:t_demo:{ver}:{window}:forecast:all:{k}} or on
+ * collide on the per-tenant Redis cache key {@code topk:tenant_a:{ver}:{window}:forecast:all:{k}} or on
  * the serving partition key, keeping the two {@code @Test}s order-independent in the shared context.
  */
 class ForecastDegradationIT extends AbstractPostgresRedisIT {
 
     @Autowired ServingTableRepository servingTable;
 
-    /** A single SALE event for {@code t_demo}, dated inside the trailing-month window. */
+    /** A single SALE event for {@code tenant_a}, dated inside the trailing-month window. */
     private String event(String orderId, String category, String amount) {
         String eventTime = Instant.now().minus(1, ChronoUnit.DAYS).toString();
         return String.format(
-                "{\"tenantId\":\"t_demo\",\"orderId\":\"%s\",\"categoryId\":\"%s\","
+                "{\"tenantId\":\"tenant_a\",\"orderId\":\"%s\",\"categoryId\":\"%s\","
                         + "\"channel\":\"ONLINE\",\"amount\":%s,"
                         + "\"currency\":\"USD\",\"eventType\":\"SALE\",\"eventTime\":\"%s\"}",
                 orderId, category, amount, eventTime);
@@ -52,8 +52,8 @@ class ForecastDegradationIT extends AbstractPostgresRedisIT {
         ResponseEntity<String> read =
                 client()
                         .get()
-                        .uri("/api/v1/tenants/t_demo/top-categories?" + query)
-                        .header("X-Tenant-Id", "t_demo")
+                        .uri("/api/v1/tenants/tenant_a/top-categories?" + query)
+                        .header("X-Tenant-Id", "tenant_a")
                         .retrieve()
                         .toEntity(String.class);
         assertThat(read.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -68,7 +68,7 @@ class ForecastDegradationIT extends AbstractPostgresRedisIT {
      */
     @Test
     void noServingRows_stillReturns200Degraded() throws Exception {
-        // Some actuals for t_demo so the degraded (seasonal-naive) rung has data to recompute from.
+        // Some actuals for tenant_a so the degraded (seasonal-naive) rung has data to recompute from.
         String body =
                 "["
                         + event("fc07-a", "cat_a", "100.00") + ","
@@ -79,14 +79,14 @@ class ForecastDegradationIT extends AbstractPostgresRedisIT {
                 client()
                         .post()
                         .uri("/api/v1/events")
-                        .header("X-Tenant-Id", "t_demo")
+                        .header("X-Tenant-Id", "tenant_a")
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(body)
                         .retrieve()
                         .toEntity(String.class);
         assertThat(ingest.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 
-        // No serving rows were ever written for t_demo#month#forecast#all → rungs 1–2 miss.
+        // No serving rows were ever written for tenant_a#month#forecast#all → rungs 1–2 miss.
         TopKResponse response = forecast("mode=forecast&window=month&k=10");
 
         assertThat(response.status()).isIn(Status.DEGRADED, Status.PENDING);
@@ -104,7 +104,7 @@ class ForecastDegradationIT extends AbstractPostgresRedisIT {
     void forecast_afterBatch_isFreshWithIntervals() throws Exception {
         // The batch writes versioned rows + flips the active pointer; asOf=now is well inside the 36h
         // freshness SLO, so the ladder labels rung 1 'fresh' (not 'stale').
-        String pk = ServingKey.of("t_demo", Window.WEEK, Mode.FORECAST, ChannelFilter.ALL);
+        String pk = ServingKey.of("tenant_a", Window.WEEK, Mode.FORECAST, ChannelFilter.ALL);
         List<ServingRow> rows =
                 List.of(
                         forecastRow(1, "cat_office", "120.00"),

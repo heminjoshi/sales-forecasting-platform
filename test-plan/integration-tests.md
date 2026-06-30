@@ -22,7 +22,7 @@ Success = **202** with body `{received, applied, deduped, quarantined}`. Tenant 
 ### 1.1 Happy paths
 | ID | Scenario | Setup → Action | Expected |
 |---|---|---|---|
-| IT-IN-01 | Single valid SALE | POST one well-formed SALE for `t_demo` | 202; `{1,1,0,0}`; one `events` row; `aggregates` sum_amount += amount, order_count = 1 |
+| IT-IN-01 | Single valid SALE | POST one well-formed SALE for `tenant_a` | 202; `{1,1,0,0}`; one `events` row; `aggregates` sum_amount += amount, order_count = 1 |
 | IT-IN-02 | Batch all valid | POST array of 3 distinct valid events | 202; `{3,3,0,0}`; 3 ledger rows; aggregates reflect all 3 |
 | IT-IN-03 | Default idempotency key | POST event **without** `idempotencyKey` | 202; persisted `idempotency_key = orderId:eventType` |
 | IT-IN-04 | Signed RETURN nets | POST SALE +100.00 then RETURN −30.00 (same category/day) | aggregates `sum_amount = 70.00`, `order_count = 2` |
@@ -102,8 +102,8 @@ Success = **200** + `TopKResponse`. Enums on the wire are **lowercase** (`mode/w
 > **[P8] promotion.** `IT-RD-30/31/32` are realized end-to-end by the full-stack HTTP IT
 > `TenantIsolationIT` (`tenant-mismatch` 403 / missing-header 403 / unknown-tenant 404, asserting the
 > RFC-7807 `type`/`title`/`instance`), complementing the unit `TenantScopeFilterTest`. Cross-tenant
-> data leakage (`IT-RD-33/34`) is asserted by the Postman multi-tenant isolation folder (`t_demo` vs
-> `t_acme`) run by Newman — see §11.
+> data leakage (`IT-RD-33/34`) is asserted by the Postman multi-tenant isolation folder (`tenant_a` vs
+> `tenant_b`) run by Newman — see §11.
 
 ---
 
@@ -224,7 +224,7 @@ Unit-level with a mocked `BedrockRuntimeClient` (no Testcontainers); the read mu
 ### 8.3 Structured logging (tenant + request id via MDC)
 | ID | Scenario | Expected | Status |
 |---|---|---|---|
-| IT-LG-01 | Tenant + request id in log line | a read with `X-Tenant-Id: t_demo` emits log lines carrying `tenantId=t_demo` and a `requestId` (MDC pattern) | ✅ unit `TenantScopeFilterTest.headerPresent_setsAttribute` (MDC/attribute set from the header) |
+| IT-LG-01 | Tenant + request id in log line | a read with `X-Tenant-Id: tenant_a` emits log lines carrying `tenantId=tenant_a` and a `requestId` (MDC pattern) | ✅ unit `TenantScopeFilterTest.headerPresent_setsAttribute` (MDC/attribute set from the header) |
 | IT-LG-02 | Inbound request id honored | request with `X-Request-Id: abc123` → logs + the **response** `X-Request-Id` header echo `abc123` | ✅ unit `TenantScopeFilterTest.headerPresent_echoesRequestIdAndClearsMdc` |
 | IT-LG-03 | Generated request id | request without the header → a UUID `requestId` is generated and returned in the response header | ✅ unit `TenantScopeFilterTest.missingRequestId_isGeneratedAndEchoed` |
 | IT-LG-04 | **MDC cleared (no leak)** | after the filter returns, MDC has no `tenantId`/`requestId`; holds even when the chain throws (cleared in `finally`) — guards against cross-thread tenant-id leakage on pooled threads | ✅ unit `TenantScopeFilterTest.chainThrows_stillClearsMdc` (+ cleared-after assertions in the echo tests) |
@@ -290,10 +290,10 @@ Unit-level with a mocked `BedrockRuntimeClient` (no Testcontainers); the read mu
 
 | ID | Scenario | Expected | Status |
 |---|---|---|---|
-| IT-PM-01 | Happy path — ingest then read | POST events for `t_demo` → `GET top-categories` ranks them; `200`; `status=fresh` | ✅ PM (collection items 1–5) |
+| IT-PM-01 | Happy path — ingest then read | POST events for `tenant_a` → `GET top-categories` ranks them; `200`; `status=fresh` | ✅ PM (collection items 1–5) |
 | IT-PM-02 | Degradation — serving table wiped | the "wipe forecast" request then `mode=forecast` → still `200` with `degraded`/`pending` badge | ✅ PM (item 6) |
 | IT-PM-03 | Prompt-injection probe | a category name crafted as an instruction is ranked as data; the insight ignores it; figures unchanged | ✅ PM (item 7) |
-| IT-PM-04 | **Multi-tenant isolation** | POST as `t_demo`; `GET /tenants/t_demo/...` with `X-Tenant-Id: t_acme` → **403** `tenant-mismatch`; reading own tenant → `200`; `t_acme` never sees `t_demo` data | ✅ PM (new isolation folder, `t_demo` vs `t_acme`) |
+| IT-PM-04 | **Multi-tenant isolation** | POST as `tenant_a`; `GET /tenants/tenant_a/...` with `X-Tenant-Id: tenant_b` → **403** `tenant-mismatch`; reading own tenant → `200`; `tenant_b` never sees `tenant_a` data | ✅ PM (new isolation folder, `tenant_a` vs `tenant_b`) |
 | IT-PM-05 | Observability + RED | `/actuator/prometheus` exposes the custom + RED meters; a forced `4xx` (k=0) shows up as a `CLIENT_ERROR` sample; `/actuator/health` `UP` with db+redis | ✅ PM (items 8–9) |
 | IT-PM-06 | CORS preflight (allowed origin) | `OPTIONS` with an allow-listed `Origin` → `200`; `Access-Control-Allow-Origin` echoed (browser-enforced behavior, realized here not in an HTTP-slice IT) | ✅ PM (item 10) |
 | IT-PM-07 | CI coverage gate | `postman.yml` runs the whole collection on push/PR; any failing assertion (non-zero Newman exit) **fails the build** | ✅ CI (`postman.yml`) |

@@ -26,7 +26,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * End-to-end read path against a real Postgres: boot the full app, POST a few events through the
  * ingestion controller, then GET the ranked top-k and assert the order. Flyway auto-migrates from
- * the classpath (which also seeds the {@code t_demo} tenant via V4).
+ * the classpath (which also seeds the {@code tenant_a} tenant via V4).
  *
  * <p>NOTE: Testcontainers may fail to start on some hosts (Docker API vs the bundled docker-java
  * client). When it does, this IT is skipped locally but is correct for CI.
@@ -50,7 +50,7 @@ class TopCategoriesReadIT {
         // eventTime is relative to now so the events always land inside the trailing month window.
         String eventTime = Instant.now().minus(1, ChronoUnit.DAYS).toString();
         return String.format(
-                "{\"tenantId\":\"t_demo\",\"orderId\":\"%s\",\"categoryId\":\"%s\","
+                "{\"tenantId\":\"tenant_a\",\"orderId\":\"%s\",\"categoryId\":\"%s\","
                         + "\"channel\":\"ONLINE\",\"amount\":%s,"
                         + "\"currency\":\"USD\",\"eventType\":\"SALE\",\"eventTime\":\"%s\"}",
                 orderId, category, amount, eventTime);
@@ -70,7 +70,7 @@ class TopCategoriesReadIT {
                 client()
                         .post()
                         .uri("/api/v1/events")
-                        .header("X-Tenant-Id", "t_demo")
+                        .header("X-Tenant-Id", "tenant_a")
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(body)
                         .retrieve()
@@ -80,8 +80,8 @@ class TopCategoriesReadIT {
         ResponseEntity<String> read =
                 client()
                         .get()
-                        .uri("/api/v1/tenants/t_demo/top-categories?mode=actuals&window=month&k=10")
-                        .header("X-Tenant-Id", "t_demo")
+                        .uri("/api/v1/tenants/tenant_a/top-categories?mode=actuals&window=month&k=10")
+                        .header("X-Tenant-Id", "tenant_a")
                         .retrieve()
                         .toEntity(String.class);
 

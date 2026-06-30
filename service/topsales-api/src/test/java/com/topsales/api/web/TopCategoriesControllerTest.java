@@ -34,7 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /** Standalone MockMvc tests over the read controller + the RFC 7807 advice (service mocked). */
 class TopCategoriesControllerTest {
 
-    private static final String TENANT = "t_demo";
+    private static final String TENANT = "tenant_a";
 
     private MockMvc mvc;
     private ActualsService actualsService;

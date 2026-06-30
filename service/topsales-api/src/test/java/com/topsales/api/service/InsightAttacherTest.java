@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
  */
 class InsightAttacherTest {
 
-    private static final String TENANT = "t_demo";
+    private static final String TENANT = "tenant_a";
 
     private TopKQuery query() {
         return new TopKQuery(TENANT, Window.MONTH, Mode.ACTUALS, 10, ChannelFilter.ALL);

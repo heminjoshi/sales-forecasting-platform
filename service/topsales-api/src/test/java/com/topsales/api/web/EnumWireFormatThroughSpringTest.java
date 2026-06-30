@@ -44,7 +44,7 @@ class EnumWireFormatThroughSpringTest {
     void responseUsesLowercaseEnums_carriesInsight_andOmitsNullForecastFields() {
         TopKResponse response =
                 new TopKResponse(
-                        "t_demo",
+                        "tenant_a",
                         Mode.ACTUALS,
                         Window.MONTH,
                         ChannelFilter.ALL,

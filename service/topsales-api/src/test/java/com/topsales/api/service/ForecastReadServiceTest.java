@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 /** Pure unit tests for the forecast-path degradation ladder (docs/lld.md §5; collaborators mocked). */
 class ForecastReadServiceTest {
 
-    private static final String TENANT = "t_demo";
+    private static final String TENANT = "tenant_a";
 
     // Mirrors application.yml; freshness SLO = 36h is what drives fresh vs stale.
     private static final TopsalesProperties PROPS =

@@ -64,7 +64,7 @@ class JdbcEventLedgerIT {
 
     private SaleEvent sale() {
         return new SaleEvent(
-                "t_demo",
+                "tenant_a",
                 "o_1",
                 "cat_office",
                 Channel.ONLINE,

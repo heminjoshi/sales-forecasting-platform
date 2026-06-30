@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
@@ -40,6 +41,8 @@ public final class SeasonalityModel {
     private final LocalDate windowStart;
     private final LocalDate windowEnd;
     private final LocalDate outlierDate;
+    private final double archetypeScale;
+    private final Map<String, Double> archetypeWeights;
 
     public SeasonalityModel(
             SeedConfig config,
@@ -58,6 +61,18 @@ public final class SeasonalityModel {
         this.windowEnd = windowEnd;
         this.outlierDate =
                 config.outlier() == null ? null : windowEnd.minusDays(config.outlier().daysAgo());
+        // Per-tenant archetype shapes this tenant's category mix + overall volume. Resolved
+        // internally (no extra constructor param) and null-safe: a SeedConfig with null archetype
+        // maps yields the identity shaper (scale 1.0, empty weights), so behavior is unchanged.
+        String archName =
+                (config.tenantArchetypes() != null)
+                        ? config.tenantArchetypes().getOrDefault(tenantId, "balanced")
+                        : "balanced";
+        SeedConfig.Archetype arch =
+                (config.archetypes() != null) ? config.archetypes().get(archName) : null;
+        this.archetypeScale = (arch != null) ? arch.scale() : 1.0;
+        this.archetypeWeights =
+                (arch != null && arch.weights() != null) ? arch.weights() : Map.of();
     }
 
     /** Pre-summed aggregate rows for every cell in {@code [windowStart, windowEnd]} (zeros skipped). */
@@ -134,6 +149,9 @@ public final class SeasonalityModel {
         double noise = (1.0 - seasonality.noiseBand() / 2.0) + seasonality.noiseBand() * unit(cat, channel, date, "noise");
 
         double value = cat.base() * channelShare * trend * weekly * monthly * hveMultiplier * noise;
+
+        // Per-tenant archetype: global scale × per-category multiplier (default 1.0 if unlisted).
+        value *= archetypeScale * archetypeWeights.getOrDefault(cat.id(), 1.0);
 
         if (isOutlier(cat, channel, date)) {
             value *= config.outlier().multiplier();

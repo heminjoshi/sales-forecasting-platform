@@ -28,7 +28,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class JdbcServingTableRepositoryIT {
 
-    private static final String PK = "t_demo#7d#forecast";
+    private static final String PK = "tenant_a#7d#forecast";
     private static final Instant AS_OF = Instant.parse("2026-06-28T00:00:00Z");
 
     @Container
@@ -161,6 +161,6 @@ class JdbcServingTableRepositoryIT {
 
     @Test
     void readActive_emptyWhenPkHasNoActiveVersion() {
-        assertThat(repo.readActive("t_demo#unknown#forecast")).isEmpty();
+        assertThat(repo.readActive("tenant_a#unknown#forecast")).isEmpty();
     }
 }
