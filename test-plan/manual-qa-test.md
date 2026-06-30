@@ -89,6 +89,8 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 | MQ-70 | Fresh clone on a clean machine → `make up` → `make run` (→ `make seed`/`demo`) | Comes up in the documented 2 commands; dashboard shows data; design docs + ADRs readable |
 | MQ-71 | Public-repo hygiene glance | No secrets/.env/employer-specific text visible (run `/public-repo-check` for the real gate) |
 
+> ✅ **Run 2026-06-30** against a fresh clone of the **public** repo: **MQ-70** — `make up` → `seed` → `forecast` → `run` came up cold; `/actuator/health` UP, dashboard 200, forecast read `fresh`, cross-tenant 403, and `make demo` (17 requests / 54 assertions) all green. **MQ-71** — `public-repo-check` clean (no secrets, no tracked `private/`, no employer text). Phase 10 → **PUBLIC** milestone met.
+
 ## 9. Cross-origin / Vercel deploy [P7]
 | ID | Step | Expected |
 |---|---|---|

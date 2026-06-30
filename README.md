@@ -7,7 +7,7 @@
 > natural-language insight, and presents it in a dashboard. Java / Spring Boot, runnable locally
 > with one `docker compose up`; AWS path designed in CDK behind the same interfaces.
 
- > **Status:** 🟢 Built through **Phase 9** — 🎤 PRESENTATION-READY (PROD-SHAPED + the interview deck, demo script, and a fully-offline live demo). Ingest events → idempotent per-tenant, per-channel
+ > **Status:** 🟢 **v1.0 — public** · Phases 0–10 complete (PUBLIC milestone) — PROD-SHAPED + the interview deck, demo script, a fully-offline live demo, and a cold-clone-verified 2-command run. Ingest events → idempotent per-tenant, per-channel
 > category aggregates → ranked top-k over the REST API → served dashboard. On top of that:
 > the **channel** first-class dimension + a deterministic seasonal synthetic-data generator
 > (Phase 2.5), a **central config** surface (`TopsalesProperties`), the **forecasting engine**
