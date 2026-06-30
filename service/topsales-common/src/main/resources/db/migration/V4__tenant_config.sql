@@ -6,6 +6,6 @@ CREATE TABLE tenant_config (
   reporting_currency text NOT NULL                 -- ISO 4217, e.g. 'USD'
 );
 
--- A demo tenant so the local stack is usable immediately after `make up`.
+-- The primary demo tenant so the local stack is usable immediately after `make up`.
 INSERT INTO tenant_config (tenant_id, timezone, reporting_currency)
-VALUES ('t_demo', 'America/Los_Angeles', 'USD');
+VALUES ('tenant_a', 'America/Los_Angeles', 'USD');

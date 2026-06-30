@@ -44,29 +44,29 @@ make run     # build + start the API on http://localhost:8080 (Flyway migrates o
 ```
 
 Then open <http://localhost:8080> for the dashboard and POST a few sample events (the
-`postman/` collection has a ready sequence), e.g. for the seeded `t_demo` tenant:
+`postman/` collection has a ready sequence), e.g. for the seeded `tenant_a` tenant:
 
 ```bash
-curl -H "Content-Type: application/json" -H "X-Tenant-Id: t_demo" \
+curl -H "Content-Type: application/json" -H "X-Tenant-Id: tenant_a" \
   -X POST http://localhost:8080/api/v1/events \
   -d '{"orderId":"o1","categoryId":"Office Supplies","channel":"ONLINE","amount":120.00,"currency":"USD","eventType":"SALE","eventTime":"2026-06-20T14:03:00Z"}'
 
 # channel = all | online | offline (default all); all is the summed rollup
-curl -H "X-Tenant-Id: t_demo" \
-  "http://localhost:8080/api/v1/tenants/t_demo/top-categories?mode=actuals&window=month&channel=all&k=10"
+curl -H "X-Tenant-Id: tenant_a" \
+  "http://localhost:8080/api/v1/tenants/tenant_a/top-categories?mode=actuals&window=month&channel=all&k=10"
 ```
 
 For a realistic demo, seed the data and run the forecast batch:
 
 ```bash
-make seed        # backfill months of seasonal, channel-split history for both demo tenants
+make seed        # backfill months of seasonal, channel-split history for all 26 demo tenants (tenant_a … tenant_z)
 make trickle     # (optional) post live events that continue it so the dashboard moves
 make forecast    # batch: fit forecasters → write ranked, versioned serving rows (per tenant×window×channel)
 make eval        # backtest the forecasters → regenerate docs/forecast-eval-report.md (WAPE + bias)
 ```
 
-The dashboard's **tenant** picker is populated from `GET /api/v1/tenants`; two demo tenants
-(`t_demo`, `t_acme`) are seeded with independent data, so you can flip between them to see
+The dashboard's **tenant** picker is populated from `GET /api/v1/tenants`; 26 demo tenants
+(`tenant_a` … `tenant_z`) are seeded with independent data, so you can flip between them to see
 multi-tenant isolation. The dashboard's window/channel/`k` controls are config-driven from
 `GET /api/v1/config` — every tweakable (the `k` choices, window lengths, validation bounds, forecast
 params) lives in one place, `topsales.*` in `application.yml` (bound to `TopsalesProperties`).
@@ -187,7 +187,7 @@ The interview deck + live-demo script live in [`presentation/`](presentation/).
     invalidation, single-flight), HTTP forecast **degradation** (serving-table wiped → still `200`
     `degraded`/`pending`, never fails closed), and **multi-tenant isolation** (cross-tenant `403`
     tenant-mismatch / unknown-tenant `404`, RFC-7807 body). Plus a **Newman coverage gate** — `make
-    demo` runs the full `postman/` collection (incl. a `t_demo`-vs-`t_acme` no-leakage folder) against
+    demo` runs the full `postman/` collection (incl. a `tenant_a`-vs-`tenant_b` no-leakage folder) against
     the live stack, enforced in CI by `.github/workflows/postman.yml`. The synthetic-data generator +
     committed seed (`make seed`/`trickle`/`eval`) were already in place from Phase 2.5. `make test`
     stays the local unit gate; the `*IT`s run in CI.

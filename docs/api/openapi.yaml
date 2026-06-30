@@ -275,7 +275,7 @@ components:
           items: { type: string }
           description: Configured tenant ids (ascending).
       example:
-        tenants: [t_acme, t_demo]
+        tenants: [tenant_b, tenant_a]
 
     UiConfig:
       type: object

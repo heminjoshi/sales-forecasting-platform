@@ -17,7 +17,7 @@ Pull images and warm the build so nothing downloads on stage:
 
 ```bash
 make up            # starts Postgres + Redis (docker compose)
-make seed          # backfills ~18 months of seasonal, channel-split history for t_demo + t_acme
+make seed          # backfills ~18 months of seasonal, channel-split history for tenant_a + tenant_b
 make run           # builds + boots the API on :8080 (LEAVE RUNNING in terminal 1)
 make forecast      # writes versioned serving rows (terminal 2) — gives a FRESH forecast
 ```
@@ -43,7 +43,7 @@ Point out: **no AWS, no Node, no internet.** Open `http://localhost:8080`.
 
 ## 2. The dashboard walk (~2 min) — the happy path
 
-Tenant `t_demo`, mode **forecast**, window **month**, channel **all**, k **10**.
+Tenant `tenant_a`, mode **forecast**, window **month**, channel **all**, k **10**.
 
 1. **Status badge** → `fresh`, with an "as of …" timestamp. *"It always tells you how fresh it is."*
 2. **Ranked table** → top categories with value, **Δ vs prior**, **confidence**, and an **interval**.
@@ -70,7 +70,7 @@ docker compose -f local/docker-compose.yml exec -T postgres \
   psql -U topsales -d topsales -c 'TRUNCATE serving_rows, serving_active_version;'
 
 docker compose -f local/docker-compose.yml exec -T redis \
-  redis-cli INCR tenantver:t_demo
+  redis-cli INCR tenantver:tenant_a
 ```
 
 > **Why both steps:** the TRUNCATE removes the precomputed forecasts; the Redis `INCR` bumps the
@@ -120,7 +120,7 @@ is an atomic swap, and rollback would be a flip back to the previous version."*
 |---|---|
 | Dashboard empty after `make run` | You skipped `make seed` — run it (terminal 2), refresh |
 | Forecast shows `pending` not `fresh` at start | `make forecast` hasn't run (or ran before `seed`) — run it after seed |
-| Badge stays `fresh` after the wipe | You skipped the Redis `INCR` — bump `tenantver:t_demo`, refresh |
+| Badge stays `fresh` after the wipe | You skipped the Redis `INCR` — bump `tenantver:tenant_a`, refresh |
 | Chart blank | Hard-refresh; vendored Chart.js is at `static/vendor/chart.umd.min.js` (no network needed) |
 | Port 8080 busy | A prior `make run` is still up — stop it, or `make down && make up` |
 | Containers won't start | `make down && make up`; check Docker Desktop is running |

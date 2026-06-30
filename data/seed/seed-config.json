@@ -1,6 +1,6 @@
 {
   "globalSeed": 42,
-  "tenants": ["t_demo", "t_acme"],
+  "tenants": ["tenant_a","tenant_b","tenant_c","tenant_d","tenant_e","tenant_f","tenant_g","tenant_h","tenant_i","tenant_j","tenant_k","tenant_l","tenant_m","tenant_n","tenant_o","tenant_p","tenant_q","tenant_r","tenant_s","tenant_t","tenant_u","tenant_v","tenant_w","tenant_x","tenant_y","tenant_z"],
   "historyDays": 540,
   "trendAnnual": 0.15,
   "returnRate": 0.07,
@@ -30,5 +30,16 @@
     "decemberRampStart":  1.3,
     "decemberRampEnd":     2.0,
     "decemberPostDip":     0.7
+  },
+  "archetypes": {
+    "balanced":        { "scale": 1.00, "weights": {} },
+    "electronics_led": { "scale": 1.25, "weights": { "cat_electronics": 1.8, "cat_grocery": 0.7, "cat_apparel": 0.8, "cat_home": 0.8, "cat_toys": 0.7, "cat_collectibles": 0.9 } },
+    "grocery_led":     { "scale": 1.50, "weights": { "cat_grocery": 2.0, "cat_electronics": 0.6, "cat_apparel": 0.7, "cat_home": 0.8, "cat_toys": 0.6, "cat_collectibles": 0.5 } },
+    "apparel_led":     { "scale": 0.95, "weights": { "cat_apparel": 1.9, "cat_toys": 1.3, "cat_electronics": 0.7, "cat_grocery": 0.8, "cat_home": 0.9, "cat_collectibles": 1.0 } },
+    "home_led":        { "scale": 1.10, "weights": { "cat_home": 1.9, "cat_collectibles": 1.4, "cat_electronics": 0.8, "cat_grocery": 0.8, "cat_apparel": 0.9, "cat_toys": 0.8 } },
+    "boutique_small":  { "scale": 0.45, "weights": { "cat_collectibles": 2.2, "cat_apparel": 1.2, "cat_electronics": 0.6, "cat_grocery": 0.5, "cat_home": 0.7, "cat_toys": 0.9 } }
+  },
+  "tenantArchetypes": {
+    "tenant_a":"balanced","tenant_b":"electronics_led","tenant_c":"grocery_led","tenant_d":"apparel_led","tenant_e":"home_led","tenant_f":"boutique_small","tenant_g":"electronics_led","tenant_h":"grocery_led","tenant_i":"apparel_led","tenant_j":"home_led","tenant_k":"boutique_small","tenant_l":"electronics_led","tenant_m":"grocery_led","tenant_n":"apparel_led","tenant_o":"home_led","tenant_p":"boutique_small","tenant_q":"electronics_led","tenant_r":"grocery_led","tenant_s":"apparel_led","tenant_t":"home_led","tenant_u":"boutique_small","tenant_v":"electronics_led","tenant_w":"grocery_led","tenant_x":"apparel_led","tenant_y":"home_led","tenant_z":"boutique_small"
   }
 }

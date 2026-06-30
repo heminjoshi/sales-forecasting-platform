@@ -27,7 +27,7 @@ import tools.jackson.databind.ObjectMapper;
  *   <li><b>Locally</b> — the {@code local/docker-compose.yml} stack (started with {@code make up});
  *       run these via {@code make verify}.</li>
  * </ul>
- * Flyway auto-migrates the Postgres on startup (which also seeds the {@code t_demo}/{@code t_acme}
+ * Flyway auto-migrates the Postgres on startup (which also seeds the {@code tenant_a}/{@code tenant_b}
  * tenants via V4/V7). A clean schema each run is provided by the ephemeral CI service container.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)

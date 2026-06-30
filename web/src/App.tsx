@@ -66,7 +66,7 @@ export default function App() {
       const ids =
         tenantsRes.status === "fulfilled" && tenantsRes.value.tenants?.length
           ? tenantsRes.value.tenants
-          : ["t_demo"];
+          : ["tenant_a"];
       const cfg =
         configRes.status === "fulfilled" && Array.isArray(configRes.value.kOptions)
           ? configRes.value
@@ -76,7 +76,7 @@ export default function App() {
       setConfig(cfg);
 
       const initial: Query = {
-        tenantId: ids[0] ?? "t_demo",
+        tenantId: ids[0] ?? "tenant_a",
         mode: "actuals",
         window: cfg.windowDefault,
         channel: cfg.channelDefault,

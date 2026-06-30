@@ -42,18 +42,20 @@ class SeasonalityModelTest {
     private SeedConfig config() {
         return new SeedConfig(
                 42L,
-                List.of("t_demo"),
+                List.of("tenant_a"),
                 60,
                 0.15,
                 0.07,
                 List.of(ELECTRONICS, COLLECTIBLES),
                 new OutlierSpec("cat_home", "ONLINE", 70, 10),
                 SEASONALITY,
-                HVE);
+                HVE,
+                null,
+                null);
     }
 
     private SeasonalityModel model() {
-        return new SeasonalityModel(config(), "t_demo", "USD", START, END);
+        return new SeasonalityModel(config(), "tenant_a", "USD", START, END);
     }
 
     @Test
@@ -64,8 +66,8 @@ class SeasonalityModelTest {
     @Test
     void differentTenants_getIndependentData() {
         // The per-cell RNG keys on the tenant id, so two tenants get distinct (isolated) series.
-        SeasonalityModel demo = new SeasonalityModel(config(), "t_demo", "USD", START, END);
-        SeasonalityModel acme = new SeasonalityModel(config(), "t_acme", "USD", START, END);
+        SeasonalityModel demo = new SeasonalityModel(config(), "tenant_a", "USD", START, END);
+        SeasonalityModel acme = new SeasonalityModel(config(), "tenant_b", "USD", START, END);
         assertThat(demo.grossValue(ELECTRONICS, Channel.ONLINE, PLAIN_DAY))
                 .isNotEqualTo(acme.grossValue(ELECTRONICS, Channel.ONLINE, PLAIN_DAY));
     }
@@ -116,7 +118,7 @@ class SeasonalityModelTest {
         // monthly factors, no HVE) — isolating the ~×5 offline BF uplift against ±10% noise.
         LocalDate bf = HveCalendar.blackFriday(2025);
         SeasonalityModel m =
-                new SeasonalityModel(config(), "t_demo", "USD", bf.minusDays(30), bf.plusDays(5));
+                new SeasonalityModel(config(), "tenant_a", "USD", bf.minusDays(30), bf.plusDays(5));
 
         double spike = m.grossValue(ELECTRONICS, Channel.OFFLINE, bf);
         double ordinary = m.grossValue(ELECTRONICS, Channel.OFFLINE, bf.minusDays(14));

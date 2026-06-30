@@ -26,9 +26,9 @@ class BacktestRegressionTest {
 
     // A dense, strongly seasonal series and a sparse intermittent one (same tenant).
     private static final SeriesKey DENSE =
-            new SeriesKey("t_demo", "cat_electronics", Channel.ONLINE);
+            new SeriesKey("tenant_a", "cat_electronics", Channel.ONLINE);
     private static final SeriesKey SPARSE =
-            new SeriesKey("t_demo", "cat_collectibles", Channel.ONLINE);
+            new SeriesKey("tenant_a", "cat_collectibles", Channel.ONLINE);
 
     private static EvalResult result;
 

@@ -427,15 +427,15 @@
   }
 
   // Populate the tenant picker from GET /api/v1/tenants, then load. Falls back to a single
-  // t_demo option if the catalog can't be reached, so the demo still renders.
+  // tenant_a option if the catalog can't be reached, so the demo still renders.
   async function populateTenants() {
     try {
       const res = await fetch("/api/v1/tenants", { headers: { Accept: "application/json" } });
       const body = res.ok ? await res.json() : null;
-      const ids = body && Array.isArray(body.tenants) && body.tenants.length ? body.tenants : ["t_demo"];
+      const ids = body && Array.isArray(body.tenants) && body.tenants.length ? body.tenants : ["tenant_a"];
       setTenantOptions(ids);
     } catch (_) {
-      setTenantOptions(["t_demo"]);
+      setTenantOptions(["tenant_a"]);
     }
   }
 

@@ -41,6 +41,6 @@ the `implement-phase` skill — each phase adds its `[P<N>]`-tagged cases here a
   returned as 4xx. The only ingest 4xx is a missing `X-Tenant-Id` (400) or an unparseable top-level body.
 - **Error model:** RFC 7807 `ProblemDetail` — assert `status`, `type` (`https://topsales/errors/{slug}`),
   `title`, and `instance` (= request URI).
-- **Test data:** seeded tenant `t_demo` (`America/Los_Angeles`, `USD`). Synthetic/canary tenants use a
+- **Test data:** seeded tenant `tenant_a` (`America/Los_Angeles`, `USD`). Synthetic/canary tenants use a
   `t_canary*` prefix and are cleaned up.
 </content>

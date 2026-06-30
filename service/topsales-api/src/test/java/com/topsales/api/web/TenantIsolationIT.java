@@ -17,7 +17,7 @@ import org.springframework.web.client.RestClient;
  * published by {@link TenantScopeFilter}: a mismatch (or a missing header) is a 403
  * {@code tenant-mismatch}; a self-consistent but non-existent tenant is a 404 {@code unknown-tenant}.
  *
- * <p>{@code t_demo}/{@code t_acme} are seeded by Flyway (V4/V7); {@code t_nope} is a deliberately
+ * <p>{@code tenant_a}/{@code tenant_b} are seeded by Flyway (V4/V7); {@code t_nope} is a deliberately
  * absent id for the unknown-tenant case.
  */
 class TenantIsolationIT extends AbstractPostgresRedisIT {
@@ -41,19 +41,19 @@ class TenantIsolationIT extends AbstractPostgresRedisIT {
     }
 
     /**
-     * IT-RD-30: a caller authenticated as {@code t_acme} asking for {@code t_demo}'s data is rejected
+     * IT-RD-30: a caller authenticated as {@code tenant_b} asking for {@code tenant_a}'s data is rejected
      * before any read — 403 with a {@code tenant-mismatch} problem whose instance is the request URI.
      */
     @Test
     void crossTenant_pathNeHeader_returns403() throws Exception {
-        String uri = "/api/v1/tenants/t_demo/top-categories?mode=actuals&window=month&k=10";
-        ResponseEntity<String> resp = get(uri, "t_acme");
+        String uri = "/api/v1/tenants/tenant_a/top-categories?mode=actuals&window=month&k=10";
+        ResponseEntity<String> resp = get(uri, "tenant_b");
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         Problem problem = objectMapper.readValue(resp.getBody(), Problem.class);
         assertThat(problem.type()).endsWith("/tenant-mismatch");
         assertThat(problem.title()).isEqualTo("Tenant mismatch");
-        assertThat(problem.instance()).isEqualTo("/api/v1/tenants/t_demo/top-categories");
+        assertThat(problem.instance()).isEqualTo("/api/v1/tenants/tenant_a/top-categories");
     }
 
     /**
@@ -63,7 +63,7 @@ class TenantIsolationIT extends AbstractPostgresRedisIT {
      */
     @Test
     void missingTenantHeader_returns403() throws Exception {
-        String uri = "/api/v1/tenants/t_demo/top-categories?mode=actuals&window=month&k=10";
+        String uri = "/api/v1/tenants/tenant_a/top-categories?mode=actuals&window=month&k=10";
         ResponseEntity<String> resp = get(uri, null);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);

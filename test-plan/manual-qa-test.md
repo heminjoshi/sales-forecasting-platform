@@ -19,7 +19,7 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 ## 1. Dashboard — happy path
 | ID | Step | Expected |
 |---|---|---|
-| MQ-01 | Default view on load (`t_demo`) | Table renders top-k; chart renders; badge shows a status + "as of" timestamp |
+| MQ-01 | Default view on load (`tenant_a`) | Table renders top-k; chart renders; badge shows a status + "as of" timestamp |
 | MQ-02 | Toggle **mode** actuals ↔ forecast | actuals → `fresh`; forecast → `pending` badge (P2 floor); table still populated (same data underneath) |
 | MQ-03 | Change **window** week/month/year | Table + chart update; totals change consistently with the window span |
 | MQ-04 | Change **k** (e.g. 5 → 20) | Row count changes accordingly; ranks contiguous 1..k |
@@ -29,7 +29,7 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 ## 2. End-to-end ingest → see it move
 | ID | Step | Expected |
 |---|---|---|
-| MQ-10 | POST a SALE for `t_demo` (curl/Postman), then refresh | New/updated category appears; its value increased by the amount; `asOf` advances |
+| MQ-10 | POST a SALE for `tenant_a` (curl/Postman), then refresh | New/updated category appears; its value increased by the amount; `asOf` advances |
 | MQ-11 | POST a **batch** (Postman "batch" request) | Response `{received, applied, deduped, quarantined}` with sensible counts; dashboard reflects all applied |
 | MQ-12 | POST the **same** event again (dedupe) | Response shows `deduped: 1`, `applied: 0`; dashboard value **unchanged** (not doubled) |
 | MQ-13 | POST a **RETURN** (negative) for a top category | That category's total **drops** by the return amount; ranking may reorder |
@@ -50,7 +50,7 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 ## 4. Multi-tenant isolation (manual)
 | ID | Step | Expected |
 |---|---|---|
-| MQ-30 | Ingest distinct data for `t_demo` and a second seeded tenant | Each dashboard/read shows only its own categories/totals |
+| MQ-30 | Ingest distinct data for `tenant_a` and a second seeded tenant | Each dashboard/read shows only its own categories/totals |
 | MQ-31 | Switch `X-Tenant-Id` between the two and read each path | No cross-tenant values ever appear; 403 if path≠header |
 
 ## 5. Degradation demo [P4] — ✅ built, runnable now
@@ -72,7 +72,7 @@ the status badge / chart, and end-to-end "feel". Each case has explicit steps an
 | MQ-55 | `curl localhost:8080/actuator/prometheus` | 200 plain-text; grep shows `http_server_requests`, `topsales_read_total`, `topsales_forecast_freshness_seconds` |
 | MQ-56 | `curl localhost:8080/actuator/health` | 200 `{"status":"UP"}` with DB + Redis components UP |
 | MQ-57 | Do MQ-41 (wipe serving) then re-scrape | `topsales_read_total{status="degraded"}` sample present and climbing — the degraded read is **observable**, not just visible in the UI |
-| MQ-58 | Tail app logs during any read | each line carries `[t_demo <requestId>]` (tenant + request id from MDC); a request sent with `X-Request-Id: demo1` echoes `demo1` in the response header and the logs |
+| MQ-58 | Tail app logs during any read | each line carries `[tenant_a <requestId>]` (tenant + request id from MDC); a request sent with `X-Request-Id: demo1` echoes `demo1` in the response header and the logs |
 | MQ-59 | Bedrock-down resilience (`provider=bedrock`, no AWS creds) | insight still renders the **template** (no error, read not blocked); after repeated calls the breaker opens and `topsales_insight_fallback_total` keeps climbing |
 
 ## 7. Cross-browser / responsiveness / a11y (smoke)
@@ -105,9 +105,9 @@ The Phase-9 acceptance is "full run-through to time; demo (incl. dashboard) runs
 cases are the rehearsal checklist — run them as the dry-run, not just at release.
 | ID | Step | Expected |
 |---|---|---|
-| MQ-90 | **Cold-start from scratch** (containers down, no prior state): `make up` → `make seed` → `make run` → `make forecast` → open `http://localhost:8080` | Comes up clean in the documented sequence; dashboard renders seeded `t_demo` with a `fresh` forecast badge, intervals, and a grounded insight — **no errors, no manual fix-ups** |
+| MQ-90 | **Cold-start from scratch** (containers down, no prior state): `make up` → `make seed` → `make run` → `make forecast` → open `http://localhost:8080` | Comes up clean in the documented sequence; dashboard renders seeded `tenant_a` with a `fresh` forecast badge, intervals, and a grounded insight — **no errors, no manual fix-ups** |
 | MQ-91 | **Dashboard walk** (the demo beats): toggle mode actuals↔forecast, window week/month/year, channel all/online/offline, change k | Each control updates table + chart live; badge + `asOf` stay honest; per-channel views differ and `all` ≈ their sum (mirrors MQ-01..05, run as one fluid sequence) |
-| MQ-92 | **Degradation beat (live):** `docker compose -f local/docker-compose.yml exec -T postgres psql -U topsales -d topsales -c 'TRUNCATE serving_rows, serving_active_version;'` then `... exec -T redis redis-cli INCR tenantver:t_demo`, then refresh forecast view | Forecast read still **200**; badge flips to `degraded` (seasonal-naive) or `pending` (actuals floor); the degradation banner shows; items still present — **never a 5xx, blank, or crash** (the signature resilience moment; matches `ForecastDegradationIT`) |
+| MQ-92 | **Degradation beat (live):** `docker compose -f local/docker-compose.yml exec -T postgres psql -U topsales -d topsales -c 'TRUNCATE serving_rows, serving_active_version;'` then `... exec -T redis redis-cli INCR tenantver:tenant_a`, then refresh forecast view | Forecast read still **200**; badge flips to `degraded` (seasonal-naive) or `pending` (actuals floor); the degradation banner shows; items still present — **never a 5xx, blank, or crash** (the signature resilience moment; matches `ForecastDegradationIT`) |
 | MQ-93 | **Recovery:** `make forecast` again, refresh | Badge returns to `fresh` with intervals; the wipe was fully recoverable on stage |
 | MQ-94 | **Fully-offline rehearsal:** repeat MQ-90→93 with the machine's network **off** (after images are pulled) | Everything works — no CDN, no AWS, no internet (Chart.js vendored in P9); proves the demo survives a dead venue wifi |
 | MQ-95 | **Deck renders:** open `presentation/deck/index.html` in a browser (reveal.js) **and** preview `presentation/deck/deck.md` (Marp / GitHub) | Slides advance with arrow keys; diagrams + screenshots show; the three renderings are the same content from one `deck.md` source |

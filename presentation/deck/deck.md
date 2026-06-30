@@ -392,10 +392,10 @@ flowchart LR
 
 | Forecaster | Segments | n | **WAPE** | bias |
 |---|---:|---:|---:|---:|
-| SeasonalNaive | 24 | 2016 | 0.0755 | −0.0146 |
-| **HoltWinters** | 24 | 2016 | **0.0686** | 0.0118 |
+| SeasonalNaive | 312 | 26208 | 0.0744 | −0.0157 |
+| **HoltWinters** | 312 | 26208 | **0.0690** | 0.0082 |
 
-> Holt-Winters beats the naive baseline (~6.9% vs ~7.6% WAPE) — and the naive *is* the degradation fallback, so we ship the better one and keep the simpler one as the floor.
+> Holt-Winters beats the naive baseline (~6.9% vs ~7.4% WAPE) — and the naive *is* the degradation fallback, so we ship the better one and keep the simpler one as the floor.
 
 ---
 
@@ -706,7 +706,7 @@ Reads scale flat (precompute + cache + stateless). The real lever is the **batch
 
 ## Q&A — how is multi-tenancy enforced?
 
-`TenantScopeFilter` runs **first** on every request; the path tenant must equal the authed tenant — **never trust a body-supplied id**. Cross-tenant read → **403** `tenant-mismatch`; unknown tenant → **404** `unknown-tenant` (RFC-7807 problem body). Verified end-to-end by `TenantIsolationIT` + a Postman no-leakage folder (`t_demo` vs `t_acme`). Isolation holds in the cache key, the serving key, and the ML plane.
+`TenantScopeFilter` runs **first** on every request; the path tenant must equal the authed tenant — **never trust a body-supplied id**. Cross-tenant read → **403** `tenant-mismatch`; unknown tenant → **404** `unknown-tenant` (RFC-7807 problem body). Verified end-to-end by `TenantIsolationIT` + a Postman no-leakage folder (`tenant_a` vs `tenant_b`). Isolation holds in the cache key, the serving key, and the ML plane.
 
 ---
 

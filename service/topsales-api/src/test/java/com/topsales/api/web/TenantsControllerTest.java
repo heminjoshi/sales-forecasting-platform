@@ -29,12 +29,12 @@ class TenantsControllerTest {
 
     @Test
     void listsConfiguredTenantIds() throws Exception {
-        when(tenants.allTenantIds()).thenReturn(List.of("t_acme", "t_demo"));
+        when(tenants.allTenantIds()).thenReturn(List.of("tenant_b", "tenant_a"));
 
         mvc.perform(get("/api/v1/tenants"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tenants").isArray())
-                .andExpect(jsonPath("$.tenants[0]").value("t_acme"))
-                .andExpect(jsonPath("$.tenants[1]").value("t_demo"));
+                .andExpect(jsonPath("$.tenants[0]").value("tenant_b"))
+                .andExpect(jsonPath("$.tenants[1]").value("tenant_a"));
     }
 }
