@@ -26,6 +26,8 @@ Keep them ~1600px wide, light background, no browser chrome / no personal bookma
 
 ## Status
 
-> ⏳ **Not yet captured** — placeholder. Add the two PNGs above during the first cold rehearsal, then
-> reference `dashboard-fresh.png` from `deck/deck.md` (Presentation-tier slide) and the repo `README.md`
-> Architecture section.
+> ✅ **Captured** — `dashboard-fresh.png` (tenant_a · forecast · month · all · k=10, `fresh` badge,
+> confidence-interval whiskers + the Δ/confidence/interval table) and `dashboard-degraded.png` (the same
+> view after a `serving_rows` wipe + cache-version bump → `degraded` badge, fallback banner, table still
+> populated). Still to do: reference `dashboard-fresh.png` from `deck/deck.md` (Presentation-tier slide)
+> and the repo `README.md` Architecture section.
