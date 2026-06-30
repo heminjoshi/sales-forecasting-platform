@@ -112,8 +112,9 @@ flowchart TB
 Full narrative in [`docs/hld.md`](docs/hld.md) and the diagrams under [`docs/diagrams/`](docs/diagrams/).
 The interview deck + live-demo script live in [`presentation/`](presentation/).
 
-<!-- Hero screenshot: capture during a rehearsal — see presentation/screenshots/README.md, then embed dashboard-fresh.png here. -->
-> _Dashboard screenshots (fresh + degraded) — capture via `presentation/screenshots/README.md`._
+![Dashboard — forecast mode, fresh](presentation/screenshots/dashboard-fresh.png)
+
+> The dashboard in `forecast` mode — ranked top-k with **confidence intervals**, a grounded insight, and a `fresh` status badge. When the forecast plane is wiped the read **never fails closed**: it falls back to a seasonal-naive estimate and flips the badge to `degraded` ([screenshot](presentation/screenshots/dashboard-degraded.png)).
 
 ## Tech stack
 
@@ -128,6 +129,7 @@ The interview deck + live-demo script live in [`presentation/`](presentation/).
 - [`docs/lld.md`](docs/lld.md) — low-level design (the implementation contract: DDL, interfaces, pipelines)
 - [`docs/adr/`](docs/adr/) — 10 comparative architecture decision records · [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — REST contract
 - [`docs/diagrams/`](docs/diagrams/) — architecture, data-flow, ERD, sequence, UI-flow · [`docs/runbook.md`](docs/runbook.md) — alarms, degradation, recovery
+- [`docs/demo-runbook.md`](docs/demo-runbook.md) — cold-start demo walkthrough, the `make demo` gate, and troubleshooting
 - [`test-plan/`](test-plan/) — integration, load, stress, canary, and manual-QA test plans
 
 ## Built vs. designed
